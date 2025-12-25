@@ -16,15 +16,24 @@ import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import GuestLoginPage from './pages/GuestLoginPage';
 
-// Dashboard pages (lazy loaded)
+// Dashboard pages
 import EmployeeDashboard from './pages/employee/Dashboard';
 import MenuPage from './pages/employee/MenuPage';
 import OrderHistoryPage from './pages/employee/OrderHistoryPage';
 
 import KitchenDashboard from './pages/kitchen/Dashboard';
 import HRDashboard from './pages/hr/Dashboard';
-import AdminDashboard from './pages/admin/Dashboard';
 import ReceptionistDashboard from './pages/receptionist/Dashboard';
+
+// Admin pages
+import AdminDashboard from './pages/admin/Dashboard';
+import UserManagement from './pages/admin/UserManagement';
+import UserForm from './pages/admin/UserForm';
+import MenuManagement from './pages/admin/MenuManagement';
+import CompanySettings from './pages/admin/CompanySettings';
+import Reports from './pages/admin/Reports';
+import SystemSettings from './pages/admin/SystemSettings';
+import OrderManagement from './pages/admin/OrderManagement';
 
 // Layout
 import MainLayout from './components/layout/MainLayout';
@@ -133,9 +142,49 @@ function App() {
           } />
           
           {/* Admin routes */}
-          <Route path="admin/*" element={
+          <Route path="admin" element={
             <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
               <AdminDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="admin/users" element={
+            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <UserManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="admin/users/new" element={
+            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <UserForm />
+            </ProtectedRoute>
+          } />
+          <Route path="admin/users/:id" element={
+            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <UserForm />
+            </ProtectedRoute>
+          } />
+          <Route path="admin/menus" element={
+            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <MenuManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="admin/companies" element={
+            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <CompanySettings />
+            </ProtectedRoute>
+          } />
+          <Route path="admin/orders" element={
+            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <OrderManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="admin/reports" element={
+            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <Reports />
+            </ProtectedRoute>
+          } />
+          <Route path="admin/settings" element={
+            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <SystemSettings />
             </ProtectedRoute>
           } />
         </Route>
