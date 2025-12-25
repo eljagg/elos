@@ -189,18 +189,20 @@ const generateRandomToken = (bytes = 32) => {
  * @returns {Promise<Object>} Created session
  */
 const saveSession = async (userId, refreshToken, metadata = {}) => {
-    const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
-    
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7);
     
+    const deviceInfo = JSON.stringify({
+        userAgent: metadata.userAgent,
+        deviceType: metadata.deviceType
+    });
+    
     const result = await db.query(
         `INSERT INTO user_sessions (
-            user_id, refresh_token_hash, user_agent, ip_address, 
-            device_type, expires_at
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+            user_id, refresh_token, device_info, ip_address, expires_at
+        ) VALUES ($1, $2, $3, $4, $5)
         RETURNING id`,
-        [userId, tokenHash, metadata.userAgent, metadata.ip, metadata.deviceType, expiresAt]
+        [userId, refreshToken, deviceInfo, metadata.ip, expiresAt]
     );
     
     return result.rows[0];
@@ -217,7 +219,7 @@ const saveSession = async (userId, refreshToken, metadata = {}) => {
 const logAudit = async (action, userId, details, req) => {
     try {
         await db.query(
-            `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address, user_agent)
+            `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address, device_info)
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             [
                 userId,
@@ -612,10 +614,9 @@ const logout = async (req, res, next) => {
             await logAudit('LOGOUT_ALL_SESSIONS', userId, {}, req);
         } else if (refreshToken) {
             // Invalidate specific session
-            const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
             await db.query(
-                'UPDATE user_sessions SET is_valid = FALSE WHERE user_id = $1 AND refresh_token_hash = $2',
-                [userId, tokenHash]
+                'UPDATE user_sessions SET is_valid = FALSE WHERE user_id = $1 AND refresh_token = $2',
+                [userId, refreshToken]
             );
         }
         
@@ -654,17 +655,15 @@ const refreshToken = async (req, res, next) => {
         }
         
         // Check if session is valid in database
-        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-        
         const sessionResult = await db.query(
             `SELECT us.*, u.is_active, u.disabled_reason
              FROM user_sessions us
              JOIN users u ON us.user_id = u.id
              WHERE us.user_id = $1 
-               AND us.refresh_token_hash = $2 
+               AND us.refresh_token = $2 
                AND us.is_valid = TRUE
                AND us.expires_at > CURRENT_TIMESTAMP`,
-            [decoded.userId, tokenHash]
+            [decoded.userId, token]
         );
         
         if (sessionResult.rows.length === 0) {
@@ -706,7 +705,7 @@ const refreshToken = async (req, res, next) => {
         
         // Update session last used time
         await db.query(
-            'UPDATE user_sessions SET last_used_at = CURRENT_TIMESTAMP WHERE id = $1',
+            'UPDATE user_sessions SET is_valid = TRUE WHERE id = $1',
             [session.id]
         );
         
@@ -1089,26 +1088,27 @@ const getSessions = async (req, res, next) => {
         const userId = req.user.userId;
         
         const result = await db.query(
-            `SELECT id, user_agent, ip_address, device_type, 
-                    created_at, last_used_at
+            `SELECT id, device_info, ip_address, created_at
              FROM user_sessions
              WHERE user_id = $1 AND is_valid = TRUE AND expires_at > CURRENT_TIMESTAMP
-             ORDER BY last_used_at DESC`,
+             ORDER BY created_at DESC`,
             [userId]
         );
         
         // Get current session (from token)
         const currentToken = req.headers.authorization?.split(' ')[1];
         
-        const sessions = result.rows.map(session => ({
-            id: session.id,
-            device: session.device_type || 'Unknown',
-            userAgent: session.user_agent,
-            ipAddress: session.ip_address,
-            createdAt: session.created_at,
-            lastUsedAt: session.last_used_at,
-            current: false // We'd need to match tokens to determine this
-        }));
+        const sessions = result.rows.map(session => {
+            const deviceInfo = session.device_info || {};
+            return {
+                id: session.id,
+                device: deviceInfo.deviceType || 'Unknown',
+                userAgent: deviceInfo.userAgent || 'Unknown',
+                ipAddress: session.ip_address,
+                createdAt: session.created_at,
+                current: false
+            };
+        });
         
         res.status(200).json({
             success: true,
