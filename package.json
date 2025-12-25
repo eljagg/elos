@@ -1,0 +1,39 @@
+{
+  "name": "elos",
+  "version": "1.0.0",
+  "description": "Employee Lunch Ordering System",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm install && npm run build",
+    "postinstall": "npm run build",
+    "db:migrate": "psql $DATABASE_URL -f database/supabase_schema.sql",
+    "db:seed": "psql $DATABASE_URL -f database/seeds/seed_data.sql"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "pg": "^8.11.3",
+    "dotenv": "^16.3.1",
+    "speakeasy": "^2.0.0",
+    "qrcode": "^1.5.3",
+    "nodemailer": "^6.9.7",
+    "express-validator": "^7.0.1",
+    "express-rate-limit": "^7.1.5",
+    "winston": "^3.11.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

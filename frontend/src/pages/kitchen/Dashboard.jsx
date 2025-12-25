@@ -1,0 +1,1 @@
+import React from "react"; const Dashboard = () => (<div className="animate-fade-in"><div className="page-header"><h1 className="page-title">Kitchen Dashboard</h1></div><div className="card"><p>Kitchen management area - Coming soon!</p></div></div>); export default Dashboard;
