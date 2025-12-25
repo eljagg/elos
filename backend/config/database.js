@@ -71,8 +71,9 @@ const poolConfig = {
     // ========================================================================
     // SSL Configuration (IMPORTANT for production!)
     // ========================================================================
-    ssl: process.env.DB_SSL === 'true' ? {
-        rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false'
+    // Railway and most cloud PostgreSQL providers require SSL
+    ssl: process.env.DATABASE_URL ? {
+        rejectUnauthorized: false  // Required for Railway/Supabase/Neon
     } : false,
     
     // Application name shown in database monitoring tools
@@ -292,16 +293,11 @@ const closePool = async () => {
  * ============================================================================
  */
 module.exports = {
-    // Core query functions
     query,
     getClient,
     transaction,
-    
-    // Utility functions
     checkConnection,
     getPoolStats,
     closePool,
-    
-    // Direct pool access (use sparingly)
     pool
 };
