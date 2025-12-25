@@ -59,8 +59,8 @@ const formatUser = (user) => ({
     lastName: user.last_name,
     employeeCode: user.employee_code,
     phone: user.phone,
-    languagePreference: user.language_preference,
-    profilePhoto: user.profile_photo_url,
+    languagePreference: user.preferred_language,
+    profilePhoto: user.profile_image_url,
     dietaryPreferences: user.dietary_preferences || [],
     role: {
         code: user.role_code,
@@ -402,7 +402,7 @@ const createUser = async (req, res, next) => {
             `INSERT INTO users (
                 email, password_hash, first_name, last_name,
                 role_id, company_id, department_id, employee_code,
-                phone, language_preference,
+                phone, preferred_language,
                 must_change_password, email_verified,
                 created_by
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, TRUE, $11)
@@ -553,7 +553,7 @@ const updateUser = async (req, res, next) => {
         }
         
         if (languagePreference !== undefined) {
-            updates.push(`language_preference = $${paramIndex++}`);
+            updates.push(`preferred_language = $${paramIndex++}`);
             params.push(languagePreference);
         }
         
@@ -644,7 +644,7 @@ const updateProfile = async (req, res, next) => {
         }
         
         if (languagePreference) {
-            updates.push(`language_preference = $${paramIndex++}`);
+            updates.push(`preferred_language = $${paramIndex++}`);
             params.push(languagePreference);
         }
         
@@ -668,7 +668,7 @@ const updateProfile = async (req, res, next) => {
         
         const result = await db.query(
             `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex}
-             RETURNING id, first_name, last_name, phone, language_preference, dietary_preferences`,
+             RETURNING id, first_name, last_name, phone, preferred_language, dietary_preferences`,
             params
         );
         
@@ -680,7 +680,7 @@ const updateProfile = async (req, res, next) => {
                     firstName: result.rows[0].first_name,
                     lastName: result.rows[0].last_name,
                     phone: result.rows[0].phone,
-                    languagePreference: result.rows[0].language_preference,
+                    languagePreference: result.rows[0].preferred_language,
                     dietaryPreferences: result.rows[0].dietary_preferences
                 }
             }
@@ -736,7 +736,7 @@ const disableUser = async (req, res, next) => {
         await db.query(
             `UPDATE users 
              SET is_active = FALSE, 
-                 disabled_until = $1, 
+                 disabled_reason = $1, 
                  disabled_reason = $2,
                  updated_at = CURRENT_TIMESTAMP,
                  updated_by = $3
@@ -783,7 +783,7 @@ const enableUser = async (req, res, next) => {
         await db.query(
             `UPDATE users 
              SET is_active = TRUE, 
-                 disabled_until = NULL, 
+                 disabled_reason = NULL, 
                  disabled_reason = NULL,
                  updated_at = CURRENT_TIMESTAMP,
                  updated_by = $1
@@ -1003,7 +1003,7 @@ const exportUsers = async (req, res, next) => {
         
         let query = `
             SELECT u.email, u.first_name, u.last_name, u.employee_code, u.phone,
-                   u.language_preference, u.is_active, u.created_at, u.last_login_at,
+                   u.preferred_language, u.is_active, u.created_at, u.last_login_at,
                    r.code as role_code,
                    c.name as company_name,
                    d.name as department_name
@@ -1044,7 +1044,7 @@ const exportUsers = async (req, res, next) => {
             role: row.role_code,
             company: row.company_name,
             department: row.department_name,
-            languagePreference: row.language_preference,
+            languagePreference: row.preferred_language,
             isActive: row.is_active,
             createdAt: row.created_at,
             lastLoginAt: row.last_login_at

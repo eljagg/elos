@@ -324,7 +324,7 @@ const register = async (req, res, next) => {
             `INSERT INTO users (
                 email, password_hash, first_name, last_name,
                 company_id, department_id, role_id, employee_code,
-                phone, language_preference,
+                phone, preferred_language,
                 email_verification_token, email_verification_expires,
                 email_verified
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
@@ -389,8 +389,8 @@ const login = async (req, res, next) => {
                 u.company_id, u.department_id, u.role_id,
                 u.is_active, u.failed_login_attempts, u.locked_until,
                 u.must_change_password, u.two_factor_enabled, u.two_factor_secret,
-                u.email_verified, u.language_preference, u.profile_photo_url,
-                u.dietary_preferences, u.disabled_until,
+                u.email_verified, u.preferred_language, u.profile_image_url,
+                u.dietary_preferences, u.disabled_reason,
                 r.code as role_code, r.name as role_name,
                 c.name as company_name, c.logo_url as company_logo,
                 d.name as department_name
@@ -446,7 +446,7 @@ const login = async (req, res, next) => {
         }
         
         // Check if account is temporarily disabled
-        if (user.disabled_until && new Date(user.disabled_until) > new Date()) {
+        if (user.disabled_reason && new Date(user.disabled_reason) > new Date()) {
             logger.security('LOGIN_FAILED', { email: normalizedEmail, reason: 'ACCOUNT_DISABLED', ip: clientIp });
             
             return res.status(403).json({
@@ -546,10 +546,9 @@ const login = async (req, res, next) => {
             `UPDATE users 
              SET failed_login_attempts = 0, 
                  locked_until = NULL,
-                 last_login_at = CURRENT_TIMESTAMP,
-                 last_login_ip = $1
-             WHERE id = $2`,
-            [clientIp, user.id]
+                 last_login_at = CURRENT_TIMESTAMP
+             WHERE id = $1`,
+            [user.id]
         );
         
         // Log successful login
@@ -579,8 +578,8 @@ const login = async (req, res, next) => {
                     companyLogo: user.company_logo,
                     departmentId: user.department_id,
                     departmentName: user.department_name,
-                    languagePreference: user.language_preference,
-                    profilePhoto: user.profile_photo_url,
+                    languagePreference: user.preferred_language,
+                    profilePhoto: user.profile_image_url,
                     dietaryPreferences: user.dietary_preferences || [],
                     mustChangePassword: user.must_change_password,
                     twoFactorEnabled: user.two_factor_enabled,
@@ -658,7 +657,7 @@ const refreshToken = async (req, res, next) => {
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
         
         const sessionResult = await db.query(
-            `SELECT us.*, u.is_active, u.disabled_until
+            `SELECT us.*, u.is_active, u.disabled_reason
              FROM user_sessions us
              JOIN users u ON us.user_id = u.id
              WHERE us.user_id = $1 
@@ -1021,7 +1020,7 @@ const getMe = async (req, res, next) => {
             `SELECT 
                 u.id, u.email, u.first_name, u.last_name,
                 u.company_id, u.department_id, u.employee_code,
-                u.phone, u.language_preference, u.profile_photo_url,
+                u.phone, u.preferred_language, u.profile_image_url,
                 u.dietary_preferences, u.two_factor_enabled, u.email_verified,
                 u.must_change_password, u.created_at,
                 r.code as role_code, r.name as role_name,
@@ -1065,8 +1064,8 @@ const getMe = async (req, res, next) => {
                     departmentId: user.department_id,
                     departmentName: user.department_name,
                     departmentCode: user.department_code,
-                    languagePreference: user.language_preference,
-                    profilePhoto: user.profile_photo_url,
+                    languagePreference: user.preferred_language,
+                    profilePhoto: user.profile_image_url,
                     dietaryPreferences: user.dietary_preferences || [],
                     twoFactorEnabled: user.two_factor_enabled,
                     emailVerified: user.email_verified,
@@ -1356,9 +1355,9 @@ const verify2FA = async (req, res, next) => {
         // Update last login
         await db.query(
             `UPDATE users 
-             SET failed_login_attempts = 0, last_login_at = CURRENT_TIMESTAMP, last_login_ip = $1
+             SET failed_login_attempts = 0, last_login_at = CURRENT_TIMESTAMP
              WHERE id = $2`,
-            [req.ip, user.id]
+            [user.id]
         );
         
         await logAudit('USER_LOGIN_2FA', user.id, {
@@ -1384,7 +1383,7 @@ const verify2FA = async (req, res, next) => {
                     companyLogo: user.company_logo,
                     departmentId: user.department_id,
                     departmentName: user.department_name,
-                    languagePreference: user.language_preference,
+                    languagePreference: user.preferred_language,
                     twoFactorEnabled: true
                 }
             }
