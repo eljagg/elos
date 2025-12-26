@@ -1,20 +1,20 @@
 /**
- * Admin Dashboard - Main Overview
+ * Admin Dashboard - Main Overview with Real Stats
  */
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { adminAPI, reportAPI, userAPI, orderAPI } from '../../services/api';
+import { adminAPI, userAPI, orderAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
-    totalUsers: 0,
-    todayOrders: 0,
-    weekOrders: 0,
-    pendingOrders: 0
+    users: { total_users: 0, active_users: 0, new_today: 0, logged_in_today: 0 },
+    orders: { total_today: 0, pending: 0, preparing: 0, ready: 0, completed: 0, total_value: 0 },
+    companies: { total_companies: 0 }
   });
+  const [recentActivity, setRecentActivity] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
   const [recentUsers, setRecentUsers] = useState([]);
 
@@ -25,22 +25,19 @@ export default function AdminDashboard() {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [usersRes, ordersRes] = await Promise.all([
-        userAPI.getUsers({ limit: 5 }).catch(() => ({ data: { data: { users: [] } } })),
+      const [dashboardRes, usersRes, ordersRes] = await Promise.all([
+        adminAPI.getDashboard().catch(() => null),
+        userAPI.getUsers({ limit: 5, sortBy: 'created_at', sortOrder: 'desc' }).catch(() => ({ data: { data: { users: [] } } })),
         orderAPI.getOrders({ limit: 5 }).catch(() => ({ data: { data: { orders: [] } } }))
       ]);
 
-      const users = usersRes.data?.data?.users || [];
-      const orders = ordersRes.data?.data?.orders || [];
+      if (dashboardRes?.data?.data?.stats) {
+        setStats(dashboardRes.data.data.stats);
+        setRecentActivity(dashboardRes.data.data.stats.recentActivity || []);
+      }
 
-      setRecentUsers(users);
-      setRecentOrders(orders);
-      setStats({
-        totalUsers: users.length,
-        todayOrders: orders.filter(o => o.order_date === new Date().toISOString().split('T')[0]).length,
-        weekOrders: orders.length,
-        pendingOrders: orders.filter(o => o.status === 'pending').length
-      });
+      setRecentUsers(usersRes.data?.data?.users || []);
+      setRecentOrders(ordersRes.data?.data?.orders || []);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
@@ -48,12 +45,13 @@ export default function AdminDashboard() {
     }
   };
 
-  const StatCard = ({ title, value, icon, color, link }) => (
+  const StatCard = ({ title, value, subtitle, icon, color, link }) => (
     <Link to={link} className={`bg-white rounded-xl shadow-sm p-6 border-l-4 ${color} hover:shadow-md transition-shadow`}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-500 font-medium">{title}</p>
           <p className="text-3xl font-bold text-gray-800 mt-1">{value}</p>
+          {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
         </div>
         <div className="text-4xl opacity-20">{icon}</div>
       </div>
@@ -85,16 +83,42 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
           <p className="text-gray-500">Welcome back! Here's what's happening today.</p>
         </div>
-        <button onClick={loadDashboardData} className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg">
+        <button onClick={loadDashboardData} className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-2">
           🔄 Refresh
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Users" value={stats.totalUsers} icon="👥" color="border-blue-500" link="/admin/users" />
-        <StatCard title="Today's Orders" value={stats.todayOrders} icon="🍽️" color="border-green-500" link="/admin/orders" />
-        <StatCard title="Week's Orders" value={stats.weekOrders} icon="📊" color="border-purple-500" link="/admin/reports" />
-        <StatCard title="Pending Orders" value={stats.pendingOrders} icon="⏳" color="border-orange-500" link="/admin/orders" />
+        <StatCard title="Total Users" value={stats.users?.total_users || 0} subtitle={`${stats.users?.active_users || 0} active`} icon="👥" color="border-blue-500" link="/admin/users" />
+        <StatCard title="Today's Orders" value={stats.orders?.total_today || 0} subtitle={`$${parseFloat(stats.orders?.total_value || 0).toFixed(2)} revenue`} icon="🍽️" color="border-green-500" link="/admin/orders" />
+        <StatCard title="Pending Orders" value={stats.orders?.pending || 0} subtitle={`${stats.orders?.preparing || 0} preparing`} icon="⏳" color="border-orange-500" link="/admin/orders" />
+        <StatCard title="Companies" value={stats.companies?.total_companies || 0} icon="🏢" color="border-purple-500" link="/admin/companies" />
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Today's Order Status</h2>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="text-center p-4 bg-yellow-50 rounded-lg">
+            <p className="text-2xl font-bold text-yellow-600">{stats.orders?.pending || 0}</p>
+            <p className="text-sm text-yellow-700">Pending</p>
+          </div>
+          <div className="text-center p-4 bg-blue-50 rounded-lg">
+            <p className="text-2xl font-bold text-blue-600">{stats.orders?.preparing || 0}</p>
+            <p className="text-sm text-blue-700">Preparing</p>
+          </div>
+          <div className="text-center p-4 bg-purple-50 rounded-lg">
+            <p className="text-2xl font-bold text-purple-600">{stats.orders?.ready || 0}</p>
+            <p className="text-sm text-purple-700">Ready</p>
+          </div>
+          <div className="text-center p-4 bg-green-50 rounded-lg">
+            <p className="text-2xl font-bold text-green-600">{stats.orders?.completed || 0}</p>
+            <p className="text-sm text-green-700">Completed</p>
+          </div>
+          <div className="text-center p-4 bg-gray-50 rounded-lg">
+            <p className="text-2xl font-bold text-gray-600">${parseFloat(stats.orders?.total_value || 0).toFixed(2)}</p>
+            <p className="text-sm text-gray-700">Revenue</p>
+          </div>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-6">
@@ -119,14 +143,16 @@ export default function AdminDashboard() {
                 <div key={order.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-medium text-gray-800">{order.order_number || `#${order.id?.slice(0, 8)}`}</p>
-                    <p className="text-sm text-gray-500">{order.meal_type}</p>
+                    <p className="text-sm text-gray-500">{order.first_name} {order.last_name} • {order.meal_type}</p>
                   </div>
                   <div className="text-right">
                     <span className={`px-2 py-1 text-xs rounded-full ${
                       order.status === 'completed' ? 'bg-green-100 text-green-800' :
                       order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      order.status === 'preparing' ? 'bg-blue-100 text-blue-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>{order.status}</span>
+                    <p className="text-sm text-gray-500 mt-1">${parseFloat(order.total || 0).toFixed(2)}</p>
                   </div>
                 </div>
               ))}
@@ -155,7 +181,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <span className={`px-2 py-1 text-xs rounded-full ${user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {user.is_active ? 'Active' : 'Inactive'}
+                    {user.role_name || 'Employee'}
                   </span>
                 </div>
               ))}
@@ -166,29 +192,44 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {recentActivity.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Recent Activity</h2>
+          <div className="space-y-3">
+            {recentActivity.map((activity, index) => (
+              <div key={index} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  activity.action?.includes('LOGIN') ? 'bg-blue-100 text-blue-600' :
+                  activity.action?.includes('CREATE') ? 'bg-green-100 text-green-600' :
+                  'bg-gray-100 text-gray-600'
+                }`}>
+                  {activity.action?.includes('LOGIN') ? '🔑' : activity.action?.includes('CREATE') ? '➕' : '📋'}
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-800">{activity.action?.replace(/_/g, ' ')}</p>
+                  <p className="text-sm text-gray-500">{activity.user_name || 'System'}</p>
+                </div>
+                <p className="text-sm text-gray-400">{new Date(activity.created_at).toLocaleTimeString()}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-sm p-6">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">System Status</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex items-center p-4 bg-green-50 rounded-lg">
             <div className="w-3 h-3 bg-green-500 rounded-full mr-3 animate-pulse"></div>
-            <div>
-              <p className="font-medium text-green-800">Database</p>
-              <p className="text-sm text-green-600">Connected</p>
-            </div>
+            <div><p className="font-medium text-green-800">Database</p><p className="text-sm text-green-600">Connected</p></div>
           </div>
           <div className="flex items-center p-4 bg-green-50 rounded-lg">
             <div className="w-3 h-3 bg-green-500 rounded-full mr-3 animate-pulse"></div>
-            <div>
-              <p className="font-medium text-green-800">API Server</p>
-              <p className="text-sm text-green-600">Running</p>
-            </div>
+            <div><p className="font-medium text-green-800">API Server</p><p className="text-sm text-green-600">Running</p></div>
           </div>
           <div className="flex items-center p-4 bg-yellow-50 rounded-lg">
             <div className="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
-            <div>
-              <p className="font-medium text-yellow-800">Email Service</p>
-              <p className="text-sm text-yellow-600">Not configured</p>
-            </div>
+            <div><p className="font-medium text-yellow-800">Email Service</p><p className="text-sm text-yellow-600">Not configured</p></div>
           </div>
         </div>
       </div>
