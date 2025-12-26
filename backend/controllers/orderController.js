@@ -649,6 +649,7 @@ const getOrders = async (req, res, next) => {
         });
         
     } catch (error) {
+        console.error("ORDERS ERROR:", error.message, error.code);
         next(error);
     }
 };
