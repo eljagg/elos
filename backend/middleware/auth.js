@@ -117,7 +117,7 @@ const authenticate = async (req, res, next) => {
         
         // Step 3: Check if user still exists and is active
         const userResult = await db.query(
-            `SELECT u.id, u.is_active, u.locked_until, u.disabled_until,
+            `SELECT u.id, u.is_active, u.locked_until, u.disabled_reason,
                     r.code as role_code
              FROM users u
              JOIN roles r ON u.role_id = r.id
@@ -149,7 +149,7 @@ const authenticate = async (req, res, next) => {
         }
         
         // Check if account is temporarily disabled
-        if (user.disabled_until && new Date(user.disabled_until) > new Date()) {
+        if (user.disabled_reason) {
             return res.status(403).json({
                 success: false,
                 error: {

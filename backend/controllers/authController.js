@@ -199,7 +199,7 @@ const saveSession = async (userId, refreshToken, metadata = {}) => {
     
     const result = await db.query(
         `INSERT INTO user_sessions (
-            user_id, refresh_token, device_info, ip_address, expires_at
+            user_id, refresh_token, user_agent, ip_address, expires_at
         ) VALUES ($1, $2, $3, $4, $5)
         RETURNING id`,
         [userId, refreshToken, deviceInfo, metadata.ip, expiresAt]
@@ -219,7 +219,7 @@ const saveSession = async (userId, refreshToken, metadata = {}) => {
 const logAudit = async (action, userId, details, req) => {
     try {
         await db.query(
-            `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address, device_info)
+            `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address, user_agent)
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             [
                 userId,
@@ -1088,7 +1088,7 @@ const getSessions = async (req, res, next) => {
         const userId = req.user.userId;
         
         const result = await db.query(
-            `SELECT id, device_info, ip_address, created_at
+            `SELECT id, user_agent, ip_address, created_at
              FROM user_sessions
              WHERE user_id = $1 AND is_valid = TRUE AND expires_at > CURRENT_TIMESTAMP
              ORDER BY created_at DESC`,
@@ -1099,11 +1099,10 @@ const getSessions = async (req, res, next) => {
         const currentToken = req.headers.authorization?.split(' ')[1];
         
         const sessions = result.rows.map(session => {
-            const deviceInfo = session.device_info || {};
             return {
                 id: session.id,
-                device: deviceInfo.deviceType || 'Unknown',
-                userAgent: deviceInfo.userAgent || 'Unknown',
+                device: "Browser",
+                userAgent: session.user_agent || "Unknown",
                 ipAddress: session.ip_address,
                 createdAt: session.created_at,
                 current: false
