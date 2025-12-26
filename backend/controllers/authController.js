@@ -199,7 +199,7 @@ const saveSession = async (userId, refreshToken, metadata = {}) => {
     
     const result = await db.query(
         `INSERT INTO user_sessions (
-            user_id, refresh_token, user_agent, ip_address, expires_at
+            user_id, refresh_token, device_info, ip_address, expires_at
         ) VALUES ($1, $2, $3, $4, $5)
         RETURNING id`,
         [userId, refreshToken, deviceInfo, metadata.ip, expiresAt]
@@ -1088,7 +1088,7 @@ const getSessions = async (req, res, next) => {
         const userId = req.user.userId;
         
         const result = await db.query(
-            `SELECT id, user_agent, ip_address, created_at
+            `SELECT id, device_info, ip_address, created_at
              FROM user_sessions
              WHERE user_id = $1 AND is_valid = TRUE AND expires_at > CURRENT_TIMESTAMP
              ORDER BY created_at DESC`,
@@ -1102,7 +1102,7 @@ const getSessions = async (req, res, next) => {
             return {
                 id: session.id,
                 device: "Browser",
-                userAgent: session.user_agent || "Unknown",
+                userAgent: session.device_info || "Unknown",
                 ipAddress: session.ip_address,
                 createdAt: session.created_at,
                 current: false
