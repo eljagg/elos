@@ -165,7 +165,7 @@ const getUsers = async (req, res, next) => {
                 u.email ILIKE $${paramIndex} OR
                 u.employee_code ILIKE $${paramIndex}
             )`;
-            params.push(`%${search}%`);
+           params.push(`%${search}%`);
             paramIndex++;
         }
         
