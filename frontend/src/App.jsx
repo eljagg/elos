@@ -15,6 +15,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import GuestLoginPage from './pages/GuestLoginPage';
+import DeliveryDashboard from './pages/delivery/Dashboard';
+
 
 // Dashboard pages
 import EmployeeDashboard from './pages/employee/Dashboard';
@@ -78,6 +80,8 @@ const DashboardRouter = () => {
       return <KitchenDashboard />;
     case 'RECEPTIONIST':
       return <ReceptionistDashboard />;
+    case 'DELIVERY_PERSON':
+      return <DeliveryDashboard />;
     default:
       return <EmployeeDashboard />;
   }
@@ -138,6 +142,13 @@ function App() {
           <Route path="hr/*" element={
             <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HR_ADMIN']}>
               <HRDashboard />
+            </ProtectedRoute>
+          } />
+          
+          {/* Delivery routes */}
+          <Route path="delivery/*" element={
+            <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'DELIVERY_PERSON']}>
+              <DeliveryDashboard />
             </ProtectedRoute>
           } />
           

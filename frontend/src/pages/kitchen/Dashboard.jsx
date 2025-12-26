@@ -12,7 +12,8 @@ export default function KitchenDashboard() {
   const [issues, setIssues] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [cafeterias, setCafeterias] = useState([]);
-  const [stats, setStats] = useState({ pendingOrders: 0, preparingOrders: 0, readyOrders: 0, completedToday: 0, openIssues: 0 });
+  const [stats, setStats] = useState({ pendingOrders: 0, preparingOrders: 0, readyOrders: 0, completedToday: 0, openIssues: 0, deliveryUpdates: 0 });
+  const [deliveryNotifications, setDeliveryNotifications] = useState([]);
   const [filters, setFilters] = useState({ status: 'pending', company: '', department: '', date: new Date().toISOString().split('T')[0] });
   const [prepList, setPrepList] = useState([]);
 
@@ -64,12 +65,21 @@ export default function KitchenDashboard() {
       const templates = JSON.parse(localStorage.getItem('menuTemplates') || '[]');
       setSavedTemplates(templates);
 
+      // Load delivery notifications
+      const deliveryTracking = JSON.parse(localStorage.getItem('deliveryTracking') || '{}');
+      const recentDeliveries = Object.entries(deliveryTracking)
+        .filter(([_, t]) => t.deliveryTime && new Date(t.deliveryTime).toDateString() === new Date().toDateString())
+        .map(([orderId, t]) => ({ orderId, ...t }))
+        .sort((a, b) => new Date(b.deliveryTime) - new Date(a.deliveryTime));
+      setDeliveryNotifications(recentDeliveries);
+
       setStats({
         pendingOrders: ordersList.filter(o => o.status === 'pending').length,
         preparingOrders: ordersList.filter(o => o.status === 'preparing').length,
         readyOrders: ordersList.filter(o => o.status === 'ready').length,
         completedToday: ordersList.filter(o => o.status === 'completed').length,
-        openIssues: issuesList.filter(i => i.status !== 'resolved').length
+        openIssues: issuesList.filter(i => i.status !== 'resolved').length,
+        deliveryUpdates: recentDeliveries.length
       });
     } catch (error) { console.error('Failed to load data:', error); }
     finally { setLoading(false); }
@@ -292,6 +302,7 @@ export default function KitchenDashboard() {
           {[
             { id: 'orders', label: '📦 Orders' },
             { id: 'prep', label: '📋 Prep List' },
+            { id: 'deliveries', label: '🚚 Deliveries' },
             { id: 'menus', label: '🍽️ Menus' },
             { id: 'items', label: '🥗 Menu Items' },
             { id: 'templates', label: '📑 Templates' },
@@ -380,6 +391,43 @@ export default function KitchenDashboard() {
                 </div>
               ) : (
                 <p className="text-gray-500 text-center py-12">No items to prepare</p>
+              )}
+            </div>
+          )}
+
+          {/* Deliveries Tab */}
+          {activeTab === 'deliveries' && (
+            <div>
+              <h3 className="font-semibold mb-4">Today's Delivery Updates</h3>
+              {deliveryNotifications.length > 0 ? (
+                <div className="space-y-3">
+                  {deliveryNotifications.map((delivery, idx) => (
+                    <div key={idx} className={`border rounded-lg p-4 ${delivery.confirmed ? 'bg-green-50 border-green-200' : 'bg-cyan-50 border-cyan-200'}`}>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-mono font-bold">Order #{delivery.orderId?.slice(0,8)}</p>
+                          <p className="text-sm text-gray-600">{delivery.companyName || 'Customer'}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className={`px-2 py-1 text-xs rounded-full ${delivery.confirmed ? 'bg-green-200 text-green-800' : 'bg-cyan-200 text-cyan-800'}`}>
+                            {delivery.confirmed ? '✓ Confirmed' : '🚚 Delivered'}
+                          </span>
+                          <p className="text-xs text-gray-500 mt-1">{delivery.deliveryTime ? new Date(delivery.deliveryTime).toLocaleTimeString() : 'N/A'}</p>
+                        </div>
+                      </div>
+                      {delivery.notes && <p className="text-sm text-gray-600 mt-2">📝 {delivery.notes}</p>}
+                      {delivery.confirmed && delivery.confirmedAt && (
+                        <p className="text-xs text-green-600 mt-2">Confirmed at {new Date(delivery.confirmedAt).toLocaleTimeString()} by {delivery.confirmedBy}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-4xl mb-2">🚚</p>
+                  <p className="text-gray-500">No delivery updates today</p>
+                  <p className="text-sm text-gray-400 mt-1">Updates will appear when orders are delivered</p>
+                </div>
               )}
             </div>
           )}

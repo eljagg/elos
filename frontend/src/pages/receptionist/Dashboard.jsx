@@ -12,7 +12,8 @@ export default function ReceptionistDashboard() {
   const [companies, setCompanies] = useState([]);
   const [cafeterias, setCafeterias] = useState([]);
   const [issues, setIssues] = useState([]);
-  const [stats, setStats] = useState({ activeCodes: 0, usedToday: 0, totalOrders: 0, openIssues: 0 });
+  const [stats, setStats] = useState({ activeCodes: 0, usedToday: 0, totalOrders: 0, openIssues: 0, pendingDeliveries: 0 });
+  const [pendingDeliveries, setPendingDeliveries] = useState([]);
   const [filters, setFilters] = useState({ company: '', department: '', date: new Date().toISOString().split('T')[0] });
 
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -57,11 +58,16 @@ export default function ReceptionistDashboard() {
         cafeteria: c.cafeteria_name
       })));
 
+      // Load pending delivery confirmations
+      const pendingConf = JSON.parse(localStorage.getItem('pendingDeliveryConfirmations') || '[]');
+      setPendingDeliveries(pendingConf);
+
       setStats({
         activeCodes: codes.filter(c => !c.is_used && c.status === 'active').length,
         usedToday: codes.filter(c => c.is_used && c.used_at && new Date(c.used_at).toDateString() === new Date().toDateString()).length,
         totalOrders: ordersList.length,
-        openIssues: issuesList.filter(i => i.status !== 'resolved').length
+        openIssues: issuesList.filter(i => i.status !== 'resolved').length,
+        pendingDeliveries: pendingConf.length
       });
     } catch (error) { console.error('Failed to load data:', error); }
     finally { setLoading(false); }
@@ -135,6 +141,34 @@ export default function ReceptionistDashboard() {
     catch { toast.error('Failed'); }
   };
 
+  const handleConfirmDelivery = async (delivery) => {
+    try {
+      // Update delivery tracking
+      const tracking = JSON.parse(localStorage.getItem('deliveryTracking') || '{}');
+      if (tracking[delivery.orderId]) {
+        tracking[delivery.orderId].confirmed = true;
+        tracking[delivery.orderId].confirmedAt = new Date().toISOString();
+        tracking[delivery.orderId].confirmedBy = 'Receptionist';
+        localStorage.setItem('deliveryTracking', JSON.stringify(tracking));
+      }
+
+      // Remove from pending confirmations
+      const pending = JSON.parse(localStorage.getItem('pendingDeliveryConfirmations') || '[]');
+      const updated = pending.filter(p => p.orderId !== delivery.orderId);
+      localStorage.setItem('pendingDeliveryConfirmations', JSON.stringify(updated));
+
+      // Notify kitchen that delivery is confirmed
+      await messageAPI.sendMessage({
+        recipientRole: 'KITCHEN_HEAD',
+        subject: `📦 Delivery Confirmed - Order #${delivery.orderNumber}`,
+        message: `Order #${delivery.orderNumber} delivery has been confirmed by reception. Company: ${delivery.companyName}`
+      }).catch(() => {});
+
+      toast.success('Delivery confirmed');
+      loadData();
+    } catch { toast.error('Failed to confirm'); }
+  };
+
   const filteredOrders = orders.filter(o => {
     if (filters.company && o.company_id !== filters.company) return false;
     if (filters.date && o.order_date !== filters.date) return false;
@@ -165,6 +199,7 @@ export default function ReceptionistDashboard() {
         <div className="bg-blue-50 rounded-xl p-4 border-l-4 border-blue-500"><p className="text-sm text-blue-600">Active Codes</p><p className="text-2xl font-bold text-blue-700">{stats.activeCodes}</p></div>
         <div className="bg-green-50 rounded-xl p-4 border-l-4 border-green-500"><p className="text-sm text-green-600">Used Today</p><p className="text-2xl font-bold text-green-700">{stats.usedToday}</p></div>
         <div className="bg-purple-50 rounded-xl p-4 border-l-4 border-purple-500"><p className="text-sm text-purple-600">Total Orders</p><p className="text-2xl font-bold text-purple-700">{stats.totalOrders}</p></div>
+        <div className="bg-cyan-50 rounded-xl p-4 border-l-4 border-cyan-500"><p className="text-sm text-cyan-600">Pending Deliveries</p><p className="text-2xl font-bold text-cyan-700">{stats.pendingDeliveries}</p></div>
         <div className="bg-orange-50 rounded-xl p-4 border-l-4 border-orange-500"><p className="text-sm text-orange-600">Open Issues</p><p className="text-2xl font-bold text-orange-700">{stats.openIssues}</p></div>
       </div>
 
@@ -172,6 +207,7 @@ export default function ReceptionistDashboard() {
         <div className="border-b flex overflow-x-auto">
           {[
             { id: 'codes', label: '🎟️ Guest Codes' },
+            { id: 'deliveries', label: '📦 Deliveries' },
             { id: 'notifications', label: '🔔 Code Usage Log' },
             { id: 'menus', label: '📋 Menus' },
             { id: 'orders', label: '📦 Orders' },
@@ -206,6 +242,39 @@ export default function ReceptionistDashboard() {
                 </div>
               ) : (
                 <div className="text-center py-12"><p className="text-4xl mb-2">🎟️</p><p className="text-gray-500">No active codes</p><button onClick={() => setShowGenerateModal(true)} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg">Generate First Code</button></div>
+              )}
+            </div>
+          )}
+
+          {/* Deliveries Tab */}
+          {activeTab === 'deliveries' && (
+            <div>
+              <h3 className="font-semibold mb-4">Pending Delivery Confirmations</h3>
+              {pendingDeliveries.length > 0 ? (
+                <div className="space-y-4">
+                  {pendingDeliveries.map((delivery, idx) => (
+                    <div key={idx} className="border-2 border-cyan-200 bg-cyan-50 rounded-xl p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <p className="font-mono font-bold text-lg">Order #{delivery.orderNumber}</p>
+                          <p className="text-sm text-gray-600">{delivery.companyName || 'Customer'}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="px-3 py-1 bg-cyan-200 text-cyan-800 rounded-full text-sm">Awaiting Confirmation</span>
+                          <p className="text-xs text-gray-500 mt-1">Delivered: {delivery.deliveryTime ? new Date(delivery.deliveryTime).toLocaleTimeString() : 'N/A'}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 mb-3 text-sm">
+                        <div><p className="text-gray-500">Delivery Person</p><p className="font-medium">🚗 {delivery.deliveryPersonPlate || 'N/A'}</p></div>
+                        <div><p className="text-gray-500">Time</p><p className="font-medium">{delivery.deliveryTime ? new Date(delivery.deliveryTime).toLocaleString() : 'N/A'}</p></div>
+                      </div>
+                      {delivery.notes && <div className="bg-white border border-cyan-200 rounded p-2 mb-3"><p className="text-xs font-semibold text-cyan-800">📝 Notes:</p><p className="text-sm">{delivery.notes}</p></div>}
+                      <button onClick={() => handleConfirmDelivery(delivery)} className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">✅ Confirm Delivery Received</button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12"><p className="text-4xl mb-2">📦</p><p className="text-gray-500">No deliveries awaiting confirmation</p></div>
               )}
             </div>
           )}
