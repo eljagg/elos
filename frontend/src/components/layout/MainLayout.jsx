@@ -1,110 +1,224 @@
+/**
+ * MainLayout - Themed layout with sidebar navigation
+ */
+
 import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 const MainLayout = () => {
-  const { t, i18n } = useTranslation();
   const { user, logout } = useAuth();
+  const { colors } = useTheme();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const handleLogout = async () => {
-    await logout();
+  const handleLogout = () => {
+    logout();
     navigate('/login');
   };
 
-  // Base navigation items for all users
-  const baseNavItems = [
-    { to: '/dashboard', icon: '🏠', label: t('nav.dashboard') || 'Dashboard' },
-    { to: '/menu', icon: '📋', label: t('nav.menu') || 'Menu' },
-    { to: '/orders', icon: '📦', label: t('nav.orderHistory') || 'Order History' },
-  ];
-
-  // Admin navigation items
-  const adminNavItems = [
-    { to: '/admin', icon: '🏠', label: 'Dashboard' },
-    { to: '/admin/users', icon: '👥', label: 'Users' },
-    { to: '/admin/menus', icon: '📋', label: 'Menus' },
-    { to: '/admin/orders', icon: '📦', label: 'Orders' },
-    { to: '/admin/companies', icon: '🏢', label: 'Companies' },
-    { to: '/admin/reports', icon: '📈', label: 'Reports' },
-    { to: '/admin/settings', icon: '⚙️', label: 'Settings' },
-  ];
-
-  // Kitchen navigation items
-  const kitchenNavItems = [
-    { to: '/dashboard', icon: '🏠', label: 'Dashboard' },
-    { to: '/kitchen/orders', icon: '📦', label: 'Today\'s Orders' },
-    { to: '/kitchen/prep', icon: '👨‍🍳', label: 'Prep List' },
-  ];
-
-  // HR navigation items
-  const hrNavItems = [
-    { to: '/dashboard', icon: '🏠', label: 'Dashboard' },
-    { to: '/hr/employees', icon: '👥', label: 'Employees' },
-    { to: '/hr/feedback', icon: '💬', label: 'Feedback' },
-  ];
-
-  // Select nav items based on role
+  // Navigation items based on role
   const getNavItems = () => {
+    const baseItems = [
+      { path: '/dashboard', icon: '🏠', label: 'Dashboard' },
+    ];
+
     switch (user?.role) {
       case 'SUPER_ADMIN':
-        return adminNavItems;
+        return [
+          ...baseItems,
+          { path: '/admin/users', icon: '👥', label: 'Users' },
+          { path: '/admin/companies', icon: '🏢', label: 'Companies' },
+          { path: '/admin/orders', icon: '📦', label: 'Orders' },
+          { path: '/admin/menus', icon: '🍽️', label: 'Menus' },
+          { path: '/admin/reports', icon: '📊', label: 'Reports' },
+          { path: '/admin/settings', icon: '⚙️', label: 'Settings' },
+        ];
       case 'HR_ADMIN':
-        return hrNavItems;
+        return [
+          ...baseItems,
+          { path: '/hr', icon: '👥', label: 'Employees' },
+          { path: '/hr/feedback', icon: '💬', label: 'Feedback' },
+          { path: '/hr/reports', icon: '📊', label: 'Reports' },
+        ];
       case 'KITCHEN_HEAD':
       case 'KITCHEN_SOUS':
       case 'KITCHEN_STAFF':
-        return kitchenNavItems;
+        return [
+          ...baseItems,
+          { path: '/kitchen/orders', icon: '📦', label: 'Orders' },
+          { path: '/kitchen/menus', icon: '🍽️', label: 'Menus' },
+          { path: '/kitchen/prep', icon: '📋', label: 'Prep List' },
+        ];
+      case 'RECEPTIONIST':
+        return [
+          ...baseItems,
+          { path: '/dashboard', icon: '🎟️', label: 'Guest Codes' },
+          { path: '/dashboard', icon: '📦', label: 'Deliveries' },
+          { path: '/dashboard', icon: '📊', label: 'Reports' },
+        ];
+      case 'DELIVERY_PERSON':
+        return [
+          ...baseItems,
+          { path: '/delivery', icon: '🚚', label: 'Deliveries' },
+          { path: '/delivery', icon: '📜', label: 'History' },
+        ];
       default:
-        return baseNavItems;
+        return [
+          ...baseItems,
+          { path: '/menu', icon: '🍽️', label: 'Menu' },
+          { path: '/orders', icon: '📦', label: 'My Orders' },
+        ];
     }
   };
 
   const navItems = getNavItems();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden p-2">☰</button>
-            <NavLink to="/dashboard" className="flex items-center gap-2">
-              <span className="text-2xl">🍽️</span>
-              <span className="font-bold text-xl text-blue-600">ELOS</span>
-            </NavLink>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
-              <div className="text-sm font-medium">{user?.firstName} {user?.lastName}</div>
-              <div className="text-xs text-gray-500">{user?.roleName || user?.role}</div>
+    <div className={`min-h-screen ${colors.bgPrimary} flex`}>
+      {/* Sidebar */}
+      <aside className={`${colors.sidebar} ${sidebarCollapsed ? 'w-20' : 'w-64'} min-h-screen flex flex-col transition-all duration-300 shadow-xl`}>
+        {/* Logo */}
+        <div className="p-4 flex items-center justify-between border-b border-white/10">
+          {!sidebarCollapsed && (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                <span className="text-white font-bold text-lg">E</span>
+              </div>
+              <div>
+                <h1 className="text-white font-bold text-xl">ELOS</h1>
+                <p className="text-white/60 text-xs">Meal Ordering</p>
+              </div>
             </div>
-            <button onClick={handleLogout} className="p-2 hover:bg-gray-100 rounded-lg" title="Logout">🚪</button>
-          </div>
+          )}
+          {sidebarCollapsed && (
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mx-auto">
+              <span className="text-white font-bold text-lg">E</span>
+            </div>
+          )}
+          <button 
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="text-white/60 hover:text-white p-1 rounded transition-colors"
+          >
+            {sidebarCollapsed ? '→' : '←'}
+          </button>
         </div>
-      </header>
-      <div className="flex">
-        <aside className={`fixed lg:sticky top-[57px] h-[calc(100vh-57px)] w-64 bg-white border-r transform transition-transform z-30
-                         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-          <nav className="p-4 space-y-1">
-            {navItems.map(item => (
-              <NavLink key={item.to} to={item.to} onClick={() => setSidebarOpen(false)}
-                       className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}>
-                <span className="text-lg">{item.icon}</span><span>{item.label}</span>
-              </NavLink>
-            ))}
-          </nav>
-          
-          {/* Role badge at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-gray-50">
-            <div className="text-xs text-gray-500 text-center">
-              Logged in as <span className="font-medium text-gray-700">{user?.roleName || user?.role}</span>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-2">
+          {navItems.map((item, index) => (
+            <NavLink
+              key={index}
+              to={item.path}
+              className={({ isActive }) => `
+                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
+                ${isActive 
+                  ? `${colors.sidebarItemActive} ${colors.sidebarTextActive} shadow-lg` 
+                  : `${colors.sidebarText} ${colors.sidebarItem}`
+                }
+              `}
+            >
+              <span className="text-xl">{item.icon}</span>
+              {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* User Section */}
+        <div className="p-4 border-t border-white/10">
+          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
+            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white font-semibold">
+              {user?.firstName?.[0]}{user?.lastName?.[0]}
+            </div>
+            {!sidebarCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-medium truncate">{user?.firstName} {user?.lastName}</p>
+                <p className="text-white/60 text-xs truncate">{user?.role?.replace('_', ' ')}</p>
+              </div>
+            )}
+          </div>
+          {!sidebarCollapsed && (
+            <button
+              onClick={handleLogout}
+              className="w-full mt-3 px-4 py-2 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+            >
+              <span>🚪</span>
+              <span>Logout</span>
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* Top Header */}
+        <header className={`${colors.bgCard} shadow-sm border-b ${colors.border} px-6 py-4`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className={`text-lg font-semibold ${colors.textPrimary}`}>
+                {user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 
+                 user?.role === 'HR_ADMIN' ? 'HR Dashboard' :
+                 user?.role?.includes('KITCHEN') ? 'Kitchen' :
+                 user?.role === 'RECEPTIONIST' ? 'Reception' :
+                 user?.role === 'DELIVERY_PERSON' ? 'Delivery' :
+                 'Employee'} Portal
+              </h2>
+              <p className={`text-sm ${colors.textMuted}`}>
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              {/* Notifications */}
+              <button className={`relative p-2 ${colors.bgSecondary} rounded-lg ${colors.bgHover} transition-colors`}>
+                <span className="text-xl">🔔</span>
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+              </button>
+              
+              {/* User Menu */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className={`flex items-center gap-2 px-3 py-2 ${colors.bgSecondary} rounded-lg ${colors.bgHover} transition-colors`}
+                >
+                  <div className={`w-8 h-8 ${colors.accent} rounded-full flex items-center justify-center text-white text-sm font-semibold`}>
+                    {user?.firstName?.[0]}{user?.lastName?.[0]}
+                  </div>
+                  <span className={`${colors.textPrimary} font-medium hidden md:block`}>{user?.firstName}</span>
+                  <span className={colors.textMuted}>▼</span>
+                </button>
+                
+                {showUserMenu && (
+                  <div className={`absolute right-0 mt-2 w-48 ${colors.bgCard} rounded-xl shadow-lg border ${colors.border} py-2 z-50`}>
+                    <a href="#" className={`block px-4 py-2 ${colors.textSecondary} ${colors.bgHover}`}>👤 Profile</a>
+                    <a href="#" className={`block px-4 py-2 ${colors.textSecondary} ${colors.bgHover}`}>⚙️ Settings</a>
+                    <hr className={`my-2 ${colors.border}`} />
+                    <button 
+                      onClick={handleLogout}
+                      className={`w-full text-left px-4 py-2 text-red-600 ${colors.bgHover}`}
+                    >
+                      🚪 Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </aside>
-        {sidebarOpen && <div className="fixed inset-0 bg-black/20 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />}
-        <main className="flex-1 p-4 lg:p-8 min-h-[calc(100vh-57px)]"><Outlet /></main>
+        </header>
+
+        {/* Page Content */}
+        <main className={`flex-1 p-6 ${colors.bgPrimary}`}>
+          <Outlet />
+        </main>
+
+        {/* Footer */}
+        <footer className={`${colors.bgCard} border-t ${colors.border} px-6 py-3`}>
+          <p className={`text-center text-sm ${colors.textMuted}`}>
+            © 2024 ELOS - Employee Lunch Ordering System
+          </p>
+        </footer>
       </div>
     </div>
   );

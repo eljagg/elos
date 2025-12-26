@@ -9,6 +9,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 // Pages
 import LoginPage from './pages/LoginPage';
@@ -90,119 +91,121 @@ const DashboardRouter = () => {
 function App() {
   return (
     <AuthProvider>
-      <Toaster 
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-          success: {
+      <ThemeProvider>
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
             style: {
-              background: '#10b981',
+              background: '#363636',
+              color: '#fff',
             },
-          },
-          error: {
-            style: {
-              background: '#ef4444',
+            success: {
+              style: {
+                background: '#10b981',
+              },
             },
-          },
-        }}
-      />
-      
-      <Routes>
-        {/* Public routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/guest" element={<GuestLoginPage />} />
+            error: {
+              style: {
+                background: '#ef4444',
+              },
+            },
+          }}
+        />
         
-        {/* Protected routes */}
-        <Route path="/" element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }>
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardRouter />} />
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/guest" element={<GuestLoginPage />} />
           
-          {/* Employee routes */}
-          <Route path="menu" element={<MenuPage />} />
-          <Route path="orders" element={<OrderHistoryPage />} />
+          {/* Protected routes */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardRouter />} />
+            
+            {/* Employee routes */}
+            <Route path="menu" element={<MenuPage />} />
+            <Route path="orders" element={<OrderHistoryPage />} />
+            
+            {/* Kitchen routes */}
+            <Route path="kitchen/*" element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'KITCHEN_HEAD', 'KITCHEN_SOUS', 'KITCHEN_STAFF']}>
+                <KitchenDashboard />
+              </ProtectedRoute>
+            } />
+            
+            {/* HR routes */}
+            <Route path="hr/*" element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HR_ADMIN']}>
+                <HRDashboard />
+              </ProtectedRoute>
+            } />
+            
+            {/* Delivery routes */}
+            <Route path="delivery/*" element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'DELIVERY_PERSON']}>
+                <DeliveryDashboard />
+              </ProtectedRoute>
+            } />
+            
+            {/* Admin routes */}
+            <Route path="admin" element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/users" element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <UserManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/users/new" element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <UserForm />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/users/:id" element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <UserForm />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/menus" element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <MenuManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/companies" element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <CompanySettings />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/orders" element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <OrderManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/reports" element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <Reports />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/settings" element={
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                <SystemSettings />
+              </ProtectedRoute>
+            } />
+          </Route>
           
-          {/* Kitchen routes */}
-          <Route path="kitchen/*" element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'KITCHEN_HEAD', 'KITCHEN_SOUS', 'KITCHEN_STAFF']}>
-              <KitchenDashboard />
-            </ProtectedRoute>
-          } />
-          
-          {/* HR routes */}
-          <Route path="hr/*" element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HR_ADMIN']}>
-              <HRDashboard />
-            </ProtectedRoute>
-          } />
-          
-          {/* Delivery routes */}
-          <Route path="delivery/*" element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'DELIVERY_PERSON']}>
-              <DeliveryDashboard />
-            </ProtectedRoute>
-          } />
-          
-          {/* Admin routes */}
-          <Route path="admin" element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="admin/users" element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-              <UserManagement />
-            </ProtectedRoute>
-          } />
-          <Route path="admin/users/new" element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-              <UserForm />
-            </ProtectedRoute>
-          } />
-          <Route path="admin/users/:id" element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-              <UserForm />
-            </ProtectedRoute>
-          } />
-          <Route path="admin/menus" element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-              <MenuManagement />
-            </ProtectedRoute>
-          } />
-          <Route path="admin/companies" element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-              <CompanySettings />
-            </ProtectedRoute>
-          } />
-          <Route path="admin/orders" element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-              <OrderManagement />
-            </ProtectedRoute>
-          } />
-          <Route path="admin/reports" element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-              <Reports />
-            </ProtectedRoute>
-          } />
-          <Route path="admin/settings" element={
-            <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-              <SystemSettings />
-            </ProtectedRoute>
-          } />
-        </Route>
-        
-        {/* 404 */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+          {/* 404 */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </ThemeProvider>
     </AuthProvider>
   );
 }
