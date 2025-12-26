@@ -624,9 +624,13 @@ const getOrders = async (req, res, next) => {
         }
         
         // Count total
-        const countQuery = query.replace(/SELECT o\.\*.*FROM/, 'SELECT COUNT(*) FROM');
-        const countResult = await db.query(countQuery, params);
-        const totalCount = parseInt(countResult.rows[0].count);
+const countQuery = `SELECT COUNT(*) FROM orders o
+            JOIN users u ON o.user_id = u.id
+            LEFT JOIN companies c ON o.company_id = c.id
+            LEFT JOIN departments d ON o.department_id = d.id
+            JOIN cafeterias cf ON o.cafeteria_id = cf.id
+            WHERE 1=1` + query.split('WHERE 1=1')[1].split('ORDER BY')[0];        const countResult = await db.query(countQuery, params);
+        const totalCount = countResult.rows[0] ? parseInt(countResult.rows[0].count) : 0;
         
         // Add pagination and sorting
         const offset = (page - 1) * limit;
