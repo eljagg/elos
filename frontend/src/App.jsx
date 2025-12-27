@@ -82,6 +82,7 @@ const DashboardRouter = () => {
     case 'RECEPTIONIST':
       return <ReceptionistDashboard />;
     case 'DELIVERY_PERSON':
+    case 'DELIVERY':
       return <DeliveryDashboard />;
     default:
       return <EmployeeDashboard />;
@@ -149,7 +150,7 @@ function App() {
             
             {/* Delivery routes */}
             <Route path="delivery/*" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'DELIVERY_PERSON']}>
+              <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'DELIVERY_PERSON', 'DELIVERY']}>
                 <DeliveryDashboard />
               </ProtectedRoute>
             } />

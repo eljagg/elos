@@ -60,6 +60,7 @@ const MainLayout = () => {
           { path: '/dashboard', icon: '📊', label: 'Reports' },
         ];
       case 'DELIVERY_PERSON':
+      case 'DELIVERY':
         return [
           ...baseItems,
           { path: '/delivery', icon: '🚚', label: 'Deliveries' },
@@ -162,7 +163,7 @@ const MainLayout = () => {
                  user?.role === 'HR_ADMIN' ? 'HR Dashboard' :
                  user?.role?.includes('KITCHEN') ? 'Kitchen' :
                  user?.role === 'RECEPTIONIST' ? 'Reception' :
-                 user?.role === 'DELIVERY_PERSON' ? 'Delivery' :
+                 user?.role === 'DELIVERY_PERSON' || user?.role === 'DELIVERY' ? 'Delivery' :
                  'Employee'} Portal
               </h2>
               <p className={`text-sm ${colors.textMuted}`}>
