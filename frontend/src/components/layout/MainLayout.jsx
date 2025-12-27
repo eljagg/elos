@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { DashboardFooter } from '../Footer';
 
 const MainLayout = () => {
   const { user, logout } = useAuth();
@@ -215,11 +216,7 @@ const MainLayout = () => {
         </main>
 
         {/* Footer */}
-        <footer className={`${colors.bgCard} border-t ${colors.border} px-6 py-3`}>
-          <p className={`text-center text-sm ${colors.textMuted}`}>
-            © 2024 ELOS - Employee Lunch Ordering System
-          </p>
-        </footer>
+        <DashboardFooter />
       </div>
     </div>
   );

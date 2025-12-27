@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { AuthFooter } from '../components/Footer';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
@@ -147,9 +148,7 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-indigo-200 text-sm mt-8">
-          © 2024 ELOS - Employee Lunch Ordering System
-        </p>
+        <AuthFooter />
       </div>
     </div>
   );
