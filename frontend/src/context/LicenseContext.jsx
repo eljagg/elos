@@ -45,14 +45,27 @@ export const LicenseProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('License check failed:', error);
-      // If API fails, check localStorage fallback
-      const cachedLicense = localStorage.getItem('licenseStatus');
-      if (cachedLicense) {
-        const cached = JSON.parse(cachedLicense);
-        const endDate = new Date(cached.endDate);
-        const now = new Date();
-        setIsValid(endDate > now);
-        setDaysRemaining(Math.ceil((endDate - now) / (1000 * 60 * 60 * 24)));
+      // If API fails (404 = not implemented yet), default to valid
+      // This allows the app to work while license backend is not yet built
+      if (error.response?.status === 404) {
+        console.log('License API not found - defaulting to valid (trial mode)');
+        setIsValid(true);
+        setDaysRemaining(30);
+        setShowWarning(false);
+      } else {
+        // For other errors, check localStorage fallback
+        const cachedLicense = localStorage.getItem('licenseStatus');
+        if (cachedLicense) {
+          const cached = JSON.parse(cachedLicense);
+          const endDate = new Date(cached.endDate);
+          const now = new Date();
+          setIsValid(endDate > now);
+          setDaysRemaining(Math.ceil((endDate - now) / (1000 * 60 * 60 * 24)));
+        } else {
+          // No cache, default to valid
+          setIsValid(true);
+          setDaysRemaining(30);
+        }
       }
     } finally {
       setLoading(false);
