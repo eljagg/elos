@@ -27,6 +27,16 @@ const MainLayout = () => {
     ];
 
     switch (user?.role) {
+      case 'SYSTEM_OWNER':
+        return [
+          ...baseItems,
+          { path: '/admin/users', icon: '👥', label: 'Users' },
+          { path: '/admin/companies', icon: '🏢', label: 'Companies' },
+          { path: '/admin/orders', icon: '📦', label: 'Orders' },
+          { path: '/admin/menus', icon: '🍽️', label: 'Menus' },
+          { path: '/admin/reports', icon: '📊', label: 'Reports' },
+          { path: '/admin/settings', icon: '⚙️', label: 'Settings' },
+        ];
       case 'SUPER_ADMIN':
         return [
           ...baseItems,
@@ -160,7 +170,8 @@ const MainLayout = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className={`text-lg font-semibold ${colors.textPrimary}`}>
-                {user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 
+                {user?.role === 'SYSTEM_OWNER' ? 'System Owner' :
+                 user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 
                  user?.role === 'HR_ADMIN' ? 'HR Dashboard' :
                  user?.role?.includes('KITCHEN') ? 'Kitchen' :
                  user?.role === 'RECEPTIONIST' ? 'Reception' :

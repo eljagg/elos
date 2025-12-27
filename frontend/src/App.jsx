@@ -10,6 +10,8 @@ import { Toaster } from 'react-hot-toast';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LicenseProvider } from './context/LicenseContext';
+import LicenseCheck from './components/LicenseCheck';
 
 // Pages
 import LoginPage from './pages/LoginPage';
@@ -71,6 +73,7 @@ const DashboardRouter = () => {
   if (!user) return <Navigate to="/login" />;
   
   switch (user.role) {
+    case 'SYSTEM_OWNER':
     case 'SUPER_ADMIN':
       return <AdminDashboard />;
     case 'HR_ADMIN':
@@ -93,40 +96,43 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-            success: {
+        <LicenseProvider>
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
               style: {
-                background: '#10b981',
+                background: '#363636',
+                color: '#fff',
               },
-            },
-            error: {
-              style: {
-                background: '#ef4444',
+              success: {
+                style: {
+                  background: '#10b981',
+                },
               },
-            },
-          }}
-        />
-        
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/guest" element={<GuestLoginPage />} />
+              error: {
+                style: {
+                  background: '#ef4444',
+                },
+              },
+            }}
+          />
           
-          {/* Protected routes */}
-          <Route path="/" element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }>
+          <Routes>
+            {/* Public routes - No license check needed */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/guest" element={<GuestLoginPage />} />
+            
+            {/* Protected routes - License check required */}
+            <Route path="/" element={
+              <ProtectedRoute>
+                <LicenseCheck>
+                  <MainLayout />
+                </LicenseCheck>
+              </ProtectedRoute>
+            }>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardRouter />} />
             
@@ -157,47 +163,47 @@ function App() {
             
             {/* Admin routes */}
             <Route path="admin" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN']}>
                 <AdminDashboard />
               </ProtectedRoute>
             } />
             <Route path="admin/users" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN']}>
                 <UserManagement />
               </ProtectedRoute>
             } />
             <Route path="admin/users/new" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN']}>
                 <UserForm />
               </ProtectedRoute>
             } />
             <Route path="admin/users/:id" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN']}>
                 <UserForm />
               </ProtectedRoute>
             } />
             <Route path="admin/menus" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN']}>
                 <MenuManagement />
               </ProtectedRoute>
             } />
             <Route path="admin/companies" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN']}>
                 <CompanySettings />
               </ProtectedRoute>
             } />
             <Route path="admin/orders" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN']}>
                 <OrderManagement />
               </ProtectedRoute>
             } />
             <Route path="admin/reports" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN']}>
                 <Reports />
               </ProtectedRoute>
             } />
             <Route path="admin/settings" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN']}>
                 <SystemSettings />
               </ProtectedRoute>
             } />
@@ -206,6 +212,7 @@ function App() {
           {/* 404 */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
+        </LicenseProvider>
       </ThemeProvider>
     </AuthProvider>
   );
