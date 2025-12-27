@@ -26,11 +26,11 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState([]);
   const [roles, setRoles] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
-  const [auditLogs, setAuditLogs] = useState([]);
   const [stats, setStats] = useState({});
   const [filters, setFilters] = useState({ search: '', role: '', company: '', status: '' });
 
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [showCafeteriaModal, setShowCafeteriaModal] = useState(false);
@@ -42,6 +42,7 @@ export default function AdminDashboard() {
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [selectedCafeteria, setSelectedCafeteria] = useState(null);
   const [userForm, setUserForm] = useState({ firstName: '', lastName: '', email: '', phone: '', roleId: '', companyId: '', departmentId: '' });
+  const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [companyForm, setCompanyForm] = useState({ name: '', code: '', address: '', phone: '', email: '', contactPerson: '' });
   const [departmentForm, setDepartmentForm] = useState({ name: '', companyId: '', managerId: '' });
   const [cafeteriaForm, setCafeteriaForm] = useState({ name: '', location: '', capacity: '', companyId: '' });
@@ -87,7 +88,61 @@ export default function AdminDashboard() {
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
-  const handleSaveUser = async (e) => { e.preventDefault(); try { if (selectedUser) { await userAPI.updateUser(selectedUser.id, userForm); toast.success('Updated'); } else { await userAPI.createUser({ ...userForm, password: 'TempPass123!' }); toast.success('Created'); } setShowUserModal(false); loadAllData(); } catch (err) { toast.error(err.response?.data?.error?.message || 'Failed'); } };
+  const handleSaveUser = async (e) => {
+    e.preventDefault();
+    try {
+      if (selectedUser) {
+        // Update existing user - only send fields that are editable
+        const updateData = {
+          firstName: userForm.firstName,
+          lastName: userForm.lastName,
+          phone: userForm.phone,
+          roleId: userForm.roleId || undefined,
+          companyId: userForm.companyId || undefined,
+          departmentId: userForm.departmentId || undefined
+        };
+        // Remove undefined/empty values
+        Object.keys(updateData).forEach(key => {
+          if (updateData[key] === undefined || updateData[key] === '') {
+            delete updateData[key];
+          }
+        });
+        await userAPI.updateUser(selectedUser.id, updateData);
+        toast.success('User updated successfully');
+      } else {
+        // Create new user
+        await userAPI.createUser({ ...userForm, password: 'TempPass123!' });
+        toast.success('User created with temporary password: TempPass123!');
+      }
+      setShowUserModal(false);
+      loadAllData();
+    } catch (err) {
+      console.error('Save user error:', err);
+      toast.error(err.response?.data?.error?.message || 'Failed to save user');
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    try {
+      await userAPI.resetPassword(selectedUser.id, passwordForm.newPassword);
+      toast.success('Password reset successfully');
+      setShowPasswordModal(false);
+      setPasswordForm({ newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      console.error('Reset password error:', err);
+      toast.error(err.response?.data?.error?.message || 'Failed to reset password');
+    }
+  };
+
   const handleDeleteUser = async (id) => { if (!confirm('Delete this user?')) return; try { await userAPI.deleteUser(id); toast.success('Deleted'); loadAllData(); } catch { toast.error('Failed'); } };
   const handleUnlockUser = async (id) => { try { await userAPI.enableUser(id); toast.success('Unlocked'); loadAllData(); } catch { toast.error('Failed'); } };
   const handleSaveCompany = async (e) => { e.preventDefault(); try { if (selectedCompany) { await companyAPI.updateCompany(selectedCompany.id, companyForm); toast.success('Updated'); } else { await companyAPI.createCompany(companyForm); toast.success('Created'); } setShowCompanyModal(false); loadAllData(); } catch { toast.error('Failed'); } };
@@ -98,6 +153,12 @@ export default function AdminDashboard() {
   const handleDeleteDomain = async (companyId, domain) => { if (!confirm('Delete this domain?')) return; try { await companyAPI.removeDomain(companyId, domain); toast.success('Deleted'); loadAllData(); } catch { toast.error('Failed'); } };
   const handleSaveAnnouncement = async (e) => { e.preventDefault(); try { await messageAPI.createAnnouncement(announcementForm); toast.success('Created'); setShowAnnouncementModal(false); setAnnouncements([...announcements, { id: Date.now(), ...announcementForm }]); } catch { toast.error('Failed'); } };
   const handleThemeChange = (themeId) => { changeTheme(themeId); toast.success(`Theme changed to ${themeOptions.find(t => t.id === themeId)?.name}`); };
+
+  const openPasswordModal = (user) => {
+    setSelectedUser(user);
+    setPasswordForm({ newPassword: '', confirmPassword: '' });
+    setShowPasswordModal(true);
+  };
 
   const filteredUsers = users.filter(u => { const s = filters.search.toLowerCase(); if (s && !`${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(s)) return false; if (filters.role && u.role_id !== filters.role) return false; if (filters.company && u.company_id !== filters.company) return false; if (filters.status === 'active' && !u.is_active) return false; if (filters.status === 'locked' && (!u.locked_until || new Date(u.locked_until) <= new Date())) return false; return true; });
 
@@ -147,8 +208,54 @@ export default function AdminDashboard() {
 
           {activeTab === 'users' && (
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-4 justify-between"><div className="flex flex-wrap gap-2"><input placeholder="Search..." className={`px-4 py-2 border ${colors.border} rounded-lg ${colors.bgInput}`} value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} /><select className={`px-4 py-2 border ${colors.border} rounded-lg`} value={filters.role} onChange={e => setFilters({ ...filters, role: e.target.value })}><option value="">All Roles</option>{roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select><select className={`px-4 py-2 border ${colors.border} rounded-lg`} value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}><option value="">All Status</option><option value="active">Active</option><option value="locked">Locked</option></select></div><button onClick={() => { setSelectedUser(null); setUserForm({ firstName: '', lastName: '', email: '', phone: '', roleId: '', companyId: '', departmentId: '' }); setShowUserModal(true); }} className={`px-4 py-2 ${colors.btnPrimary} rounded-lg`}>+ Add User</button></div>
-              <div className="overflow-x-auto"><table className="w-full"><thead className={colors.bgSecondary}><tr><th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>User</th><th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>Role</th><th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>Company</th><th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>Status</th><th className={`px-4 py-3 text-right text-xs font-medium ${colors.textMuted} uppercase`}>Actions</th></tr></thead><tbody className={`divide-y ${colors.border}`}>{filteredUsers.map(u => <tr key={u.id} className={colors.bgHover}><td className="px-4 py-3"><p className={`font-medium ${colors.textPrimary}`}>{u.first_name} {u.last_name}</p><p className={`text-sm ${colors.textMuted}`}>{u.email}</p></td><td className={`px-4 py-3 text-sm ${colors.textSecondary}`}>{u.role_name || '-'}</td><td className={`px-4 py-3 text-sm ${colors.textSecondary}`}>{u.company_name || '-'}</td><td className="px-4 py-3"><span className={`px-2 py-1 text-xs rounded-full ${u.locked_until && new Date(u.locked_until) > new Date() ? 'bg-red-100 text-red-800' : u.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{u.locked_until && new Date(u.locked_until) > new Date() ? 'Locked' : u.is_active ? 'Active' : 'Inactive'}</span></td><td className="px-4 py-3 text-right space-x-2">{u.locked_until && new Date(u.locked_until) > new Date() && <button onClick={() => handleUnlockUser(u.id)} className="text-green-600 text-sm">Unlock</button>}<button onClick={() => { setSelectedUser(u); setUserForm({ firstName: u.first_name, lastName: u.last_name, email: u.email, phone: u.phone || '', roleId: u.role_id || '', companyId: u.company_id || '', departmentId: u.department_id || '' }); setShowUserModal(true); }} className="text-blue-600 text-sm">Edit</button><button onClick={() => handleDeleteUser(u.id)} className="text-red-600 text-sm">Delete</button></td></tr>)}</tbody></table></div>
+              <div className="flex flex-wrap gap-4 justify-between">
+                <div className="flex flex-wrap gap-2">
+                  <input placeholder="Search..." className={`px-4 py-2 border ${colors.border} rounded-lg ${colors.bgInput}`} value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} />
+                  <select className={`px-4 py-2 border ${colors.border} rounded-lg`} value={filters.role} onChange={e => setFilters({ ...filters, role: e.target.value })}><option value="">All Roles</option>{roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select>
+                  <select className={`px-4 py-2 border ${colors.border} rounded-lg`} value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}><option value="">All Status</option><option value="active">Active</option><option value="locked">Locked</option></select>
+                </div>
+                <button onClick={() => { setSelectedUser(null); setUserForm({ firstName: '', lastName: '', email: '', phone: '', roleId: '', companyId: '', departmentId: '' }); setShowUserModal(true); }} className={`px-4 py-2 ${colors.btnPrimary} rounded-lg`}>+ Add User</button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className={colors.bgSecondary}>
+                    <tr>
+                      <th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>User</th>
+                      <th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>Role</th>
+                      <th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>Company</th>
+                      <th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>Status</th>
+                      <th className={`px-4 py-3 text-right text-xs font-medium ${colors.textMuted} uppercase`}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`divide-y ${colors.border}`}>
+                    {filteredUsers.map(u => (
+                      <tr key={u.id} className={colors.bgHover}>
+                        <td className="px-4 py-3">
+                          <p className={`font-medium ${colors.textPrimary}`}>{u.first_name} {u.last_name}</p>
+                          <p className={`text-sm ${colors.textMuted}`}>{u.email}</p>
+                        </td>
+                        <td className={`px-4 py-3 text-sm ${colors.textSecondary}`}>{u.role_name || '-'}</td>
+                        <td className={`px-4 py-3 text-sm ${colors.textSecondary}`}>{u.company_name || '-'}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 text-xs rounded-full ${u.locked_until && new Date(u.locked_until) > new Date() ? 'bg-red-100 text-red-800' : u.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                            {u.locked_until && new Date(u.locked_until) > new Date() ? 'Locked' : u.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            {u.locked_until && new Date(u.locked_until) > new Date() && (
+                              <button onClick={() => handleUnlockUser(u.id)} className="text-green-600 text-sm hover:underline">Unlock</button>
+                            )}
+                            <button onClick={() => openPasswordModal(u)} className="text-amber-600 text-sm hover:underline">Reset Password</button>
+                            <button onClick={() => { setSelectedUser(u); setUserForm({ firstName: u.first_name, lastName: u.last_name, email: u.email, phone: u.phone || '', roleId: u.role_id || '', companyId: u.company_id || '', departmentId: u.department_id || '' }); setShowUserModal(true); }} className="text-blue-600 text-sm hover:underline">Edit</button>
+                            <button onClick={() => handleDeleteUser(u.id)} className="text-red-600 text-sm hover:underline">Delete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -226,7 +333,80 @@ export default function AdminDashboard() {
       </div>
 
       {/* User Modal */}
-      {showUserModal && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto`}><h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>{selectedUser ? 'Edit' : 'Add'} User</h2><form onSubmit={handleSaveUser} className="space-y-4"><div className="grid grid-cols-2 gap-4"><input placeholder="First Name" value={userForm.firstName} onChange={e => setUserForm({ ...userForm, firstName: e.target.value })} className={`px-4 py-2 border ${colors.border} rounded-lg`} required /><input placeholder="Last Name" value={userForm.lastName} onChange={e => setUserForm({ ...userForm, lastName: e.target.value })} className={`px-4 py-2 border ${colors.border} rounded-lg`} required /></div><input type="email" placeholder="Email" value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} required /><input placeholder="Phone" value={userForm.phone} onChange={e => setUserForm({ ...userForm, phone: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} /><select value={userForm.roleId} onChange={e => setUserForm({ ...userForm, roleId: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}><option value="">Select Role</option>{roles.filter(r => r.code !== 'SYSTEM_OWNER').map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select><select value={userForm.companyId} onChange={e => setUserForm({ ...userForm, companyId: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}><option value="">Select Company</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select><div className="flex justify-end gap-3"><button type="button" onClick={() => setShowUserModal(false)} className={`px-4 py-2 border ${colors.border} rounded-lg`}>Cancel</button><button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg">{selectedUser ? 'Update' : 'Create'}</button></div></form></div></div>}
+      {showUserModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto`}>
+            <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>{selectedUser ? 'Edit' : 'Add'} User</h2>
+            <form onSubmit={handleSaveUser} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <input placeholder="First Name" value={userForm.firstName} onChange={e => setUserForm({ ...userForm, firstName: e.target.value })} className={`px-4 py-2 border ${colors.border} rounded-lg`} required />
+                <input placeholder="Last Name" value={userForm.lastName} onChange={e => setUserForm({ ...userForm, lastName: e.target.value })} className={`px-4 py-2 border ${colors.border} rounded-lg`} required />
+              </div>
+              <input type="email" placeholder="Email" value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} required disabled={!!selectedUser} />
+              {selectedUser && <p className={`text-xs ${colors.textMuted}`}>Email cannot be changed. Use "Reset Password" to change password.</p>}
+              <input placeholder="Phone" value={userForm.phone} onChange={e => setUserForm({ ...userForm, phone: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} />
+              <select value={userForm.roleId} onChange={e => setUserForm({ ...userForm, roleId: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}>
+                <option value="">Select Role</option>
+                {roles.filter(r => r.code !== 'SYSTEM_OWNER').map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+              <select value={userForm.companyId} onChange={e => setUserForm({ ...userForm, companyId: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}>
+                <option value="">Select Company</option>
+                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => setShowUserModal(false)} className={`px-4 py-2 border ${colors.border} rounded-lg`}>Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg">{selectedUser ? 'Update' : 'Create'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-md`}>
+            <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>🔐 Reset Password</h2>
+            <p className={`mb-4 ${colors.textSecondary}`}>
+              Reset password for: <strong>{selectedUser?.first_name} {selectedUser?.last_name}</strong>
+              <br /><span className={colors.textMuted}>{selectedUser?.email}</span>
+            </p>
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${colors.textSecondary}`}>New Password</label>
+                <input 
+                  type="password" 
+                  placeholder="Enter new password" 
+                  value={passwordForm.newPassword} 
+                  onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} 
+                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} 
+                  required 
+                  minLength={6}
+                />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${colors.textSecondary}`}>Confirm Password</label>
+                <input 
+                  type="password" 
+                  placeholder="Confirm new password" 
+                  value={passwordForm.confirmPassword} 
+                  onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })} 
+                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} 
+                  required 
+                  minLength={6}
+                />
+              </div>
+              {passwordForm.newPassword && passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword && (
+                <p className="text-red-500 text-sm">Passwords do not match</p>
+              )}
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setShowPasswordModal(false)} className={`px-4 py-2 border ${colors.border} rounded-lg`}>Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg">Reset Password</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Company Modal */}
       {showCompanyModal && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-lg`}><h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>{selectedCompany ? 'Edit' : 'Add'} Company</h2><form onSubmit={handleSaveCompany} className="space-y-4"><input placeholder="Company Name" value={companyForm.name} onChange={e => setCompanyForm({ ...companyForm, name: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} required /><input placeholder="Code" value={companyForm.code} onChange={e => setCompanyForm({ ...companyForm, code: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} required /><input placeholder="Address" value={companyForm.address} onChange={e => setCompanyForm({ ...companyForm, address: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} /><div className="grid grid-cols-2 gap-4"><input placeholder="Phone" value={companyForm.phone} onChange={e => setCompanyForm({ ...companyForm, phone: e.target.value })} className={`px-4 py-2 border ${colors.border} rounded-lg`} /><input placeholder="Email" value={companyForm.email} onChange={e => setCompanyForm({ ...companyForm, email: e.target.value })} className={`px-4 py-2 border ${colors.border} rounded-lg`} /></div><input placeholder="Contact Person" value={companyForm.contactPerson} onChange={e => setCompanyForm({ ...companyForm, contactPerson: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} /><div className="flex justify-end gap-3"><button type="button" onClick={() => setShowCompanyModal(false)} className={`px-4 py-2 border ${colors.border} rounded-lg`}>Cancel</button><button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg">{selectedCompany ? 'Update' : 'Create'}</button></div></form></div></div>}

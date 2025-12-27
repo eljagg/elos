@@ -31,4 +31,7 @@ router.delete('/:id', authenticate, requireSuperAdmin, userController.deleteUser
 router.post('/:id/disable', authenticate, requireHRStaff, userController.disableUser);
 router.post('/:id/enable', authenticate, requireHRStaff, userController.enableUser);
 
+// Password reset (Admin/HR) - NEW!
+router.post('/:id/reset-password', authenticate, requireHRStaff, userController.resetPassword);
+
 module.exports = router;

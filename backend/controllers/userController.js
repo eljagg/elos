@@ -10,6 +10,7 @@
  * - User preferences (dietary, language)
  * - Bulk import/export (for HR)
  * - Account enable/disable
+ * - Password reset (Admin)
  * 
  * LEARNING NOTES:
  * ---------------
@@ -19,14 +20,13 @@
  * 3. Audit requirements (track all changes)
  * 
  * Key principles:
- * - Role hierarchy: Super Admin > HR > Kitchen > Employee
+ * - Role hierarchy: System Owner > Super Admin > HR > Kitchen > Employee
  * - Company isolation: HR can only manage their company's users
  * - Soft deletes: Never truly delete, just deactivate
  * - Audit logging: Track who changed what and when
  * 
  * ============================================================================
  */
-
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const db = require('../config/database');
@@ -50,36 +50,35 @@ const generateTempPassword = () => {
 };
 
 /**
- * Format user for response (remove sensitive fields)
+ * Format user object for API response
  */
 const formatUser = (user) => ({
     id: user.id,
     email: user.email,
     firstName: user.first_name,
     lastName: user.last_name,
-    employeeCode: user.employee_code,
     phone: user.phone,
+    employeeCode: user.employee_code,
+    profileImageUrl: user.profile_image_url,
     languagePreference: user.preferred_language,
-    profilePhoto: user.profile_image_url,
-    dietaryPreferences: user.dietary_preferences || [],
-    role: {
-        code: user.role_code,
-        name: user.role_name
-    },
-    company: user.company_name ? {
-        id: user.company_id,
-        name: user.company_name
-    } : null,
-    department: user.department_name ? {
-        id: user.department_id,
-        name: user.department_name,
-        code: user.department_code
-    } : null,
+    dietaryPreferences: user.dietary_preferences,
+    allergenAlerts: user.allergen_alerts,
+    role: user.role_code,
+    roleName: user.role_name,
+    roleId: user.role_id,
+    companyId: user.company_id,
+    companyName: user.company_name,
+    departmentId: user.department_id,
+    departmentName: user.department_name,
+    departmentCode: user.department_code,
     isActive: user.is_active,
     emailVerified: user.email_verified,
     twoFactorEnabled: user.two_factor_enabled,
+    mustChangePassword: user.must_change_password,
     lastLoginAt: user.last_login_at,
-    createdAt: user.created_at
+    createdAt: user.created_at,
+    lockedUntil: user.locked_until,
+    failedLoginAttempts: user.failed_login_attempts
 });
 
 /**
@@ -87,6 +86,7 @@ const formatUser = (user) => ({
  */
 const canManageUser = (managerRole, targetRole) => {
     const hierarchy = {
+        'SYSTEM_OWNER': 0,
         'SUPER_ADMIN': 1,
         'HR_ADMIN': 2,
         'KITCHEN_HEAD': 3,
@@ -98,8 +98,8 @@ const canManageUser = (managerRole, targetRole) => {
         'GUEST': 20
     };
     
-    // Super Admin can manage everyone
-    if (managerRole === 'SUPER_ADMIN') return true;
+    // System Owner and Super Admin can manage everyone
+    if (managerRole === 'SYSTEM_OWNER' || managerRole === 'SUPER_ADMIN') return true;
     
     // Can only manage users with lower privilege level
     return (hierarchy[managerRole] || 100) < (hierarchy[targetRole] || 100);
@@ -151,7 +151,7 @@ const getUsers = async (req, res, next) => {
             // HR can only see users in their company
             query += ` AND u.company_id = $${paramIndex++}`;
             params.push(userCompanyId);
-        } else if (userRole !== 'SUPER_ADMIN') {
+        } else if (userRole !== 'SUPER_ADMIN' && userRole !== 'SYSTEM_OWNER') {
             // Other roles can only see themselves
             query += ` AND u.id = $${paramIndex++}`;
             params.push(req.user.userId);
@@ -165,12 +165,12 @@ const getUsers = async (req, res, next) => {
                 u.email ILIKE $${paramIndex} OR
                 u.employee_code ILIKE $${paramIndex}
             )`;
-           params.push(`%${search}%`);
+            params.push(`%${search}%`);
             paramIndex++;
         }
         
         // Company filter (Super Admin only)
-        if (companyId && userRole === 'SUPER_ADMIN') {
+        if (companyId && (userRole === 'SUPER_ADMIN' || userRole === 'SYSTEM_OWNER')) {
             query += ` AND u.company_id = $${paramIndex++}`;
             params.push(companyId);
         }
@@ -391,7 +391,7 @@ const createUser = async (req, res, next) => {
         }
         
         // HR can only create users in their company
-        const finalCompanyId = creatorRole === 'SUPER_ADMIN' ? companyId : creatorCompanyId;
+        const finalCompanyId = (creatorRole === 'SUPER_ADMIN' || creatorRole === 'SYSTEM_OWNER') ? companyId : creatorCompanyId;
         
         // Generate temporary password
         const tempPassword = generateTempPassword();
@@ -430,11 +430,6 @@ const createUser = async (req, res, next) => {
             createdBy: creatorId 
         });
         
-        // TODO: Send welcome email with temporary password
-        // if (sendWelcomeEmail) {
-        //     await emailService.sendWelcomeEmail(normalizedEmail, firstName, tempPassword);
-        // }
-        
         res.status(201).json({
             success: true,
             message: 'User created successfully',
@@ -445,7 +440,7 @@ const createUser = async (req, res, next) => {
                     firstName: newUser.first_name,
                     lastName: newUser.last_name
                 },
-                tempPassword: tempPassword // Only returned once! User must change on first login.
+                tempPassword: tempPassword
             }
         });
         
@@ -500,7 +495,7 @@ const updateUser = async (req, res, next) => {
         const currentUser = currentResult.rows[0];
         
         // Check permission
-        if (updaterRole !== 'SUPER_ADMIN') {
+        if (updaterRole !== 'SUPER_ADMIN' && updaterRole !== 'SYSTEM_OWNER') {
             if (updaterRole === 'HR_ADMIN' && currentUser.company_id !== req.user.companyId) {
                 return res.status(403).json({
                     success: false,
@@ -557,8 +552,8 @@ const updateUser = async (req, res, next) => {
             params.push(languagePreference);
         }
         
-        // Role change (Super Admin only)
-        if (roleCode !== undefined && updaterRole === 'SUPER_ADMIN') {
+        // Role change (Super Admin or System Owner only)
+        if (roleCode !== undefined && (updaterRole === 'SUPER_ADMIN' || updaterRole === 'SYSTEM_OWNER')) {
             const newRoleResult = await db.query(
                 'SELECT id FROM roles WHERE code = $1',
                 [roleCode]
@@ -692,6 +687,114 @@ const updateProfile = async (req, res, next) => {
 };
 
 // ============================================================================
+// PASSWORD RESET (ADMIN)
+// ============================================================================
+
+/**
+ * POST /api/users/:id/reset-password
+ * Admin reset password for a user
+ */
+const resetPassword = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const adminId = req.user.userId;
+        const adminRole = req.user.role;
+        const { password } = req.body;
+
+        // Validate password
+        if (!password || password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                error: {
+                    code: 'INVALID_PASSWORD',
+                    message: 'Password must be at least 6 characters'
+                }
+            });
+        }
+
+        // Get target user
+        const userResult = await db.query(
+            `SELECT u.*, r.code as role_code 
+             FROM users u 
+             JOIN roles r ON u.role_id = r.id 
+             WHERE u.id = $1`,
+            [id]
+        );
+
+        if (userResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: {
+                    code: 'USER_NOT_FOUND',
+                    message: 'User not found'
+                }
+            });
+        }
+
+        const targetUser = userResult.rows[0];
+
+        // Check permission - must be able to manage this user
+        if (!canManageUser(adminRole, targetUser.role_code)) {
+            return res.status(403).json({
+                success: false,
+                error: {
+                    code: 'FORBIDDEN',
+                    message: 'You do not have permission to reset this user\'s password'
+                }
+            });
+        }
+
+        // HR can only reset passwords for users in their company
+        if (adminRole === 'HR_ADMIN' && targetUser.company_id !== req.user.companyId) {
+            return res.status(403).json({
+                success: false,
+                error: {
+                    code: 'FORBIDDEN',
+                    message: 'You can only reset passwords for users in your company'
+                }
+            });
+        }
+
+        // Hash new password
+        const passwordHash = await bcrypt.hash(password, security.password.saltRounds);
+
+        // Update password and clear lockout
+        await db.query(
+            `UPDATE users 
+             SET password_hash = $1, 
+                 must_change_password = TRUE,
+                 failed_login_attempts = 0,
+                 locked_until = NULL,
+                 updated_at = CURRENT_TIMESTAMP,
+                 updated_by = $2
+             WHERE id = $3`,
+            [passwordHash, adminId, id]
+        );
+
+        // Log audit
+        await db.query(
+            `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details, ip_address)
+             VALUES ($1, 'PASSWORD_RESET_BY_ADMIN', 'user', $2, $3, $4)`,
+            [adminId, id, JSON.stringify({ resetBy: adminId, targetEmail: targetUser.email }), req.ip]
+        );
+
+        logger.info('Password reset by admin:', { 
+            userId: id, 
+            targetEmail: targetUser.email,
+            resetBy: adminId 
+        });
+
+        res.status(200).json({
+            success: true,
+            message: 'Password has been reset successfully'
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+// ============================================================================
 // USER ACCOUNT STATUS
 // ============================================================================
 
@@ -736,18 +839,11 @@ const disableUser = async (req, res, next) => {
         await db.query(
             `UPDATE users 
              SET is_active = FALSE, 
-                 disabled_reason = $1, 
-                 disabled_reason = $2,
+                 disabled_reason = $1,
                  updated_at = CURRENT_TIMESTAMP,
-                 updated_by = $3
-             WHERE id = $4`,
-            [until || null, reason, adminId, id]
-        );
-        
-        // Invalidate all sessions
-        await db.query(
-            'UPDATE user_sessions SET is_valid = FALSE WHERE user_id = $1',
-            [id]
+                 updated_by = $2
+             WHERE id = $3`,
+            [reason, adminId, id]
         );
         
         // Log audit
@@ -756,8 +852,6 @@ const disableUser = async (req, res, next) => {
              VALUES ($1, 'USER_DISABLED', 'user', $2, $3, $4)`,
             [adminId, id, JSON.stringify({ reason, until }), req.ip]
         );
-        
-        // TODO: Send notification email to user
         
         logger.info('User disabled:', { userId: id, disabledBy: adminId, reason });
         
@@ -783,8 +877,9 @@ const enableUser = async (req, res, next) => {
         await db.query(
             `UPDATE users 
              SET is_active = TRUE, 
-                 disabled_reason = NULL, 
                  disabled_reason = NULL,
+                 failed_login_attempts = 0,
+                 locked_until = NULL,
                  updated_at = CURRENT_TIMESTAMP,
                  updated_by = $1
              WHERE id = $2`,
@@ -797,8 +892,6 @@ const enableUser = async (req, res, next) => {
              VALUES ($1, 'USER_ENABLED', 'user', $2, $3)`,
             [adminId, id, req.ip]
         );
-        
-        // TODO: Send notification email to user
         
         logger.info('User enabled:', { userId: id, enabledBy: adminId });
         
@@ -841,12 +934,6 @@ const deleteUser = async (req, res, next) => {
                  updated_by = $2
              WHERE id = $1`,
             [id, adminId]
-        );
-        
-        // Invalidate sessions
-        await db.query(
-            'UPDATE user_sessions SET is_valid = FALSE WHERE user_id = $1',
-            [id]
         );
         
         // Log audit
@@ -1120,6 +1207,9 @@ module.exports = {
     // Updates
     updateUser,
     updateProfile,
+    
+    // Password reset
+    resetPassword,
     
     // Account status
     disableUser,
