@@ -47,6 +47,10 @@ import MainLayout from './components/layout/MainLayout';
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading, isAuthenticated } = useAuth();
   
+  // Also check localStorage directly as fallback for race condition after login
+  const hasToken = localStorage.getItem('accessToken');
+  const hasSavedUser = localStorage.getItem('user');
+  
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -55,11 +59,18 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     );
   }
   
-  if (!isAuthenticated) {
+  // Check both React state AND localStorage
+  // This handles the race condition where login sets localStorage but React state hasn't updated yet
+  const effectivelyAuthenticated = isAuthenticated || (hasToken && hasSavedUser);
+  
+  if (!effectivelyAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  // Get user from state or localStorage
+  const effectiveUser = user || (hasSavedUser ? JSON.parse(hasSavedUser) : null);
+  
+  if (allowedRoles && effectiveUser && !allowedRoles.includes(effectiveUser.role)) {
     return <Navigate to="/dashboard" replace />;
   }
   
@@ -70,9 +81,13 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 const DashboardRouter = () => {
   const { user } = useAuth();
   
-  if (!user) return <Navigate to="/login" />;
+  // Also check localStorage as fallback
+  const savedUser = localStorage.getItem('user');
+  const effectiveUser = user || (savedUser ? JSON.parse(savedUser) : null);
   
-  switch (user.role) {
+  if (!effectiveUser) return <Navigate to="/login" />;
+  
+  switch (effectiveUser.role) {
     case 'SYSTEM_OWNER':
     case 'SUPER_ADMIN':
       return <AdminDashboard />;
@@ -142,21 +157,21 @@ function App() {
             
             {/* Kitchen routes */}
             <Route path="kitchen/*" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'KITCHEN_HEAD', 'KITCHEN_SOUS', 'KITCHEN_STAFF']}>
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN', 'KITCHEN_HEAD', 'KITCHEN_SOUS', 'KITCHEN_STAFF']}>
                 <KitchenDashboard />
               </ProtectedRoute>
             } />
             
             {/* HR routes */}
             <Route path="hr/*" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'HR_ADMIN']}>
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN', 'HR_ADMIN']}>
                 <HRDashboard />
               </ProtectedRoute>
             } />
             
             {/* Delivery routes */}
             <Route path="delivery/*" element={
-              <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'DELIVERY_PERSON', 'DELIVERY']}>
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN', 'DELIVERY_PERSON', 'DELIVERY']}>
                 <DeliveryDashboard />
               </ProtectedRoute>
             } />
