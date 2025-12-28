@@ -24,12 +24,35 @@ export const AuthProvider = ({ children }) => {
         try {
           // Verify token is still valid
           const response = await authAPI.getMe();
-          setUser(response.data.data.user);
+          const userData = response.data.data?.user || response.data.user || response.data.data;
+          if (userData) {
+            setUser(userData);
+            // Update saved user with fresh data
+            localStorage.setItem('user', JSON.stringify(userData));
+          } else {
+            // Fallback to saved user
+            setUser(JSON.parse(savedUser));
+          }
         } catch (err) {
-          // Token expired or invalid
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
+          console.log('Token verification failed:', err.message);
+          // If token verification fails but we have saved user, use it
+          // This handles cases where token just expired
+          try {
+            const parsedUser = JSON.parse(savedUser);
+            if (parsedUser && parsedUser.id) {
+              // Use saved user - they may need to re-login soon but don't kick them out immediately
+              setUser(parsedUser);
+              console.log('Using cached user data');
+            } else {
+              throw new Error('Invalid saved user');
+            }
+          } catch (parseErr) {
+            // Invalid saved user, clear everything
+            console.log('Clearing invalid session');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+          }
         }
       }
       setLoading(false);
