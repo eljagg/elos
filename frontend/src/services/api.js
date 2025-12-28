@@ -103,6 +103,9 @@ export const companyAPI = {
 
 // Menu API
 export const menuAPI = {
+  getCategories: () => api.get('/menus/categories'),
+  getDietaryTags: () => api.get('/menus/dietary-tags'),
+  getAllergens: () => api.get('/menus/allergens'),
   getMenus: (params) => api.get('/menus', { params }),
   getMenu: (id) => api.get(`/menus/${id}`),
   createMenu: (data) => api.post('/menus', data),
