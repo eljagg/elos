@@ -540,10 +540,10 @@ const createMenu = async (req, res, next) => {
         const result = await db.query(
             `INSERT INTO menus (
                 name, cafeteria_id, week_start_date, week_end_date,
-                is_template, template_name, internal_notes, status, created_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft', $8)
+                is_template, status, created_by
+            ) VALUES ($1, $2, $3, $4, $5, 'draft', $6)
             RETURNING *`,
-            [name, cafeteriaId, weekStartDate, weekEndDate, isTemplate, templateName, internalNotes, userId]
+            [name, cafeteriaId, weekStartDate, weekEndDate, isTemplate, userId]
         );
         
         const newMenu = result.rows[0];
