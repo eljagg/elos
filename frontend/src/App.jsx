@@ -35,6 +35,7 @@ import AdminDashboard from './pages/admin/Dashboard';
 import UserManagement from './pages/admin/UserManagement';
 import UserForm from './pages/admin/UserForm';
 import MenuManagement from './pages/admin/MenuManagement';
+import DishLibrary from './pages/admin/DishLibrary';
 import CompanySettings from './pages/admin/CompanySettings';
 import Reports from './pages/admin/Reports';
 import SystemSettings from './pages/admin/SystemSettings';
@@ -195,6 +196,11 @@ function App() {
             <Route path="admin/users/:id" element={
               <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN']}>
                 <UserForm />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/dish-library" element={
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN', 'KITCHEN_HEAD', 'KITCHEN_SOUS', 'KITCHEN_STAFF']}>
+                <DishLibrary />
               </ProtectedRoute>
             } />
             <Route path="admin/menus" element={

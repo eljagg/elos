@@ -257,6 +257,7 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const companyRoutes = require('./routes/companyRoutes');
 const menuRoutes = require('./routes/menuRoutes');
+const catalogRoutes = require('./routes/catalogRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const guestRoutes = require('./routes/guestRoutes');
 const messageRoutes = require('./routes/messageRoutes');
@@ -274,6 +275,7 @@ app.use('/api/auth', authRoutes);        // Authentication (login, register, etc
 app.use('/api/users', userRoutes);       // User management
 app.use('/api/companies', companyRoutes); // Company management
 app.use('/api/menus', menuRoutes);       // Menu management
+app.use('/api/catalog', catalogRoutes);   // Dish catalog/library
 app.use('/api/orders', orderRoutes);     // Order management
 app.use('/api/guests', guestRoutes);     // Guest code management
 app.use('/api/messages', messageRoutes); // Messaging system

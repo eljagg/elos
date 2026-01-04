@@ -179,3 +179,28 @@ export const adminAPI = {
 };
 
 export default api;
+
+// Catalog API (Dish Library)
+export const catalogAPI = {
+  // Catalog Items
+  getItems: (params) => api.get('/catalog/items', { params }),
+  getItem: (id) => api.get(`/catalog/items/${id}`),
+  createItem: (data) => api.post('/catalog/items', data),
+  updateItem: (id, data) => api.put(`/catalog/items/${id}`, data),
+  deleteItem: (id) => api.delete(`/catalog/items/${id}`),
+  getPriceHistory: (id) => api.get(`/catalog/items/${id}/price-history`),
+  
+  // Categories
+  getCategories: (params) => api.get('/catalog/categories', { params }),
+  createCategory: (data) => api.post('/catalog/categories', data),
+  updateCategory: (id, data) => api.put(`/catalog/categories/${id}`, data),
+  deleteCategory: (id) => api.delete(`/catalog/categories/${id}`),
+  
+  // Dietary Tags
+  getDietaryTags: () => api.get('/catalog/dietary-tags'),
+  createDietaryTag: (data) => api.post('/catalog/dietary-tags', data),
+  
+  // Allergens
+  getAllergens: () => api.get('/catalog/allergens'),
+  createAllergen: (data) => api.post('/catalog/allergens', data),
+};
