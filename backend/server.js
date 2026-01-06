@@ -1,4 +1,21 @@
-console.log("=== ELOS SERVER STARTING - BUILD v3 ===");
+
+// === STARTUP DIAGNOSTICS ===
+console.log("=== ELOS SERVER v4 STARTING ===");
+console.log("Node version:", process.version);
+console.log("Working directory:", process.cwd());
+console.log("Environment:", process.env.NODE_ENV || 'not set');
+
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err.message);
+  console.error(err.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('UNHANDLED REJECTION:', reason);
+});
+// === END STARTUP DIAGNOSTICS ===
+
 /**
  * ============================================================================
  * ELOS - Employee Lunch Ordering System
