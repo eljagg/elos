@@ -311,6 +311,9 @@ app.use('/api/admin', adminRoutes);      // Admin functions
 // SERVE FRONTEND STATIC FILES
 // ============================================================================
 const frontendPath = path.join(__dirname, '../frontend/dist');
+console.log('Frontend path:', frontendPath);
+console.log('Frontend exists:', require('fs').existsSync(frontendPath));
+console.log('Frontend files:', require('fs').existsSync(frontendPath) ? require('fs').readdirSync(frontendPath) : 'N/A');
 app.use(express.static(frontendPath));
 
 // Handle SPA routing - serve index.html for all non-API routes
