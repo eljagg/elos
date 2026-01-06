@@ -309,6 +309,20 @@ app.use('/api/delivery', deliveryRoutes); // Delivery management
 app.use('/api/admin', adminRoutes);      // Admin functions
 
 // ============================================================================
+// ============================================================================
+// SERVE FRONTEND STATIC FILES
+// ============================================================================
+const frontendPath = path.join(__dirname, '../frontend/dist');
+app.use(express.static(frontendPath));
+
+// Handle SPA routing - serve index.html for all non-API routes
+app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+        return next();
+    }
+    res.sendFile(path.join(frontendPath, 'index.html'));
+});
+
 // ERROR HANDLING
 // ============================================================================
 
@@ -488,19 +502,3 @@ startServer();
 
 // Export app for testing
 module.exports = app;
-// Catalog routes enabled Mon Jan  5 00:52:37 UTC 2026
-// Catalog v2 - Tue Jan  6 00:18:53 UTC 2026
-
-// ============================================================================
-// SERVE FRONTEND STATIC FILES
-// ============================================================================
-const frontendPath = path.join(__dirname, '../frontend/dist');
-app.use(express.static(frontendPath));
-
-// Handle SPA routing - serve index.html for all non-API routes
-app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api/')) {
-        return next();
-    }
-    res.sendFile(path.join(frontendPath, 'index.html'));
-});
