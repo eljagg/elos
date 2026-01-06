@@ -1,0 +1,5 @@
+2026-01-06 00:36:00 [INFO]: 🚀 Checking database connection... {"service":"elos-api","type":"startup"}
+2026-01-06 00:36:00 [ERROR]: Failed to start server: Database connection failed {"service":"elos-api"}
+Error: Database connection failed
+    at startServer (/workspaces/elos/backend/server.js:373:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
