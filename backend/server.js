@@ -260,7 +260,7 @@ const menuRoutes = require('./routes/menuRoutes');
 let catalogRoutes;
 try {
   catalogRoutes = require('./routes/catalogRoutes');
-  console.log('✅ Catalog routes loaded successfully');
+  console.log('✅ Catalog routes loaded successfully - v3');
 } catch (err) {
   console.error('❌ Failed to load catalog routes:', err.message);
   catalogRoutes = require('express').Router(); // Empty router as fallback
