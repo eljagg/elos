@@ -257,7 +257,14 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const companyRoutes = require('./routes/companyRoutes');
 const menuRoutes = require('./routes/menuRoutes');
-const catalogRoutes = require('./routes/catalogRoutes');
+let catalogRoutes;
+try {
+  catalogRoutes = require('./routes/catalogRoutes');
+  console.log('✅ Catalog routes loaded successfully');
+} catch (err) {
+  console.error('❌ Failed to load catalog routes:', err.message);
+  catalogRoutes = require('express').Router(); // Empty router as fallback
+}
 const orderRoutes = require('./routes/orderRoutes');
 const guestRoutes = require('./routes/guestRoutes');
 const messageRoutes = require('./routes/messageRoutes');
