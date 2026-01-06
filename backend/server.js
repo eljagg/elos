@@ -1,3 +1,4 @@
+console.log("=== ELOS SERVER STARTING - BUILD v3 ===");
 /**
  * ============================================================================
  * ELOS - Employee Lunch Ordering System
