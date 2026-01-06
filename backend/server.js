@@ -464,3 +464,4 @@ startServer();
 // Export app for testing
 module.exports = app;
 // Catalog routes enabled Mon Jan  5 00:52:37 UTC 2026
+// Catalog v2 - Tue Jan  6 00:18:53 UTC 2026
