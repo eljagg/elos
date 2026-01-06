@@ -97,7 +97,7 @@ app.set('trust proxy', 1);
  * - And more...
  */
 app.use(helmet({
-    contentSecurityPolicy: false  // Disabled for now to debug static file issues, // Disabled in development for easier testing
+    contentSecurityPolicy: false,  // Disabled for now to debug static file issues
     crossOriginEmbedderPolicy: false // Allow loading external resources
 }));
 
