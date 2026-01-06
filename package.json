@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "description": "Employee Lunch Ordering System",
   "private": true,
-  "main": "server.js",
+  "main": "backend/server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "node backend/server.js",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
     "build": "cd frontend && npm install && npm run build",
-    "postinstall": "npm run build",
+    "postinstall": "cd backend && npm install && cd ../frontend && npm install && npm run build",
     "db:migrate": "psql $DATABASE_URL -f database/supabase_schema.sql",
     "db:seed": "psql $DATABASE_URL -f database/seeds/seed_data.sql"
   },
