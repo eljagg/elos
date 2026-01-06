@@ -317,7 +317,12 @@ app.use(express.static(frontendPath));
 
 // Handle SPA routing - serve index.html for all non-API routes
 app.get('*', (req, res, next) => {
+    // Skip API routes
     if (req.path.startsWith('/api/')) {
+        return next();
+    }
+    // Skip static file requests
+    if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map)$/)) {
         return next();
     }
     res.sendFile(path.join(frontendPath, 'index.html'));
