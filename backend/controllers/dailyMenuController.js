@@ -233,6 +233,16 @@ const updatePortions = async (req, res, next) => {
         const { dailyMenuItemId } = req.params;
         const { portionsAvailable } = req.body;
 
+        logger.info('updatePortions called:', { dailyMenuItemId, portionsAvailable });
+
+        // Validate input
+        if (portionsAvailable === undefined || portionsAvailable === null) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'INVALID_INPUT', message: 'portionsAvailable is required' }
+            });
+        }
+
         const result = await db.query(`
             UPDATE daily_menu_items 
             SET portions_available = $2,
