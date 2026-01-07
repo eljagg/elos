@@ -62,6 +62,7 @@ const MainLayout = () => {
         return [
           ...baseItems,
           { path: '/admin/dish-library', icon: '📚', label: 'Dish Library' },
+          { path: '/kitchen/daily-menu', icon: '📅', label: 'Daily Menu' },
           { path: '/kitchen/orders', icon: '📦', label: 'Orders' },
           { path: '/kitchen/menus', icon: '🍽️', label: 'Menus' },
           { path: '/kitchen/prep', icon: '📋', label: 'Prep List' },

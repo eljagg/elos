@@ -27,6 +27,7 @@ import MenuPage from './pages/employee/MenuPage';
 import OrderHistoryPage from './pages/employee/OrderHistoryPage';
 
 import KitchenDashboard from './pages/kitchen/Dashboard';
+import DailyMenuManagement from './pages/kitchen/DailyMenuManagement';
 import HRDashboard from './pages/hr/Dashboard';
 import ReceptionistDashboard from './pages/receptionist/Dashboard';
 
@@ -157,6 +158,11 @@ function App() {
             <Route path="orders" element={<OrderHistoryPage />} />
             
             {/* Kitchen routes */}
+            <Route path="kitchen/daily-menu" element={
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN', 'KITCHEN_HEAD', 'KITCHEN_SOUS', 'KITCHEN_STAFF']}>
+                <DailyMenuManagement />
+              </ProtectedRoute>
+            } />
             <Route path="kitchen/*" element={
               <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN', 'KITCHEN_HEAD', 'KITCHEN_SOUS', 'KITCHEN_STAFF']}>
                 <KitchenDashboard />
