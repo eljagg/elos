@@ -1,6 +1,24 @@
 /**
- * API Service - ELOS Employee Lunch Ordering System
+ * API Service - Updated with password reset functionality
+ * 
+ * Add this resetPassword function to your existing api.js file
+ * in the userAPI object
  */
+
+// Add this to your userAPI object in frontend/src/services/api.js:
+
+/*
+export const userAPI = {
+  // ... existing methods ...
+  
+  // Add this new method:
+  resetPassword: (userId, newPassword) => api.post(`/users/${userId}/reset-password`, { password: newPassword }),
+};
+*/
+
+// ============================================
+// FULL userAPI OBJECT FOR REFERENCE:
+// ============================================
 
 import axios from 'axios';
 
@@ -30,8 +48,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('accessToken'); localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
@@ -60,6 +77,7 @@ export const userAPI = {
   enableUser: (id) => api.post(`/users/${id}/enable`),
   disableUser: (id, reason, endDate) => api.post(`/users/${id}/disable`, { reason, endDate }),
   getRoles: () => api.get('/roles'),
+  // NEW: Admin password reset for users
   resetPassword: (userId, newPassword) => api.post(`/users/${userId}/reset-password`, { password: newPassword }),
 };
 
@@ -105,7 +123,6 @@ export const orderAPI = {
   getOrders: (params) => api.get('/orders', { params }),
   getOrder: (id) => api.get(`/orders/${id}`),
   getMyOrders: () => api.get('/orders/my'),
-  getMyOrderHistory: () => api.get('/orders/my-history'),
   createOrder: (data) => api.post('/orders', data),
   updateOrder: (id, data) => api.put(`/orders/${id}`, data),
   updateOrderStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
@@ -161,6 +178,8 @@ export const adminAPI = {
   testEmail: (email) => api.post('/admin/test-email', { email }),
 };
 
+export default api;
+
 // Catalog API (Dish Library)
 export const catalogAPI = {
   // Catalog Items
@@ -200,5 +219,3 @@ export const dailyMenuAPI = {
   markNotificationRead: (id) => api.patch(`/daily-menu/notifications/${id}/read`),
   markAllNotificationsRead: () => api.patch('/daily-menu/notifications/read-all'),
 };
-
-export default api;
