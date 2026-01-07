@@ -63,7 +63,7 @@ export default function UserForm() {
   const loadUser = async () => {
     setLoading(true);
     try {
-      const response = await userAPI.getUserById(id);
+      const response = await userAPI.getUser(id);
       const user = response.data?.data?.user;
       if (user) {
         setFormData({
