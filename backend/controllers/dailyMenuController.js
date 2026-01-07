@@ -147,7 +147,7 @@ const publishDailyMenu = async (req, res, next) => {
 
         const result = await db.query(`
             UPDATE daily_menus 
-            SET status = 'published', updated_at = CURRENT_TIMESTAMP
+            SET status = 'published', is_active = TRUE
             WHERE id = $1
             RETURNING *
         `, [id]);
@@ -247,7 +247,7 @@ const updatePortions = async (req, res, next) => {
             UPDATE daily_menu_items 
             SET portions_available = $2,
                 is_sold_out = CASE WHEN $2 <= portions_ordered THEN TRUE ELSE FALSE END,
-                updated_at = CURRENT_TIMESTAMP
+                is_active = TRUE
             WHERE id = $1
             RETURNING *
         `, [dailyMenuItemId, portionsAvailable]);
