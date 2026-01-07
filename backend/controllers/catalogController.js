@@ -213,6 +213,10 @@ const createCatalogItem = async (req, res, next) => {
             isSpicy = false,
             spiceLevel = 0,
             isFeatured = false,
+            hasSizes = false,
+            sizeSmallPrice,
+            sizeMediumPrice,
+            sizeLargePrice,
             dietaryTagIds = [],
             allergenIds = []
         } = req.body;
@@ -233,13 +237,15 @@ const createCatalogItem = async (req, res, next) => {
             INSERT INTO menu_item_catalog (
                 cafeteria_id, category_id, name, description, price, image_url,
                 prep_time_minutes, calories, is_vegetarian, is_vegan, is_gluten_free,
-                is_spicy, spice_level, is_featured, created_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                is_spicy, spice_level, is_featured, has_sizes, size_small_price, 
+                size_medium_price, size_large_price, created_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
             RETURNING *
         `, [
             cafeteriaId || null, categoryId || null, name, description, price, imageUrl,
             prepTimeMinutes, calories, isVegetarian, isVegan, isGlutenFree,
-            isSpicy, spiceLevel, isFeatured, userId
+            isSpicy, spiceLevel, isFeatured, hasSizes, sizeSmallPrice || null,
+            sizeMediumPrice || null, sizeLargePrice || null, userId
         ]);
 
         const newItem = result.rows[0];

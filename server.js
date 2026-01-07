@@ -29,6 +29,7 @@ const reportRoutes = require('./backend/routes/reportRoutes');
 const deliveryRoutes = require('./backend/routes/deliveryRoutes');
 const adminRoutes = require('./backend/routes/adminRoutes');
 const catalogRoutes = require('./backend/routes/catalogRoutes');
+const dailyMenuRoutes = require('./backend/routes/dailyMenuRoutes');
 
 const logger = require('./backend/utils/logger');
 
@@ -120,6 +121,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/catalog', catalogRoutes);
+app.use('/api/daily-menu', dailyMenuRoutes);
 
 // API 404 handler
 app.use('/api/*', (req, res) => {

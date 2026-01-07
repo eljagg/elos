@@ -204,3 +204,18 @@ export const catalogAPI = {
   getAllergens: () => api.get('/catalog/allergens'),
   createAllergen: (data) => api.post('/catalog/allergens', data),
 };
+
+// Daily Menu API (Portion tracking & Notifications)
+export const dailyMenuAPI = {
+  // Daily Menu
+  getDailyMenu: (params) => api.get('/daily-menu', { params }),
+  createDailyMenu: (data) => api.post('/daily-menu', data),
+  publishDailyMenu: (id) => api.post(`/daily-menu/${id}/publish`),
+  markItemSoldOut: (dailyMenuItemId, data) => api.post(`/daily-menu/items/${dailyMenuItemId}/sold-out`, data),
+  updatePortions: (dailyMenuItemId, data) => api.patch(`/daily-menu/items/${dailyMenuItemId}/portions`, data),
+  
+  // Notifications
+  getNotifications: (params) => api.get('/daily-menu/notifications', { params }),
+  markNotificationRead: (id) => api.patch(`/daily-menu/notifications/${id}/read`),
+  markAllNotificationsRead: () => api.patch('/daily-menu/notifications/read-all'),
+};
