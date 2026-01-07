@@ -303,8 +303,13 @@ export default function DailyMenuManagement() {
                           <div className="flex items-center gap-2">
                             <input
                               type="number"
-                              value={item.portions_available}
-                              onChange={(e) => handleUpdatePortions(item.id, parseInt(e.target.value))}
+                              defaultValue={item.portions_available}
+                              onBlur={(e) => {
+                                const val = parseInt(e.target.value);
+                                if (!isNaN(val) && val >= 0 && val !== item.portions_available) {
+                                  handleUpdatePortions(item.id, val);
+                                }
+                              }}
                               className="w-20 px-2 py-1 border rounded text-center"
                               min="0"
                               disabled={item.is_sold_out}
