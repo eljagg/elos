@@ -29,6 +29,7 @@ import OrderHistoryPage from './pages/employee/OrderHistoryPage';
 import KitchenDashboard from './pages/kitchen/Dashboard';
 import DailyMenuManagement from './pages/kitchen/DailyMenuManagement';
 import HRDashboard from './pages/hr/Dashboard';
+import HRUserForm from './pages/hr/UserForm';
 import ReceptionistDashboard from './pages/receptionist/Dashboard';
 
 // Admin pages
@@ -170,9 +171,19 @@ function App() {
             } />
             
             {/* HR routes */}
-            <Route path="hr/*" element={
+            <Route path="hr" element={
               <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN', 'HR_ADMIN']}>
                 <HRDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="hr/users/new" element={
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN', 'HR_ADMIN']}>
+                <HRUserForm />
+              </ProtectedRoute>
+            } />
+            <Route path="hr/users/:id" element={
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN', 'HR_ADMIN']}>
+                <HRUserForm />
               </ProtectedRoute>
             } />
             
