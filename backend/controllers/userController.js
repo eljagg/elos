@@ -558,7 +558,7 @@ const updateUser = async (req, res, next) => {
         if (password !== undefined && password !== '') {
             const bcrypt = require('bcryptjs');
             const passwordHash = await bcrypt.hash(password, 12);
-            updates.push(`password_hash = ${paramIndex++}`);
+            updates.push(`password_hash = $${paramIndex++}`);
             params.push(passwordHash);
         }
 
@@ -581,7 +581,7 @@ const updateUser = async (req, res, next) => {
             }
             
             if (newRoleIdValue) {
-                updates.push(`role_id = ${paramIndex++}`);
+                updates.push(`role_id = $${paramIndex++}`);
                 params.push(newRoleIdValue);
             }
         }
