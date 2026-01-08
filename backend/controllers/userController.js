@@ -316,6 +316,7 @@ const createUser = async (req, res, next) => {
             firstName,
             lastName,
             roleCode,
+            roleId,
             companyId,
             departmentId,
             employeeCode,
@@ -342,24 +343,33 @@ const createUser = async (req, res, next) => {
             });
         }
         
-        // Get role info - default to EMPLOYEE if not specified
-        const effectiveRoleCode = roleCode || 'EMPLOYEE';
-        const roleResult = await db.query(
-            'SELECT id, code FROM roles WHERE code = $1',
-            [effectiveRoleCode]
-        );
+        // Get role info - accept roleId or roleCode, default to EMPLOYEE
+        let finalRoleId = null;
+        let effectiveRoleCode = roleCode;
         
-        if (roleResult.rows.length === 0) {
-            return res.status(400).json({
-                success: false,
-                error: {
-                    code: 'INVALID_ROLE',
-                    message: 'Invalid role specified: ' + effectiveRoleCode
-                }
-            });
+        if (roleId) {
+            // roleId provided directly
+            const roleResult = await db.query('SELECT id, code FROM roles WHERE id = $1', [roleId]);
+            if (roleResult.rows.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: { code: 'INVALID_ROLE', message: 'Invalid role ID specified' }
+                });
+            }
+            finalRoleId = roleResult.rows[0].id;
+            effectiveRoleCode = roleResult.rows[0].code;
+        } else {
+            // Use roleCode or default to EMPLOYEE
+            effectiveRoleCode = roleCode || 'EMPLOYEE';
+            const roleResult = await db.query('SELECT id, code FROM roles WHERE code = $1', [effectiveRoleCode]);
+            if (roleResult.rows.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: { code: 'INVALID_ROLE', message: 'Invalid role specified: ' + effectiveRoleCode }
+                });
+            }
+            finalRoleId = roleResult.rows[0].id;
         }
-        
-        const roleId = roleResult.rows[0].id;
         
         // Check if creator can assign this role
         if (!canManageUser(creatorRole, effectiveRoleCode)) {
@@ -410,7 +420,7 @@ const createUser = async (req, res, next) => {
             RETURNING *`,
             [
                 normalizedEmail, passwordHash, firstName, lastName,
-                roleId, finalCompanyId, departmentId, employeeCode,
+                finalRoleId, finalCompanyId, departmentId, employeeCode,
                 phone, languagePreference,
                 creatorId
             ]
