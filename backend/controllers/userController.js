@@ -414,15 +414,13 @@ const createUser = async (req, res, next) => {
                 email, password_hash, first_name, last_name,
                 role_id, company_id, department_id, employee_code,
                 phone, preferred_language,
-                must_change_password, email_verified,
-                created_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, TRUE, $11)
+                must_change_password, email_verified
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, TRUE)
             RETURNING *`,
             [
                 normalizedEmail, passwordHash, firstName, lastName,
                 finalRoleId, finalCompanyId, departmentId, employeeCode,
-                phone, languagePreference,
-                creatorId
+                phone, languagePreference
             ]
         );
         
