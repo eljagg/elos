@@ -470,7 +470,8 @@ const updateUser = async (req, res, next) => {
             departmentId,
             employeeCode,
             languagePreference,
-            roleCode
+            roleCode,
+            roleId
         } = req.body;
         
         // Get current user data
@@ -553,15 +554,26 @@ const updateUser = async (req, res, next) => {
         }
         
         // Role change (Super Admin or System Owner only)
-        if (roleCode !== undefined && (updaterRole === 'SUPER_ADMIN' || updaterRole === 'SYSTEM_OWNER')) {
-            const newRoleResult = await db.query(
-                'SELECT id FROM roles WHERE code = $1',
-                [roleCode]
-            );
+        if ((roleCode !== undefined || roleId !== undefined) && (updaterRole === 'SUPER_ADMIN' || updaterRole === 'SYSTEM_OWNER')) {
+            let newRoleIdValue = null;
             
-            if (newRoleResult.rows.length > 0) {
-                updates.push(`role_id = $${paramIndex++}`);
-                params.push(newRoleResult.rows[0].id);
+            if (roleId) {
+                // Direct roleId provided
+                newRoleIdValue = roleId;
+            } else if (roleCode) {
+                // roleCode provided, look up the id
+                const newRoleResult = await db.query(
+                    'SELECT id FROM roles WHERE code = $1',
+                    [roleCode]
+                );
+                if (newRoleResult.rows.length > 0) {
+                    newRoleIdValue = newRoleResult.rows[0].id;
+                }
+            }
+            
+            if (newRoleIdValue) {
+                updates.push(`role_id = ${paramIndex++}`);
+                params.push(newRoleIdValue);
             }
         }
         
