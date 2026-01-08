@@ -456,7 +456,16 @@ const createUser = async (req, res, next) => {
         });
         
     } catch (error) {
-        next(error);
+        console.error('createUser ERROR:', error.message);
+        console.error('createUser STACK:', error.stack);
+        console.error('createUser BODY:', JSON.stringify(req.body));
+        return res.status(500).json({
+            success: false,
+            error: {
+                code: 'CREATE_FAILED',
+                message: error.message || 'Failed to create user'
+            }
+        });
     }
 };
 
