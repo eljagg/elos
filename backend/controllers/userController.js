@@ -471,7 +471,8 @@ const updateUser = async (req, res, next) => {
             employeeCode,
             languagePreference,
             roleCode,
-            roleId
+            roleId,
+            password
         } = req.body;
         
         // Get current user data
@@ -553,6 +554,14 @@ const updateUser = async (req, res, next) => {
             params.push(languagePreference);
         }
         
+        // Password change
+        if (password !== undefined && password !== '') {
+            const bcrypt = require('bcryptjs');
+            const passwordHash = await bcrypt.hash(password, 12);
+            updates.push(`password_hash = ${paramIndex++}`);
+            params.push(passwordHash);
+        }
+
         // Role change (Super Admin or System Owner only)
         if ((roleCode !== undefined || roleId !== undefined) && (updaterRole === 'SUPER_ADMIN' || updaterRole === 'SYSTEM_OWNER')) {
             let newRoleIdValue = null;
