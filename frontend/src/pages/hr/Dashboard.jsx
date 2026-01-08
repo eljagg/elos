@@ -22,7 +22,7 @@ export default function HRDashboard() {
 
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [selectedFeedback, setSelectedFeedback] = useState(null);
-  const [employeeForm, setEmployeeForm] = useState({ firstName: '', lastName: '', email: '', phone: '', companyId: '', departmentId: '' });
+  const [employeeForm, setEmployeeForm] = useState({ firstName: '', lastName: '', email: '', phone: '', companyId: '', departmentId: '', roleCode: 'EMPLOYEE' });
   const [disableForm, setDisableForm] = useState({ reason: '', endDate: '' });
   const [feedbackResponse, setFeedbackResponse] = useState('');
   const [kitchenMessage, setKitchenMessage] = useState('');
@@ -52,7 +52,7 @@ export default function HRDashboard() {
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
-  const handleSaveEmployee = async (e) => { e.preventDefault(); try { if (selectedEmployee) { await userAPI.updateUser(selectedEmployee.id, employeeForm); toast.success('Updated'); } else { await userAPI.createUser({ ...employeeForm, password: 'TempPass123!' }); toast.success('Created'); } setShowEmployeeModal(false); setEmployeeForm({ firstName: '', lastName: '', email: '', phone: '', companyId: '', departmentId: '' }); setSelectedEmployee(null); loadData(); } catch (err) { toast.error(err.response?.data?.error?.message || 'Failed'); } };
+  const handleSaveEmployee = async (e) => { e.preventDefault(); try { if (selectedEmployee) { await userAPI.updateUser(selectedEmployee.id, employeeForm); toast.success('Updated'); } else { await userAPI.createUser({ ...employeeForm, password: 'TempPass123!' }); toast.success('Created'); } setShowEmployeeModal(false); setEmployeeForm({ firstName: '', lastName: '', email: '', phone: '', companyId: '', departmentId: '', roleCode: 'EMPLOYEE' }); setSelectedEmployee(null); loadData(); } catch (err) { toast.error(err.response?.data?.error?.message || 'Failed'); } };
   const handleDisableEmployee = async () => { try { await userAPI.disableUser(selectedEmployee.id, disableForm.reason); toast.success('Disabled'); setShowDisableModal(false); loadData(); } catch { toast.error('Failed'); } };
   const handleEnableEmployee = async (emp) => { try { await userAPI.enableUser(emp.id); toast.success('Enabled'); loadData(); } catch { toast.error('Failed'); } };
   const handleRespondFeedback = async () => { try { await messageAPI.respondToFeedback(selectedFeedback.id, feedbackResponse); toast.success('Sent'); setShowFeedbackModal(false); loadData(); } catch { toast.error('Failed'); } };
