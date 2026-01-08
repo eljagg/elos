@@ -597,8 +597,7 @@ const updateUser = async (req, res, next) => {
         }
         
         updates.push(`updated_at = CURRENT_TIMESTAMP`);
-        updates.push(`updated_by = $${paramIndex++}`);
-        params.push(updaterId);
+        // updated_by removed - column does not exist in users table
         
         params.push(id);
         
