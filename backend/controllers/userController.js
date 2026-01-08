@@ -342,10 +342,11 @@ const createUser = async (req, res, next) => {
             });
         }
         
-        // Get role info
+        // Get role info - default to EMPLOYEE if not specified
+        const effectiveRoleCode = roleCode || 'EMPLOYEE';
         const roleResult = await db.query(
             'SELECT id, code FROM roles WHERE code = $1',
-            [roleCode]
+            [effectiveRoleCode]
         );
         
         if (roleResult.rows.length === 0) {
@@ -353,7 +354,7 @@ const createUser = async (req, res, next) => {
                 success: false,
                 error: {
                     code: 'INVALID_ROLE',
-                    message: 'Invalid role specified'
+                    message: 'Invalid role specified: ' + effectiveRoleCode
                 }
             });
         }
@@ -361,7 +362,7 @@ const createUser = async (req, res, next) => {
         const roleId = roleResult.rows[0].id;
         
         // Check if creator can assign this role
-        if (!canManageUser(creatorRole, roleCode)) {
+        if (!canManageUser(creatorRole, effectiveRoleCode)) {
             return res.status(403).json({
                 success: false,
                 error: {
