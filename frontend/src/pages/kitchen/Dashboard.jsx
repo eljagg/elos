@@ -11,6 +11,8 @@ export default function KitchenDashboard() {
   const [menus, setMenus] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [issues, setIssues] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [companies, setCompanies] = useState([]);
   const [stats, setStats] = useState({});
   const [filters, setFilters] = useState({ company: '', status: '', date: new Date().toISOString().split('T')[0] });
@@ -31,11 +33,12 @@ export default function KitchenDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [ordersRes, menusRes, itemsRes, issuesRes, companiesRes] = await Promise.all([
+      const [ordersRes, menusRes, itemsRes, issuesRes, messagesRes, companiesRes] = await Promise.all([
         orderAPI.getOrders({ limit: 200 }).catch(() => ({ data: { data: { orders: [] } } })),
         menuAPI.getMenus().catch(() => ({ data: { data: { menus: [] } } })),
         menuAPI.getMenuItems().catch(() => ({ data: { data: { items: [] } } })),
         messageAPI.getFeedback().catch(() => ({ data: { data: { feedback: [] } } })),
+        messageAPI.getInbox().catch(() => ({ data: { data: { messages: [], unreadCount: 0 } } })),
         companyAPI.getCompanies().catch(() => ({ data: { data: { companies: [] } } }))
       ]);
       const ordersList = ordersRes.data?.data?.orders || [];
@@ -43,6 +46,8 @@ export default function KitchenDashboard() {
       setMenus(menusRes.data?.data?.menus || []);
       setMenuItems(itemsRes.data?.data?.items || []);
       setIssues((issuesRes.data?.data?.feedback || []).filter(f => f.type === 'issue' || f.status === 'escalated'));
+      setMessages(messagesRes.data?.data?.messages || []);
+      setUnreadCount(messagesRes.data?.data?.unreadCount || 0);
       setCompanies(companiesRes.data?.data?.companies || []);
 
       const tracking = JSON.parse(localStorage.getItem('deliveryTracking') || '{}');
@@ -106,7 +111,7 @@ export default function KitchenDashboard() {
 
       <div className={`${colors.bgCard} rounded-xl shadow-sm border ${colors.border}`}>
         <div className={`border-b ${colors.border} flex overflow-x-auto`}>
-          {[{ id: 'orders', l: '📦 Orders' }, { id: 'prep', l: '📋 Prep List' }, { id: 'deliveries', l: '🚚 Deliveries' }, { id: 'menus', l: '🍽️ Menus' }, { id: 'items', l: '🥗 Items' }, { id: 'issues', l: '⚠️ Issues' }].map(t => <button key={t.id} onClick={() => setActiveTab(t.id)} className={`px-6 py-4 text-sm font-medium whitespace-nowrap border-b-2 ${activeTab === t.id ? 'border-orange-500 text-orange-600' : `border-transparent ${colors.textMuted}`}`}>{t.l}</button>)}
+          {[{ id: 'orders', l: '📦 Orders' }, { id: 'prep', l: '📋 Prep List' }, { id: 'deliveries', l: '🚚 Deliveries' }, { id: 'menus', l: '🍽️ Menus' }, { id: 'items', l: '🥗 Items' }, { id: 'issues', l: '⚠️ Issues' }, { id: 'messages', l: '📨 Messages' }].map(t => <button key={t.id} onClick={() => setActiveTab(t.id)} className={`px-6 py-4 text-sm font-medium whitespace-nowrap border-b-2 ${activeTab === t.id ? 'border-orange-500 text-orange-600' : `border-transparent ${colors.textMuted}`}`}>{t.l}</button>)}
         </div>
 
         <div className="p-6">
@@ -170,6 +175,28 @@ export default function KitchenDashboard() {
           {activeTab === 'issues' && (
             <div className="space-y-4">
               {issues.length > 0 ? issues.map(issue => <div key={issue.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}><div className="flex justify-between mb-2"><div><h3 className={`font-semibold ${colors.textPrimary}`}>{issue.subject}</h3><p className={`text-sm ${colors.textMuted}`}>{issue.user_name}</p></div><span className={`px-2 py-1 text-xs rounded-full ${issue.status === 'resolved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{issue.status}</span></div><p className={colors.textSecondary}>{issue.message}</p>{issue.status !== 'resolved' && <button onClick={() => { setSelectedIssue(issue); setIssueResponse(''); setShowIssueModal(true); }} className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Respond & Resolve</button>}</div>) : <p className={colors.textMuted}>No issues</p>}
+            </div>
+          )}
+
+          {activeTab === 'messages' && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`font-semibold ${colors.textPrimary}`}>Inbox ({unreadCount} unread)</h3>
+                {messages.length > 0 && <button onClick={async () => { await messageAPI.markAllAsRead(); loadData(); toast.success('All marked as read'); }} className="text-sm text-blue-600">Mark all as read</button>}
+              </div>
+              {messages.length > 0 ? messages.map(msg => (
+                <div key={msg.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard} ${!msg.isRead ? 'border-l-4 border-l-blue-500' : ''}`}>
+                  <div className="flex justify-between mb-2">
+                    <div>
+                      <h3 className={`font-semibold ${colors.textPrimary}`}>{msg.subject}</h3>
+                      <p className={`text-sm ${colors.textMuted}`}>From: {msg.sender?.name || 'Unknown'} {msg.sender?.role ? `(${msg.sender.role})` : ''}</p>
+                    </div>
+                    <span className={`text-xs ${colors.textMuted}`}>{new Date(msg.createdAt).toLocaleString()}</span>
+                  </div>
+                  <p className={colors.textSecondary}>{msg.body}</p>
+                  {!msg.isRead && <button onClick={async () => { await messageAPI.markAsRead(msg.id); loadData(); }} className="mt-2 text-sm text-blue-600">Mark as read</button>}
+                </div>
+              )) : <p className={colors.textMuted}>No messages</p>}
             </div>
           )}
         </div>
