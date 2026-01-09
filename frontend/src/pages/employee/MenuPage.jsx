@@ -106,6 +106,9 @@ const MenuPage = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Todays Menu</h1>
           <p className="text-gray-600">{formatDate(today)}</p>
+          {dailyMenu?.default_lunch_cutoff && (
+            <p className="text-sm text-orange-600 font-medium mt-1">⏰ Order by {dailyMenu.default_lunch_cutoff} for lunch</p>
+          )}
         </div>
         {cafeterias.length > 1 && (
           <select value={selectedCafeteria} onChange={(e) => setSelectedCafeteria(e.target.value)} className="px-4 py-2 border rounded-lg">

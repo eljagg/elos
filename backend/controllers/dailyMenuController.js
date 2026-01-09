@@ -25,6 +25,8 @@ const getDailyMenu = async (req, res, next) => {
             SELECT 
                 dm.*,
                 c.name as cafeteria_name,
+                c.default_breakfast_cutoff,
+                c.default_lunch_cutoff,
                 u.first_name || ' ' || u.last_name as created_by_name
             FROM daily_menus dm
             LEFT JOIN cafeterias c ON dm.cafeteria_id = c.id
