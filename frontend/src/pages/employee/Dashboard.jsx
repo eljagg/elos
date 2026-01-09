@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { orderAPI, menuAPI, messageAPI } from '../../services/api';
+import { orderAPI, menuAPI, messageAPI, dailyMenuAPI, companyAPI } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import toast from 'react-hot-toast';
 
@@ -9,6 +9,9 @@ export default function EmployeeDashboard() {
   const [loading, setLoading] = useState(true);
   const [menus, setMenus] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
+  const [dailyMenu, setDailyMenu] = useState(null);
+  const [cafeterias, setCafeterias] = useState([]);
+  const [selectedCafeteria, setSelectedCafeteria] = useState('');
   const [myOrders, setMyOrders] = useState([]);
   const [orderHistory, setOrderHistory] = useState([]);
   const [cart, setCart] = useState([]);
@@ -22,18 +25,27 @@ export default function EmployeeDashboard() {
   const [orderNotes, setOrderNotes] = useState('');
   const [feedbackForm, setFeedbackForm] = useState({ type: 'feedback', subject: '', message: '' });
 
-  useEffect(() => { loadData(); loadPreferences(); }, []);
+  useEffect(() => { loadCafeterias(); loadPreferences(); }, []);
+  useEffect(() => { if (selectedCafeteria) loadData(); }, [selectedCafeteria]);
 
+  const loadCafeterias = async () => {
+    try {
+      const res = await companyAPI.getCafeterias();
+      const list = res.data?.data?.cafeterias || [];
+      setCafeterias(list);
+      if (list.length > 0) setSelectedCafeteria(list[0].id);
+    } catch (error) { console.error('Failed to load cafeterias:', error); }
+  };
   const loadData = async () => {
     setLoading(true);
     try {
-      const [menusRes, itemsRes, ordersRes] = await Promise.all([
-        menuAPI.getMenus().catch(() => ({ data: { data: { menus: [] } } })),
-        menuAPI.getMenuItems().catch(() => ({ data: { data: { items: [] } } })),
+      const today = new Date().toISOString().split('T')[0];
+      const [dailyMenuRes, ordersRes] = await Promise.all([
+        dailyMenuAPI.getDailyMenu({ cafeteriaId: selectedCafeteria, date: today }).catch(() => ({ data: { data: { dailyMenu: null, items: [] } } })),
         orderAPI.getMyOrders().catch(() => ({ data: { data: { orders: [] } } }))
       ]);
-      setMenus(menusRes.data?.data?.menus?.filter(m => m.is_active) || []);
-      setMenuItems(itemsRes.data?.data?.items?.filter(i => i.is_available !== false) || []);
+      setDailyMenu(dailyMenuRes.data?.data?.dailyMenu);
+      setMenuItems(dailyMenuRes.data?.data?.items?.filter(i => !i.is_sold_out && i.portions_remaining > 0) || []);
       const orders = ordersRes.data?.data?.orders || [];
       setMyOrders(orders.filter(o => ['pending', 'preparing', 'ready'].includes(o.status)));
       setOrderHistory(orders.filter(o => ['completed', 'cancelled'].includes(o.status)));
