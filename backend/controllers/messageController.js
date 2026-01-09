@@ -22,6 +22,7 @@ const sendMessage = async (req, res, next) => {
         }
         
         if (recipientRole) {
+            console.log("Sending message to role:", recipientRole);
             const usersResult = await db.query(
                 `SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id WHERE r.code = $1 AND u.is_active = TRUE AND u.id != $2`,
                 [recipientRole, senderId]
@@ -41,6 +42,7 @@ const sendMessage = async (req, res, next) => {
                 );
             }
             
+            console.log("Message sent to", usersResult.rows.length, "users with role", recipientRole);
             res.status(201).json({ success: true, message: `Message sent to ${usersResult.rows.length} user(s)`, data: { recipientCount: usersResult.rows.length } });
         } else if (recipientId) {
             const result = await db.query(
@@ -61,6 +63,7 @@ const sendMessage = async (req, res, next) => {
 const getInbox = async (req, res, next) => {
     try {
         const userId = req.user.userId;
+        console.log("getInbox called for userId:", userId);
         const { unreadOnly, limit = 50 } = req.query;
         
         let query = `SELECT m.*, s.first_name as sender_first_name, s.last_name as sender_last_name, s.email as sender_email, r.name as sender_role_name
@@ -71,6 +74,7 @@ const getInbox = async (req, res, next) => {
         query += ` ORDER BY m.created_at DESC LIMIT $2`;
         
         const result = await db.query(query, [userId, parseInt(limit)]);
+        console.log("getInbox found", result.rows.length, "messages for user", userId);
         const unreadResult = await db.query('SELECT COUNT(*) FROM messages WHERE recipient_id = $1 AND is_read = FALSE AND is_deleted_by_recipient = FALSE', [userId]);
         
         res.status(200).json({
