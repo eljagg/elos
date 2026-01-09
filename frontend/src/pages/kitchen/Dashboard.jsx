@@ -1,10 +1,24 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { orderAPI, menuAPI, messageAPI, companyAPI } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import toast from 'react-hot-toast';
 
 export default function KitchenDashboard() {
   const { colors, getStatCardColors } = useTheme();
+  const location = useLocation();
+  
+  // Set active tab based on URL
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.includes('/orders')) setActiveTab('orders');
+    else if (path.includes('/prep')) setActiveTab('prep');
+    else if (path.includes('/deliveries')) setActiveTab('deliveries');
+    else if (path.includes('/menus')) setActiveTab('menus');
+    else if (path.includes('/items')) setActiveTab('items');
+    else if (path.includes('/issues')) setActiveTab('issues');
+    else if (path.includes('/messages')) setActiveTab('messages');
+  }, [location.pathname]);
   const [activeTab, setActiveTab] = useState('orders');
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState([]);
