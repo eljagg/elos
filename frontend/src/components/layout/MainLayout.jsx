@@ -2,10 +2,11 @@
  * MainLayout - Themed layout with sidebar navigation
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { messageAPI } from '../../services/api';
 import { DashboardFooter } from '../Footer';
 
 const MainLayout = () => {
@@ -14,11 +15,27 @@ const MainLayout = () => {
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  // Fetch unread message count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await messageAPI.getUnreadCount();
+        setUnreadCount(response.data?.data?.unreadCount || 0);
+      } catch (error) {
+        console.error('Failed to fetch unread count:', error);
+      }
+    };
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 60000); // Refresh every minute
+    return () => clearInterval(interval);
+  }, []);
 
   // Navigation items based on role
   const getNavItems = () => {
@@ -191,7 +208,7 @@ const MainLayout = () => {
               {/* Notifications */}
               <button className={`relative p-2 ${colors.bgSecondary} rounded-lg ${colors.bgHover} transition-colors`}>
                 <span className="text-xl">🔔</span>
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+                {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">{unreadCount}</span>}
               </button>
               
               {/* User Menu */}
