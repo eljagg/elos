@@ -10,7 +10,7 @@ import { useTheme } from '../context/ThemeContext';
 // ============================================
 // EDIT THIS TEXT TO CHANGE FOOTER EVERYWHERE
 // ============================================
-const FOOTER_TEXT = "© 2025 Designed by Omar G McLeod";
+const FOOTER_TEXT = "© 2026 Designed by Omar G McLeod";
 // ============================================
 
 // Footer for auth pages (Login, Register, etc.) - light text on dark background
