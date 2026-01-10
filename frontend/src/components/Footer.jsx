@@ -1,10 +1,8 @@
 /**
  * Footer Component
  * 
- * Edit the text below to change the footer everywhere in the app.
- * This appears on: Login, Register, Forgot Password, Guest Login, and all Dashboards
+ * Edit FOOTER_TEXT below to change the footer everywhere in the app.
  */
-
 import { useTheme } from '../context/ThemeContext';
 
 // ============================================
@@ -13,7 +11,7 @@ import { useTheme } from '../context/ThemeContext';
 const FOOTER_TEXT = "© 2026 Designed by Omar G McLeod";
 // ============================================
 
-// Footer for auth pages (Login, Register, etc.) - light text on dark background
+// Footer for auth pages (Login, Register, etc.)
 export const AuthFooter = () => {
   return (
     <p className="text-center text-indigo-200 text-sm mt-8">
@@ -35,5 +33,4 @@ export const DashboardFooter = () => {
   );
 };
 
-// Default export for simple import
 export default AuthFooter;
