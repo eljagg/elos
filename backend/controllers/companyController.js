@@ -347,14 +347,15 @@ const getCafeterias = async (req, res, next) => {
  */
 const createCafeteria = async (req, res, next) => {
     try {
+        console.log('createCafeteria called with body:', JSON.stringify(req.body));
         const { name, location, address, buildingId, companyId, defaultBreakfastCutoff, defaultLunchCutoff, operatingDays } = req.body;
         
         // Insert cafeteria
         const result = await db.query(
-            `INSERT INTO cafeterias (name, address, building_id, default_breakfast_cutoff, default_lunch_cutoff, operating_days)
-             VALUES ($1, $2, $3, $4, $5, $6)
+            `INSERT INTO cafeterias (name, building_id, default_breakfast_cutoff, default_lunch_cutoff, operating_days)
+             VALUES ($1, $2, $3, $4, $5)
              RETURNING *`,
-            [name, location || address || '', buildingId || null, defaultBreakfastCutoff || '08:00', defaultLunchCutoff || '10:00', 
+            [name, buildingId || null, defaultBreakfastCutoff || '08:00', defaultLunchCutoff || '10:00', 
              JSON.stringify(operatingDays || ['monday','tuesday','wednesday','thursday','friday'])]
         );
         
@@ -377,6 +378,8 @@ const createCafeteria = async (req, res, next) => {
         });
         
     } catch (error) {
+        console.error('createCafeteria ERROR:', error.message);
+        console.error('createCafeteria STACK:', error.stack);
         next(error);
     }
 };
