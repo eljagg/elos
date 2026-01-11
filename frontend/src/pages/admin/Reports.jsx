@@ -28,16 +28,61 @@ export default function Reports() {
   const loadReportData = async () => {
     setLoading(true);
     try {
+      // Calculate date range
+      const today = new Date();
+      let dateFrom, dateTo = today.toISOString().split('T')[0];
+      
+      if (dateRange === 'today') {
+        dateFrom = dateTo;
+      } else if (dateRange === 'week') {
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        dateFrom = weekAgo.toISOString().split('T')[0];
+      } else if (dateRange === 'month') {
+        const monthAgo = new Date(today);
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        dateFrom = monthAgo.toISOString().split('T')[0];
+      } else {
+        const yearAgo = new Date(today);
+        yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+        dateFrom = yearAgo.toISOString().split('T')[0];
+      }
+
       const [summaryRes, popularRes, dailyRes, ordersRes] = await Promise.all([
-        reportAPI.getOrderSummary({ period: dateRange }).catch(() => ({ data: { data: {} } })),
-        reportAPI.getPopularItems({ period: dateRange, limit: 5 }).catch(() => ({ data: { data: { items: [] } } })),
-        reportAPI.getDailyCounts({ period: dateRange }).catch(() => ({ data: { data: { counts: [] } } })),
+        reportAPI.getOrderSummary({ dateFrom, dateTo, groupBy: 'date' }).catch(() => ({ data: { data: { report: { data: [] } } } })),
+        reportAPI.getPopularItems({ dateFrom, dateTo, limit: 5 }).catch(() => ({ data: { data: { items: [] } } })),
+        reportAPI.getDailyOrderCounts({ dateFrom, dateTo }).catch(() => ({ data: { data: { dailyCounts: [] } } })),
         orderAPI.getOrders({ limit: 10 }).catch(() => ({ data: { data: { orders: [] } } }))
       ]);
 
-      setSummary(summaryRes.data?.data || {});
+      // Process summary data
+      const reportData = summaryRes.data?.data?.report?.data || [];
+      const totalOrders = reportData.reduce((sum, d) => sum + (d.orderCount || 0), 0);
+      const totalRevenue = reportData.reduce((sum, d) => sum + (d.totalValue || 0), 0);
+      const completedOrders = reportData.reduce((sum, d) => sum + (d.completedCount || 0), 0);
+      const cancelledOrders = reportData.reduce((sum, d) => sum + (d.cancelledCount || 0), 0);
+      
+      setSummary({
+        totalOrders,
+        totalRevenue,
+        averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
+        completedOrders,
+        cancelledOrders
+      });
+      
       setPopularItems(popularRes.data?.data?.items || []);
-      setDailyCounts(dailyRes.data?.data?.counts || []);
+      
+      // Transform daily counts for chart
+      const dailyData = dailyRes.data?.data?.dailyCounts || [];
+      const groupedByDate = dailyData.reduce((acc, d) => {
+        const date = d.order_date;
+        if (!acc[date]) acc[date] = { date, count: 0, total: 0 };
+        acc[date].count += parseInt(d.count || 0);
+        acc[date].total += parseFloat(d.total || 0);
+        return acc;
+      }, {});
+      setDailyCounts(Object.values(groupedByDate).sort((a, b) => new Date(a.date) - new Date(b.date)));
+      
       setRecentOrders(ordersRes.data?.data?.orders || []);
     } catch (error) {
       console.error('Failed to load report data:', error);
