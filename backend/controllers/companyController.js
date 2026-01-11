@@ -347,20 +347,33 @@ const getCafeterias = async (req, res, next) => {
  */
 const createCafeteria = async (req, res, next) => {
     try {
-        const { name, buildingId, defaultBreakfastCutoff, defaultLunchCutoff, operatingDays } = req.body;
+        const { name, location, address, buildingId, companyId, defaultBreakfastCutoff, defaultLunchCutoff, operatingDays } = req.body;
         
+        // Insert cafeteria
         const result = await db.query(
-            `INSERT INTO cafeterias (name, building_id, default_breakfast_cutoff, default_lunch_cutoff, operating_days)
-             VALUES ($1, $2, $3, $4, $5)
+            `INSERT INTO cafeterias (name, address, building_id, default_breakfast_cutoff, default_lunch_cutoff, operating_days)
+             VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING *`,
-            [name, buildingId, defaultBreakfastCutoff || '08:00', defaultLunchCutoff || '10:00', 
+            [name, location || address || '', buildingId || null, defaultBreakfastCutoff || '08:00', defaultLunchCutoff || '10:00', 
              JSON.stringify(operatingDays || ['monday','tuesday','wednesday','thursday','friday'])]
         );
+        
+        const cafeteria = result.rows[0];
+        
+        // Link to company if provided
+        if (companyId) {
+            await db.query(
+                `INSERT INTO cafeteria_companies (cafeteria_id, company_id)
+                 VALUES ($1, $2)
+                 ON CONFLICT (cafeteria_id, company_id) DO NOTHING`,
+                [cafeteria.id, companyId]
+            );
+        }
         
         res.status(201).json({
             success: true,
             message: 'Cafeteria created successfully',
-            data: { cafeteria: result.rows[0] }
+            data: { cafeteria }
         });
         
     } catch (error) {
