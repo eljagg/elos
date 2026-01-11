@@ -35,6 +35,7 @@ const QRCode = require('qrcode');
 const db = require('../config/database');
 const security = require('../config/security');
 const logger = require('../utils/logger');
+const emailService = require('../utils/emailService');
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -767,8 +768,8 @@ const forgotPassword = async (req, res, next) => {
             entityId: user.id
         }, req);
         
-        // TODO: Send reset email
-        // await emailService.sendPasswordResetEmail(user.email, user.first_name, resetToken);
+        // Send reset email
+        await emailService.sendPasswordResetEmail(user.email, user.first_name, resetToken);
         
         res.status(200).json(successResponse);
         

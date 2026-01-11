@@ -32,6 +32,7 @@ const crypto = require('crypto');
 const db = require('../config/database');
 const security = require('../config/security');
 const logger = require('../utils/logger');
+const emailService = require('../utils/emailService');
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -432,6 +433,16 @@ const createUser = async (req, res, next) => {
              VALUES ($1, 'USER_CREATED', 'user', $2, $3, $4)`,
             [creatorId, newUser.id, JSON.stringify({ email: normalizedEmail, roleCode }), req.ip]
         );
+        
+        // Send welcome email if requested
+        if (sendWelcomeEmail) {
+            try {
+                await emailService.sendWelcomeEmail(normalizedEmail, firstName, tempPassword);
+                logger.info('Welcome email sent to:', normalizedEmail);
+            } catch (emailError) {
+                logger.error('Failed to send welcome email:', emailError.message);
+            }
+        }
         
         logger.info('User created:', { 
             userId: newUser.id, 

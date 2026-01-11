@@ -37,6 +37,7 @@
 
 const db = require('../config/database');
 const logger = require('../utils/logger');
+const emailService = require('../utils/emailService');
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -399,6 +400,24 @@ const createOrder = async (req, res, next) => {
             mealType, 
             total: totals.total 
         });
+        
+        // Send order confirmation email
+        try {
+            const userResult = await db.query('SELECT email, first_name FROM users WHERE id = $1', [userId]);
+            if (userResult.rows.length > 0) {
+                const user = userResult.rows[0];
+                await emailService.sendOrderConfirmation(user.email, user.first_name, {
+                    orderNumber: order.order_number,
+                    orderDate: order.order_date,
+                    mealType: mealType,
+                    items: validItems.map(i => ({ name: i.name, quantity: i.quantity, totalPrice: i.price * i.quantity })),
+                    total: totals.total,
+                    notes: notes
+                });
+            }
+        } catch (emailError) {
+            logger.error('Failed to send order confirmation email:', emailError.message);
+        }
         
         res.status(201).json({
             success: true,
@@ -1171,7 +1190,25 @@ const updateOrderStatus = async (req, res, next) => {
             [id, order.status, status, userId, notes]
         );
         
-        // TODO: Send notification to user
+        // Send notification to user when order is ready
+        if (status === 'ready') {
+            try {
+                const userResult = await db.query(
+                    'SELECT u.email, u.first_name, c.name as cafeteria_name FROM users u JOIN orders o ON u.id = o.user_id LEFT JOIN cafeterias c ON o.cafeteria_id = c.id WHERE o.id = $1',
+                    [id]
+                );
+                if (userResult.rows.length > 0) {
+                    const userData = userResult.rows[0];
+                    await emailService.sendOrderReadyEmail(userData.email, userData.first_name, {
+                        orderNumber: order.order_number,
+                        mealType: order.meal_type,
+                        cafeteriaName: userData.cafeteria_name || 'Main Cafeteria'
+                    });
+                }
+            } catch (emailError) {
+                logger.error('Failed to send order ready email:', emailError.message);
+            }
+        }
         
         logger.info('Order status updated:', { 
             orderId: id, 
