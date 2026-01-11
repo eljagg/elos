@@ -472,6 +472,41 @@ const createBuilding = async (req, res, next) => {
 // EXPORTS
 // ============================================================================
 
+// Get cafeterias linked to a specific company
+const getCafeteriasByCompany = async (req, res, next) => {
+    try {
+        const { companyId } = req.params;
+        
+        const result = await db.query(
+            `SELECT cf.*, b.name as building_name, cc.custom_breakfast_cutoff, cc.custom_lunch_cutoff
+             FROM cafeterias cf
+             JOIN cafeteria_companies cc ON cf.id = cc.cafeteria_id
+             LEFT JOIN buildings b ON cf.building_id = b.id
+             WHERE cc.company_id = $1 AND cf.is_active = TRUE AND cc.is_active = TRUE
+             ORDER BY cf.name`,
+            [companyId]
+        );
+        
+        res.status(200).json({
+            success: true,
+            data: {
+                cafeterias: result.rows.map(cf => ({
+                    id: cf.id,
+                    name: cf.name,
+                    buildingId: cf.building_id,
+                    buildingName: cf.building_name,
+                    defaultBreakfastCutoff: cf.default_breakfast_cutoff,
+                    defaultLunchCutoff: cf.default_lunch_cutoff,
+                    customBreakfastCutoff: cf.custom_breakfast_cutoff,
+                    customLunchCutoff: cf.custom_lunch_cutoff
+                }))
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     // Companies
     getCompanies,

@@ -11,6 +11,9 @@ router.get('/cafeterias', authenticate, companyController.getCafeterias);
 router.post('/cafeterias', authenticate, requireSuperAdmin, companyController.createCafeteria);
 router.post('/cafeterias/:id/companies', authenticate, requireSuperAdmin, companyController.linkCompanyToCafeteria);
 
+// Get cafeterias for a specific company
+router.get('/:companyId/cafeterias', authenticate, companyController.getCafeteriasByCompany);
+
 // Buildings (must be before /:id to avoid conflict)
 router.get('/buildings', authenticate, companyController.getBuildings);
 router.post('/buildings', authenticate, requireSuperAdmin, companyController.createBuilding);

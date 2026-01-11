@@ -71,15 +71,17 @@ export default function AdminDashboard() {
       setCompanies(companiesList);
       setOrders(ordersList);
       setRoles(rolesRes.data?.data?.roles || []);
-      const allDepts = [], allCafes = [], allDomains = [];
+      const allDepts = [], allDomains = [];
+      // Get all cafeterias directly
+      const allCafesRes = await companyAPI.getCafeterias().catch(() => ({ data: { data: { cafeterias: [] } } }));
+      const allCafes = allCafesRes.data?.data?.cafeterias || [];
+      
       for (const c of companiesList) {
-        const [dRes, cafeRes, domRes] = await Promise.all([
+        const [dRes, domRes] = await Promise.all([
           companyAPI.getDepartments(c.id).catch(() => ({ data: { data: { departments: [] } } })),
-          companyAPI.getCafeterias(c.id).catch(() => ({ data: { data: { cafeterias: [] } } })),
           companyAPI.getDomains(c.id).catch(() => ({ data: { data: { domains: [] } } }))
         ]);
         allDepts.push(...(dRes.data?.data?.departments || []).map(d => ({ ...d, company_name: c.name })));
-        allCafes.push(...(cafeRes.data?.data?.cafeterias || []).map(ca => ({ ...ca, company_name: c.name })));
         allDomains.push(...(domRes.data?.data?.domains || []).map(dm => ({ ...dm, company_name: c.name })));
       }
       setDepartments(allDepts); setCafeterias(allCafes); setDomains(allDomains);
