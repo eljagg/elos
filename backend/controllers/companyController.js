@@ -521,6 +521,7 @@ module.exports = {
     
     // Cafeterias
     getCafeterias,
+    getCafeteriasByCompany,
     createCafeteria,
     linkCompanyToCafeteria,
     
