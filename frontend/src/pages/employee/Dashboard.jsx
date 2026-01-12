@@ -14,6 +14,7 @@ export default function EmployeeDashboard() {
   const [selectedCafeteria, setSelectedCafeteria] = useState('');
   const [myOrders, setMyOrders] = useState([]);
   const [orderHistory, setOrderHistory] = useState([]);
+  const [favorites, setFavorites] = useState([]);
   const [cart, setCart] = useState([]);
   const [currentOrder, setCurrentOrder] = useState(null);
   const [preferences, setPreferences] = useState({ vegan: false, vegetarian: false, glutenFree: false });
@@ -25,7 +26,7 @@ export default function EmployeeDashboard() {
   const [orderNotes, setOrderNotes] = useState('');
   const [feedbackForm, setFeedbackForm] = useState({ type: 'feedback', subject: '', message: '' });
 
-  useEffect(() => { loadCafeterias(); loadPreferences(); }, []);
+  useEffect(() => { loadCafeterias(); loadPreferences(); loadFavorites(); }, []);
   useEffect(() => { if (selectedCafeteria) loadData(); }, [selectedCafeteria]);
 
   const loadCafeterias = async () => {
@@ -56,13 +57,14 @@ export default function EmployeeDashboard() {
   const loadPreferences = () => { const saved = JSON.parse(localStorage.getItem('dietaryPreferences') || '{}'); if (saved) setPreferences(saved); };
   const savePreferences = () => { localStorage.setItem('dietaryPreferences', JSON.stringify(preferences)); toast.success('Preferences saved'); setShowPreferencesModal(false); };
 
-  const addToCart = (item) => { const existing = cart.find(c => c.id === item.id); if (existing) { setCart(cart.map(c => c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c)); } else { setCart([...cart, { ...item, quantity: 1 }]); } toast.success(`${item.name} added`); };
+  const addToCart = (item) => { const existing = cart.find(c => c.id === item.id); if (existing) { setCart(cart.map(c => c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c)); } else { setCart([...cart, { ...item, quantity: 1, note: '' }]); } toast.success(`${item.name} added`); };
   const removeFromCart = (itemId) => { setCart(cart.filter(c => c.id !== itemId)); };
   const updateQuantity = (itemId, qty) => { if (qty < 1) { removeFromCart(itemId); return; } setCart(cart.map(c => c.id === itemId ? { ...c, quantity: qty } : c)); };
+  const updateItemNote = (itemId, note) => { setCart(cart.map(c => c.id === itemId ? { ...c, note: note } : c)); };
   const cartTotal = cart.reduce((sum, item) => sum + (parseFloat(item.price) || 0) * item.quantity, 0);
 
   const handlePlaceOrder = async () => {
-    try { await orderAPI.createOrder({ items: cart.map(c => ({ menuItemId: c.id, quantity: c.quantity })), notes: orderNotes }); toast.success('Order placed!'); setCart([]); setOrderNotes(''); setShowCartModal(false); loadData(); } catch { toast.error('Failed'); }
+    try { await orderAPI.createOrder({ items: cart.map(c => ({ menuItemId: c.id, quantity: c.quantity, specialInstructions: c.note || '' })), notes: orderNotes }); toast.success('Order placed!'); setCart([]); setOrderNotes(''); setShowCartModal(false); loadData(); } catch { toast.error('Failed'); }
   };
 
   const handleCancelOrder = async (order) => {
