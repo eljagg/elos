@@ -162,13 +162,7 @@ function App() {
             <Route path="orders" element={<OrderHistoryPage />} />
             
             {/* Kitchen routes */}
-            <Route path="kitchen/menu-calendar" element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <MenuCalendar />
-                </MainLayout>
-              </ProtectedRoute>
-            } />
+            <Route path="kitchen/menu-calendar" element={<MenuCalendar />} />
             <Route path="kitchen/daily-menu" element={
               <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN', 'KITCHEN_HEAD', 'KITCHEN_SOUS', 'KITCHEN_STAFF']}>
                 <DailyMenuManagement />

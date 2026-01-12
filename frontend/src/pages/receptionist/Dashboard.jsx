@@ -1,11 +1,18 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { orderAPI, menuAPI, messageAPI, companyAPI } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import toast from 'react-hot-toast';
 
 export default function ReceptionistDashboard() {
   const { colors, getStatCardColors } = useTheme();
-  const [activeTab, setActiveTab] = useState('codes');
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'codes');
+  
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
   const [loading, setLoading] = useState(true);
   const [guestCodes, setGuestCodes] = useState([]);
   const [menus, setMenus] = useState([]);

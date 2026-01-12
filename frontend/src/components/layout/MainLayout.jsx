@@ -88,9 +88,9 @@ const MainLayout = () => {
       case 'RECEPTIONIST':
         return [
           ...baseItems,
-          { path: '/dashboard', icon: '🎟️', label: 'Guest Codes' },
-          { path: '/dashboard', icon: '📦', label: 'Deliveries' },
-          { path: '/dashboard', icon: '📊', label: 'Reports' },
+          { path: '/dashboard?tab=codes', icon: '🎟️', label: 'Guest Codes' },
+          { path: '/dashboard?tab=deliveries', icon: '📦', label: 'Deliveries' },
+          { path: '/reports', icon: '📊', label: 'Reports' },
         ];
       case 'DELIVERY_PERSON':
       case 'DELIVERY':

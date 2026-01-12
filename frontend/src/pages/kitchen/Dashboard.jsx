@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { orderAPI, menuAPI, messageAPI, companyAPI } from '../../services/api';
+import { orderAPI, menuAPI, messageAPI, companyAPI, catalogAPI } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import toast from 'react-hot-toast';
 
@@ -88,8 +88,8 @@ export default function KitchenDashboard() {
   const handleSaveItem = async (e) => {
     e.preventDefault();
     try {
-      if (selectedItem) { await menuAPI.updateMenuItem(selectedItem.id, itemForm); toast.success('Updated'); }
-      else { await menuAPI.createMenuItem(itemForm); toast.success('Created'); }
+      if (selectedItem) { await catalogAPI.updateItem(selectedItem.id, itemForm); toast.success('Updated'); }
+      else { await catalogAPI.createItem(itemForm); toast.success('Created'); }
       setShowItemModal(false); setItemForm({ name: '', description: '', price: '', category: 'main', isVegan: false, isVegetarian: false, ingredients: '' }); setSelectedItem(null); loadData();
     } catch { toast.error('Failed'); }
   };
