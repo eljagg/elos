@@ -17,7 +17,7 @@ export default function EmployeeDashboard() {
   const [favorites, setFavorites] = useState([]);
   const [cart, setCart] = useState([]);
   const [currentOrder, setCurrentOrder] = useState(null);
-  const [preferences, setPreferences] = useState({ vegan: false, vegetarian: false, glutenFree: false });
+  const [preferences, setPreferences] = useState({ vegan: false, vegetarian: false, glutenFree: false, dairyFree: false, nutFree: false, halal: false, kosher: false });
   const [filters, setFilters] = useState({ mealType: '', menuType: '', search: '' });
 
   const [showCartModal, setShowCartModal] = useState(false);
@@ -91,6 +91,10 @@ export default function EmployeeDashboard() {
     if (preferences.vegan && !item.is_vegan) return false;
     if (preferences.vegetarian && !item.is_vegetarian) return false;
     if (preferences.glutenFree && !item.is_gluten_free) return false;
+    if (preferences.dairyFree && !item.is_dairy_free) return false;
+    if (preferences.nutFree && !item.is_nut_free) return false;
+    if (preferences.halal && !item.is_halal) return false;
+    if (preferences.kosher && !item.is_kosher) return false;
     return true;
   });
 
@@ -127,8 +131,13 @@ export default function EmployeeDashboard() {
               <div className="flex flex-wrap gap-4">
                 <input placeholder="Search items..." className={`px-4 py-2 border ${colors.border} rounded-lg flex-1`} value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} />
                 <div className="flex gap-2">
-                  {preferences.vegan && <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">Vegan</span>}
-                  {preferences.vegetarian && <span className="px-3 py-1 bg-lime-100 text-lime-700 rounded-full text-sm">Vegetarian</span>}
+                  {preferences.vegan && <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">🌱 Vegan</span>}
+                  {preferences.vegetarian && <span className="px-3 py-1 bg-lime-100 text-lime-700 rounded-full text-sm">🥬 Vegetarian</span>}
+                  {preferences.halal && <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">☪️ Halal</span>}
+                  {preferences.kosher && <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">✡️ Kosher</span>}
+                  {preferences.glutenFree && <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm">🌾 GF</span>}
+                  {preferences.dairyFree && <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">🥛 DF</span>}
+                  {preferences.nutFree && <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">🥜 NF</span>}
                 </div>
               </div>
 
