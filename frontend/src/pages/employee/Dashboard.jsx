@@ -54,6 +54,9 @@ export default function EmployeeDashboard() {
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
+  const loadFavorites = () => { try { const saved = localStorage.getItem('elos_favorites'); if (saved) setFavorites(JSON.parse(saved)); } catch (e) { console.error('Failed to load favorites:', e); } };
+  const toggleFavorite = (item) => { const exists = favorites.find(f => f.id === item.id); let newFavorites; if (exists) { newFavorites = favorites.filter(f => f.id !== item.id); } else { newFavorites = [...favorites, { id: item.id, name: item.item_name || item.name, price: item.price }]; } setFavorites(newFavorites); localStorage.setItem('elos_favorites', JSON.stringify(newFavorites)); };
+  const isFavorite = (itemId) => favorites.some(f => f.id === itemId);
   const loadPreferences = () => { const saved = JSON.parse(localStorage.getItem('dietaryPreferences') || '{}'); if (saved) setPreferences(saved); };
   const savePreferences = () => { localStorage.setItem('dietaryPreferences', JSON.stringify(preferences)); toast.success('Preferences saved'); setShowPreferencesModal(false); };
 
