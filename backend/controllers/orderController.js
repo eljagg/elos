@@ -700,7 +700,7 @@ const getOrderById = async (req, res, next) => {
              LEFT JOIN companies c ON o.company_id = c.id
              LEFT JOIN departments d ON o.department_id = d.id
              JOIN cafeterias cf ON o.cafeteria_id = cf.id
-             LEFT JOIN buildings b ON o.building_id = b.id
+             LEFT JOIN buildings b ON cf.building_id = b.id
              WHERE o.id = $1`,
             [id]
         );

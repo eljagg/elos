@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
+import { orderAPI, messageAPI, dailyMenuAPI, companyAPI } from '../../services/api';
 import WeeklyMenuView from '../../components/employee/WeeklyMenuView';
-import { orderAPI, menuAPI, messageAPI, dailyMenuAPI, companyAPI } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import toast from 'react-hot-toast';
 
@@ -103,7 +103,6 @@ export default function EmployeeDashboard() {
   const groupedItems = filteredItems.reduce((acc, item) => { const cat = item.category || 'Other'; if (!acc[cat]) acc[cat] = []; acc[cat].push(item); return acc; }, {});
 
   const getCafeteriaName = () => { const c = cafeterias.find(c => c.id === selectedCafeteria); return c?.name || 'Cafeteria'; };
-
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
 
   return (
@@ -131,45 +130,15 @@ export default function EmployeeDashboard() {
 
         <div className="p-6">
           {activeTab === 'menu' && (
-            <div className="space-y-6">
-              <div className="flex flex-wrap gap-4">
-                <input placeholder="Search items..." className={`px-4 py-2 border ${colors.border} rounded-lg flex-1`} value={filters.search} onChange={e => setFilters({ ...filters, search: e.target.value })} />
-                <div className="flex gap-2">
-                  {preferences.vegan && <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">🌱 Vegan</span>}
-                  {preferences.vegetarian && <span className="px-3 py-1 bg-lime-100 text-lime-700 rounded-full text-sm">🥬 Vegetarian</span>}
-                  {preferences.halal && <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">☪️ Halal</span>}
-                  {preferences.kosher && <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">✡️ Kosher</span>}
-                  {preferences.glutenFree && <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm">🌾 GF</span>}
-                  {preferences.dairyFree && <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">🥛 DF</span>}
-                  {preferences.nutFree && <span className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm">🥜 NF</span>}
-                </div>
-              </div>
-
-              {Object.entries(groupedItems).map(([category, items]) => (
-                <div key={category}>
-                  <h3 className={`font-semibold mb-3 ${colors.textPrimary} capitalize`}>{category}s</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {items.map(item => (
-                      <div key={item.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard} hover:shadow-md transition-shadow`}>
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className={`font-medium ${colors.textPrimary}`}>{item.item_name || item.name}</h4>
-                          <span className={`font-bold ${colors.accentText}`}>${item.price}</span>
-                        </div>
-                        <p className={`text-sm ${colors.textMuted} mb-2`}>{item.description}</p>
-                        <div className="flex gap-1 mb-3">
-                          {item.is_vegan && <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">Vegan</span>}
-                          {item.is_vegetarian && <span className="px-2 py-0.5 bg-lime-100 text-lime-700 text-xs rounded">Veg</span>}
-                        </div>
-                        {item.ingredients && <p className={`text-xs ${colors.textMuted} mb-2`}>📝 {item.ingredients}</p>}
-                        <button onClick={() => addToCart(item)} className={`w-full px-4 py-2 ${colors.btnPrimary} rounded-lg text-sm`}>+ Add to Cart</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <WeeklyMenuView 
+              menuItems={filteredItems} 
+              dailyMenu={dailyMenu} 
+              selectedDate={selectedDate} 
+              onDateChange={setSelectedDate} 
+              onAddToCart={addToCart} 
+              cafeteriaName={getCafeteriaName()} 
+            />
           )}
-
           {activeTab === 'orders' && (
             <div className="space-y-4">
               {myOrders.length > 0 ? myOrders.map(order => (
