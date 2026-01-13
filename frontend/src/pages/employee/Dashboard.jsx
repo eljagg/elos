@@ -87,7 +87,7 @@ export default function EmployeeDashboard() {
   };
 
   const filteredItems = menuItems.filter(item => {
-    if (filters.search && !item.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    if (filters.search && !(item.item_name || item.name || '').toLowerCase().includes(filters.search.toLowerCase())) return false;
     if (preferences.vegan && !item.is_vegan) return false;
     if (preferences.vegetarian && !item.is_vegetarian) return false;
     if (preferences.glutenFree && !item.is_gluten_free) return false;
@@ -148,7 +148,7 @@ export default function EmployeeDashboard() {
                     {items.map(item => (
                       <div key={item.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard} hover:shadow-md transition-shadow`}>
                         <div className="flex justify-between items-start mb-2">
-                          <h4 className={`font-medium ${colors.textPrimary}`}>{item.name}</h4>
+                          <h4 className={`font-medium ${colors.textPrimary}`}>{item.item_name || item.name}</h4>
                           <span className={`font-bold ${colors.accentText}`}>${item.price}</span>
                         </div>
                         <p className={`text-sm ${colors.textMuted} mb-2`}>{item.description}</p>
