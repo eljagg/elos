@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import WeeklyMenuView from '../../components/employee/WeeklyMenuView';
 import { orderAPI, menuAPI, messageAPI, dailyMenuAPI, companyAPI } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import toast from 'react-hot-toast';
@@ -7,7 +6,6 @@ import toast from 'react-hot-toast';
 export default function EmployeeDashboard() {
   const { colors, getStatCardColors } = useTheme();
   const [activeTab, setActiveTab] = useState('menu');
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [menus, setMenus] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
@@ -29,7 +27,7 @@ export default function EmployeeDashboard() {
   const [feedbackForm, setFeedbackForm] = useState({ type: 'feedback', subject: '', message: '' });
 
   useEffect(() => { loadCafeterias(); loadPreferences(); loadFavorites(); }, []);
-  useEffect(() => { if (selectedCafeteria) loadData(); }, [selectedCafeteria, selectedDate]);
+  useEffect(() => { if (selectedCafeteria) loadData(); }, [selectedCafeteria]);
 
   const loadCafeterias = async () => {
     try {
@@ -42,9 +40,9 @@ export default function EmployeeDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      const today = new Date().toISOString().split('T')[0];
       const [dailyMenuRes, ordersRes] = await Promise.all([
-        dailyMenuAPI.getDailyMenu({ cafeteriaId: selectedCafeteria, date: dateStr }).catch(() => ({ data: { data: { dailyMenu: null, items: [] } } })),
+        dailyMenuAPI.getDailyMenu({ cafeteriaId: selectedCafeteria, date: today }).catch(() => ({ data: { data: { dailyMenu: null, items: [] } } })),
         orderAPI.getMyOrders().catch(() => ({ data: { data: { orders: [] } } }))
       ]);
       setDailyMenu(dailyMenuRes.data?.data?.dailyMenu);
@@ -101,8 +99,6 @@ export default function EmployeeDashboard() {
   });
 
   const groupedItems = filteredItems.reduce((acc, item) => { const cat = item.category || 'Other'; if (!acc[cat]) acc[cat] = []; acc[cat].push(item); return acc; }, {});
-
-  const getCafeteriaName = () => { const c = cafeterias.find(c => c.id === selectedCafeteria); return c?.name || 'Cafeteria'; };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
 
