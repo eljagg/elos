@@ -149,7 +149,7 @@ const publishDailyMenu = async (req, res, next) => {
 
         const result = await db.query(`
             UPDATE daily_menus 
-            SET status = 'published', is_active = TRUE
+            SET status = 'published'
             WHERE id = $1
             RETURNING *
         `, [id]);
