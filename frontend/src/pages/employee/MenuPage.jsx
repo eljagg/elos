@@ -85,7 +85,11 @@ const MenuPage = () => {
     if (cart.length === 0) { toast.error('Cart is empty'); return; }
     try {
       setPlacingOrder(true);
+      const orderDate = selectedDate.toISOString().split('T')[0];
       await orderAPI.createOrder({ 
+        cafeteriaId: selectedCafeteria,
+        mealType: 'lunch',
+        orderDate: orderDate,
         items: cart.map(c => ({ menuItemId: c.id, quantity: c.quantity, specialInstructions: c.note || '' })), 
         notes: orderNotes 
       });
