@@ -62,7 +62,7 @@ export default function EmployeeDashboard() {
   const loadPreferences = () => { const saved = JSON.parse(localStorage.getItem('dietaryPreferences') || '{}'); if (saved) setPreferences(saved); };
   const savePreferences = () => { localStorage.setItem('dietaryPreferences', JSON.stringify(preferences)); toast.success('Preferences saved'); setShowPreferencesModal(false); };
 
-  const addToCart = (item) => { const existing = cart.find(c => c.id === item.id); if (existing) { setCart(cart.map(c => c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c)); } else { setCart([...cart, { ...item, quantity: 1, note: '' }]); } toast.success(`${item.name} added`); };
+  const addToCart = (item) => { const existing = cart.find(c => c.id === item.id); if (existing) { setCart(cart.map(c => c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c)); } else { setCart([...cart, { ...item, quantity: 1, note: '' }]); } toast.success(`${item.item_name || item.name} added`); };
   const removeFromCart = (itemId) => { setCart(cart.filter(c => c.id !== itemId)); };
   const updateQuantity = (itemId, qty) => { if (qty < 1) { removeFromCart(itemId); return; } setCart(cart.map(c => c.id === itemId ? { ...c, quantity: qty } : c)); };
   const updateItemNote = (itemId, note) => { setCart(cart.map(c => c.id === itemId ? { ...c, note: note } : c)); };

@@ -1447,9 +1447,120 @@ const deleteFavorite = async (req, res, next) => {
 // EXPORTS
 // ============================================================================
 
+
+/**
+ * Create order from daily menu items
+ */
+const createDailyMenuOrder = async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        const userCompanyId = req.user.companyId;
+        const userDepartmentId = req.user.departmentId;
+        
+        const { cafeteriaId, orderDate, items, notes } = req.body;
+        
+        if (!items || items.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'NO_ITEMS', message: 'Order must contain at least one item' }
+            });
+        }
+        
+        // Get daily menu for the date
+        const dailyMenuResult = await db.query(
+            `SELECT id FROM daily_menus WHERE cafeteria_id = $1 AND menu_date = $2 AND status = 'published'`,
+            [cafeteriaId, orderDate]
+        );
+        
+        if (dailyMenuResult.rows.length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'NO_MENU', message: 'No published menu for this date' }
+            });
+        }
+        
+        const dailyMenuId = dailyMenuResult.rows[0].id;
+        
+        // Validate items exist in daily menu
+        const itemIds = items.map(i => i.menuItemId);
+        const itemsResult = await db.query(
+            `SELECT dmi.id, dmi.catalog_item_id, mic.name, mic.price, 
+                    (dmi.portions_available - dmi.portions_ordered) as portions_remaining
+             FROM daily_menu_items dmi
+             JOIN menu_item_catalog mic ON dmi.catalog_item_id = mic.id
+             WHERE dmi.id = ANY($1) AND dmi.daily_menu_id = $2`,
+            [itemIds, dailyMenuId]
+        );
+        
+        if (itemsResult.rows.length !== itemIds.length) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'INVALID_ITEMS', message: 'Some items are not available' }
+            });
+        }
+        
+        // Calculate total
+        let totalAmount = 0;
+        const orderItems = items.map(item => {
+            const dbItem = itemsResult.rows.find(r => r.id === item.menuItemId);
+            const price = parseFloat(dbItem.price) || 0;
+            totalAmount += price * item.quantity;
+            return {
+                dailyMenuItemId: item.menuItemId,
+                catalogItemId: dbItem.catalog_item_id,
+                name: dbItem.name,
+                quantity: item.quantity,
+                unitPrice: price,
+                specialInstructions: item.specialInstructions || ''
+            };
+        });
+        
+        // Generate order number
+        const orderNumber = 'ORD-' + Date.now().toString(36).toUpperCase();
+        
+        // Create order
+        const orderResult = await db.query(
+            `INSERT INTO orders (order_number, user_id, company_id, department_id, cafeteria_id, 
+                                order_date, meal_type, status, total_amount, notes)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             RETURNING *`,
+            [orderNumber, userId, userCompanyId, userDepartmentId, cafeteriaId,
+             orderDate, 'lunch', 'pending', totalAmount, notes || '']
+        );
+        
+        const newOrder = orderResult.rows[0];
+        
+        // Insert order items
+        for (const item of orderItems) {
+            await db.query(
+                `INSERT INTO order_items (order_id, menu_item_id, quantity, unit_price, total_price, special_instructions)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [newOrder.id, item.catalogItemId, item.quantity, item.unitPrice, 
+                 item.unitPrice * item.quantity, item.specialInstructions]
+            );
+            
+            // Update portions ordered
+            await db.query(
+                `UPDATE daily_menu_items SET portions_ordered = portions_ordered + $1 WHERE id = $2`,
+                [item.quantity, item.dailyMenuItemId]
+            );
+        }
+        
+        res.status(201).json({
+            success: true,
+            message: 'Order placed successfully',
+            data: { order: newOrder }
+        });
+        
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     // Order placement
     createOrder,
+    createDailyMenuOrder,
     createWeekOrders,
     
     // Order retrieval

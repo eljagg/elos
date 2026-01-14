@@ -124,7 +124,7 @@ const MenuPage = () => {
           }
         });
       });
-      await orderAPI.createOrder({
+      await orderAPI.createDailyOrder({
         cafeteriaId: selectedCafeteria,
         mealType: 'lunch',
         orderDate: orderDate,

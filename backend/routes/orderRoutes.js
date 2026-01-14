@@ -8,6 +8,7 @@ const { authenticate, requireKitchenStaff } = require('../middleware/auth');
 
 // Employee routes
 router.post('/', authenticate, orderController.createOrder);
+router.post('/daily', authenticate, orderController.createDailyMenuOrder);
 router.post('/week', authenticate, orderController.createWeekOrders);
 router.get('/my-history', authenticate, orderController.getMyOrderHistory);
 
