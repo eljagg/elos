@@ -3,32 +3,32 @@ import toast from 'react-hot-toast';
 import { dailyMenuAPI, orderAPI, companyAPI } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 
-const CATEGORY_COLORS = {
-  'protein': { bg: 'bg-orange-500', light: 'bg-orange-50' },
-  'proteins': { bg: 'bg-orange-500', light: 'bg-orange-50' },
-  'carbohydrate': { bg: 'bg-yellow-500', light: 'bg-yellow-50' },
-  'carbohydrates': { bg: 'bg-yellow-500', light: 'bg-yellow-50' },
-  'sides': { bg: 'bg-green-500', light: 'bg-green-50' },
-  'vegetable': { bg: 'bg-teal-500', light: 'bg-teal-50' },
-  'vegetables': { bg: 'bg-teal-500', light: 'bg-teal-50' },
-  'fibre': { bg: 'bg-teal-500', light: 'bg-teal-50' },
-  'soup': { bg: 'bg-purple-500', light: 'bg-purple-50' },
-  'soups': { bg: 'bg-purple-500', light: 'bg-purple-50' },
-  'vegetarian': { bg: 'bg-lime-500', light: 'bg-lime-50' },
-  'beverage': { bg: 'bg-cyan-500', light: 'bg-cyan-50' },
-  'dessert': { bg: 'bg-pink-500', light: 'bg-pink-50' },
-  'specials': { bg: 'bg-red-500', light: 'bg-red-50' },
-  'done to order': { bg: 'bg-blue-500', light: 'bg-blue-50' },
-  'other': { bg: 'bg-gray-500', light: 'bg-gray-50' },
+const CATEGORY_CONFIG = {
+  'proteins': { bg: 'bg-red-500', light: 'bg-red-50', required: true, label: 'PROTEIN' },
+  'protein': { bg: 'bg-red-500', light: 'bg-red-50', required: true, label: 'PROTEIN' },
+  'carbohydrates': { bg: 'bg-yellow-500', light: 'bg-yellow-50', required: true, label: 'CARBOHYDRATE' },
+  'carbohydrate': { bg: 'bg-yellow-500', light: 'bg-yellow-50', required: true, label: 'CARBOHYDRATE' },
+  'sides': { bg: 'bg-green-500', light: 'bg-green-50', required: false, label: 'SIDES' },
+  'fibre': { bg: 'bg-teal-500', light: 'bg-teal-50', required: true, label: 'FIBRE' },
+  'vegetables': { bg: 'bg-teal-500', light: 'bg-teal-50', required: true, label: 'FIBRE' },
+  'soup': { bg: 'bg-purple-500', light: 'bg-purple-50', required: false, label: 'SOUP' },
+  'vegetarian': { bg: 'bg-green-600', light: 'bg-green-50', required: false, label: 'VEGETARIAN' },
+  'done to order': { bg: 'bg-blue-500', light: 'bg-blue-50', required: false, label: 'DONE TO ORDER' },
+  'beverage': { bg: 'bg-cyan-500', light: 'bg-cyan-50', required: false, label: 'BEVERAGE' },
+  'dessert': { bg: 'bg-pink-500', light: 'bg-pink-50', required: false, label: 'DESSERT' },
+  'specials': { bg: 'bg-orange-500', light: 'bg-orange-50', required: false, label: 'SPECIALS' },
+  'other': { bg: 'bg-gray-500', light: 'bg-gray-50', required: false, label: 'OTHER' },
 };
-const getCatColor = (cat) => CATEGORY_COLORS[(cat||'other').toLowerCase()] || CATEGORY_COLORS['other'];
+const getCatConfig = (cat) => CATEGORY_CONFIG[(cat||'other').toLowerCase()] || CATEGORY_CONFIG['other'];
+
+const CATEGORY_ORDER = ['proteins', 'protein', 'carbohydrates', 'carbohydrate', 'sides', 'fibre', 'vegetables', 'soup', 'vegetarian', 'done to order', 'beverage', 'dessert', 'specials', 'other'];
 
 const MenuPage = () => {
   const { colors } = useTheme();
   const [loading, setLoading] = useState(true);
   const [menuItems, setMenuItems] = useState([]);
   const [dailyMenu, setDailyMenu] = useState(null);
-  const [cart, setCart] = useState([]);
+  const [meals, setMeals] = useState([{ id: 1, selections: {} }]);
   const [cafeterias, setCafeterias] = useState([]);
   const [selectedCafeteria, setSelectedCafeteria] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -64,41 +64,83 @@ const MenuPage = () => {
     } finally { setLoading(false); }
   };
 
-  const addToCart = (item) => {
-    const existing = cart.find(c => c.id === item.id);
-    if (existing) {
-      setCart(cart.map(c => c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c));
-    } else {
-      setCart([...cart, { ...item, name: item.item_name || item.name, quantity: 1 }]);
-    }
+  const addMeal = () => {
+    const newId = Math.max(...meals.map(m => m.id)) + 1;
+    setMeals([...meals, { id: newId, selections: {} }]);
   };
 
-  const updateQty = (id, qty) => {
-    if (qty < 1) { setCart(cart.filter(c => c.id !== id)); return; }
-    setCart(cart.map(c => c.id === id ? { ...c, quantity: qty } : c));
+  const removeMeal = (mealId) => {
+    if (meals.length === 1) return;
+    setMeals(meals.filter(m => m.id !== mealId));
   };
 
-  const removeFromCart = (id) => setCart(cart.filter(c => c.id !== id));
-  const cartTotal = cart.reduce((sum, item) => sum + (parseFloat(item.price) || 0) * item.quantity, 0);
+  const toggleSelection = (mealId, category, itemId) => {
+    setMeals(meals.map(meal => {
+      if (meal.id !== mealId) return meal;
+      const currentSelection = meal.selections[category];
+      const newSelections = { ...meal.selections };
+      if (currentSelection === itemId) {
+        delete newSelections[category];
+      } else {
+        newSelections[category] = itemId;
+      }
+      return { ...meal, selections: newSelections };
+    }));
+  };
+
+  const getMealPrice = (meal) => {
+    let price = 0;
+    Object.values(meal.selections).forEach(itemId => {
+      const item = menuItems.find(i => i.id === itemId);
+      if (item) price += parseFloat(item.price) || 0;
+    });
+    return price;
+  };
+
+  const getTotalPrice = () => meals.reduce((sum, meal) => sum + getMealPrice(meal), 0);
+
+  const isMealComplete = (meal) => {
+    const requiredCats = Object.keys(groupedItems).filter(cat => getCatConfig(cat).required);
+    return requiredCats.every(cat => meal.selections[cat]);
+  };
+
+  const allMealsComplete = () => meals.every(isMealComplete);
 
   const placeOrder = async () => {
-    if (cart.length === 0) { toast.error('Cart is empty'); return; }
+    if (!allMealsComplete()) {
+      toast.error('Please complete all meals (select protein, carbohydrate, and fibre)');
+      return;
+    }
     try {
       setPlacingOrder(true);
       const orderDate = selectedDate.toISOString().split('T')[0];
-      await orderAPI.createOrder({ 
+      const allItems = [];
+      meals.forEach(meal => {
+        Object.values(meal.selections).forEach(itemId => {
+          const existing = allItems.find(i => i.menuItemId === itemId);
+          if (existing) {
+            existing.quantity += 1;
+          } else {
+            allItems.push({ menuItemId: itemId, quantity: 1, specialInstructions: '' });
+          }
+        });
+      });
+      await orderAPI.createOrder({
         cafeteriaId: selectedCafeteria,
         mealType: 'lunch',
         orderDate: orderDate,
-        items: cart.map(c => ({ menuItemId: c.id, quantity: c.quantity, specialInstructions: c.note || '' })), 
-        notes: orderNotes 
+        items: allItems,
+        notes: orderNotes
       });
-      toast.success('Order placed successfully!');
-      setCart([]);
+      toast.success(`Order placed successfully! (${meals.length} meal${meals.length > 1 ? 's' : ''})`);
+      setMeals([{ id: 1, selections: {} }]);
       setOrderNotes('');
       loadDailyMenu();
-    } catch (error) { toast.error('Failed to place order'); } 
-    finally { setPlacingOrder(false); }
+    } catch (error) {
+      toast.error('Failed to place order');
+    } finally {
+      setPlacingOrder(false);
+    }
   };
 
   const getWeekDates = () => {
@@ -110,6 +152,7 @@ const MenuPage = () => {
     }
     return dates;
   };
+
   const weekDates = getWeekDates();
   const isToday = (d) => d.toDateString() === new Date().toDateString();
   const isSelected = (d) => d.toDateString() === selectedDate.toDateString();
@@ -124,13 +167,20 @@ const MenuPage = () => {
     e.setDate(weekStart.getDate() + 6);
     return `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
   };
+
   const groupedItems = menuItems.reduce((acc, item) => {
-    const cat = item.category_name || item.category || 'Other';
+    const cat = (item.category_name || item.category || 'Other').toLowerCase();
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(item);
     return acc;
   }, {});
-  const categories = Object.keys(groupedItems);
+
+  const sortedCategories = Object.keys(groupedItems).sort((a, b) => {
+    const aIdx = CATEGORY_ORDER.indexOf(a.toLowerCase());
+    const bIdx = CATEGORY_ORDER.indexOf(b.toLowerCase());
+    return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+  });
+
   const getCafeName = () => cafeterias.find(c => c.id === selectedCafeteria)?.name || 'Cafeteria';
 
   if (loading && !dailyMenu) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
@@ -140,8 +190,9 @@ const MenuPage = () => {
       {/* Company Header */}
       <div className="bg-gradient-to-r from-green-600 to-green-700 text-white text-center py-4 rounded-xl">
         <h2 className="text-xl font-bold uppercase">{getCafeName()} - LUNCH MENU</h2>
+        <p className="text-sm text-green-100 mt-1">Please select 1 protein, 1 carbohydrate, and 1 fibre per meal</p>
         {dailyMenu?.status !== 'published' && (
-          <p className="text-yellow-200 text-sm mt-1">Menu details for this day have not been published yet.</p>
+          <p className="text-yellow-200 text-sm mt-1">⚠️ Menu for this day has not been published yet</p>
         )}
       </div>
 
@@ -166,7 +217,6 @@ const MenuPage = () => {
                 : 'bg-gray-50 hover:bg-indigo-50'}`}>
               <p className="text-xs uppercase font-medium">{date.toLocaleDateString('en-US', { weekday: 'short' })}</p>
               <p className="text-2xl font-bold">{date.getDate()}</p>
-              {isToday(date) && !isSelected(date) && <span className="block w-2 h-2 bg-indigo-500 rounded-full mx-auto mt-1"></span>}
             </button>
           ))}
         </div>
@@ -182,37 +232,125 @@ const MenuPage = () => {
         )}
       </div>
 
-      {/* Category Columns */}
-      {dailyMenu?.status === 'published' && categories.length > 0 ? (
-        <div className="overflow-x-auto pb-4">
-          <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
-            {categories.map(category => {
-              const catColor = getCatColor(category);
-              const items = groupedItems[category] || [];
-              return (
-                <div key={category} className="w-48 flex-shrink-0 rounded-xl overflow-hidden shadow-sm border border-gray-200">
-                  <div className={`${catColor.bg} text-white text-center py-3`}>
-                    <h4 className="font-bold text-sm uppercase tracking-wide">{category}</h4>
-                  </div>
-                  <div className={`${catColor.light} p-3 min-h-[200px] space-y-2`}>
-                    {items.map(item => (
-                      <div key={item.id} 
-                        onClick={() => !item.is_sold_out && addToCart(item)}
-                        className={`bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition cursor-pointer border border-gray-100 ${item.is_sold_out ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                        <p className="font-semibold text-sm text-gray-800">{item.item_name || item.name}</p>
-                        <p className="text-xs text-gray-500 mt-1">{item.description || ''}</p>
-                        <p className="text-sm text-green-600 font-bold mt-1">${parseFloat(item.price).toFixed(2)}</p>
-                        {item.is_sold_out && <p className="text-xs text-red-500 mt-1">Sold Out</p>}
-                        {!item.is_sold_out && item.portions_remaining <= 10 && (
-                          <p className="text-xs text-orange-500 mt-1">{item.portions_remaining} left</p>
-                        )}
-                      </div>
-                    ))}
-                    {items.length === 0 && <p className="text-sm text-gray-400 italic text-center py-8">No items</p>}
-                  </div>
+      {/* Meals */}
+      {dailyMenu?.status === 'published' && sortedCategories.length > 0 ? (
+        <div className="space-y-6">
+          {meals.map((meal, mealIdx) => (
+            <div key={meal.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              {/* Meal Header */}
+              <div className="bg-gray-100 px-4 py-3 flex justify-between items-center">
+                <h4 className="font-bold text-gray-700">MEAL {mealIdx + 1}</h4>
+                <div className="flex items-center gap-4">
+                  <span className="text-green-600 font-semibold">${getMealPrice(meal).toFixed(2)}</span>
+                  {meals.length > 1 && (
+                    <button onClick={() => removeMeal(meal.id)} className="text-red-500 hover:text-red-700 text-sm">
+                      ✕ Remove
+                    </button>
+                  )}
                 </div>
-              );
-            })}
+              </div>
+
+              {/* Category Columns */}
+              <div className="overflow-x-auto">
+                <div className="flex" style={{ minWidth: 'max-content' }}>
+                  {sortedCategories.map(category => {
+                    const config = getCatConfig(category);
+                    const items = groupedItems[category] || [];
+                    return (
+                      <div key={category} className="flex-shrink-0 w-40 border-r border-gray-200 last:border-r-0">
+                        <div className={`${config.bg} text-white text-center py-2 px-2`}>
+                          <h5 className="font-bold text-xs uppercase tracking-wide">{config.label}</h5>
+                          {config.required && <span className="text-xs opacity-75">*required</span>}
+                        </div>
+                        <div className={`${config.light} p-2 min-h-[150px] space-y-1`}>
+                          {items.map(item => {
+                            const isChecked = meal.selections[category] === item.id;
+                            return (
+                              <label key={item.id} 
+                                className={`flex items-start gap-2 p-2 rounded cursor-pointer transition ${
+                                  isChecked ? 'bg-white shadow-sm ring-2 ring-indigo-400' : 'hover:bg-white/50'
+                                } ${item.is_sold_out ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => !item.is_sold_out && toggleSelection(meal.id, category, item.id)}
+                                  disabled={item.is_sold_out}
+                                  className="mt-1 w-4 h-4 rounded"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-800 leading-tight">{item.item_name || item.name}</p>
+                                  {parseFloat(item.price) > 0 && (
+                                    <p className="text-xs text-green-600 font-semibold">${parseFloat(item.price).toFixed(2)}</p>
+                                  )}
+                                  {item.is_sold_out && <p className="text-xs text-red-500">Sold Out</p>}
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Add Another Meal Button */}
+          <button
+            onClick={addMeal}
+            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition font-medium"
+          >
+            + Add Another Meal
+          </button>
+
+          {/* Order Summary */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+            <h4 className="font-bold text-gray-700 mb-3">Order Summary</h4>
+            <div className="space-y-2 mb-4">
+              {meals.map((meal, idx) => (
+                <div key={meal.id} className="flex justify-between text-sm">
+                  <span className="text-gray-600">
+                    Meal {idx + 1}: {Object.keys(meal.selections).length > 0 
+                      ? Object.entries(meal.selections).map(([cat, itemId]) => {
+                          const item = menuItems.find(i => i.id === itemId);
+                          return item ? (item.item_name || item.name) : '';
+                        }).filter(Boolean).join(' + ')
+                      : 'No selections'}
+                  </span>
+                  <span className="font-medium">${getMealPrice(meal).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+            <div className="border-t pt-3 flex justify-between items-center">
+              <div>
+                <p className="text-lg font-bold">Total: ${getTotalPrice().toFixed(2)}</p>
+                <p className="text-sm text-gray-500">{meals.length} meal{meals.length > 1 ? 's' : ''}</p>
+              </div>
+            </div>
+            <textarea
+              placeholder="Special instructions or allergies..."
+              value={orderNotes}
+              onChange={e => setOrderNotes(e.target.value)}
+              className="w-full mt-3 p-2 border border-gray-200 rounded-lg text-sm"
+              rows="2"
+            />
+            <button
+              onClick={placeOrder}
+              disabled={placingOrder || !allMealsComplete()}
+              className={`w-full mt-3 py-3 rounded-lg font-semibold text-white transition ${
+                allMealsComplete() 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : 'bg-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {placingOrder ? 'Placing Order...' : `Place Order (${meals.length} meal${meals.length > 1 ? 's' : ''})`}
+            </button>
+            {!allMealsComplete() && (
+              <p className="text-center text-sm text-orange-600 mt-2">
+                ⚠️ Please select required items (protein, carbohydrate, fibre) for each meal
+              </p>
+            )}
           </div>
         </div>
       ) : (
@@ -220,45 +358,6 @@ const MenuPage = () => {
           <p className="text-5xl mb-4">📋</p>
           <p className="text-xl text-gray-500">No menu available for this date</p>
           <p className="text-sm text-gray-400 mt-2">Please select another date or check back later</p>
-        </div>
-      )}
-
-      {/* Order Cart - Fixed at bottom on mobile, sidebar on desktop */}
-      {cart.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 md:static bg-white border-t md:border md:rounded-xl shadow-lg p-4 md:mt-4">
-          <h3 className="font-bold text-lg mb-3">🛒 Your Order ({cart.length} items)</h3>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {cart.map(item => (
-              <div key={item.id} className="flex justify-between items-center bg-gray-50 p-2 rounded-lg">
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{item.name}</p>
-                  <p className="text-xs text-gray-500">${parseFloat(item.price).toFixed(2)} each</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => updateQty(item.id, item.quantity - 1)} className="w-7 h-7 bg-gray-200 rounded text-lg">-</button>
-                  <span className="w-6 text-center font-medium">{item.quantity}</span>
-                  <button onClick={() => updateQty(item.id, item.quantity + 1)} className="w-7 h-7 bg-gray-200 rounded text-lg">+</button>
-                  <button onClick={() => removeFromCart(item.id)} className="text-red-500 ml-2 text-lg">×</button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <textarea 
-            placeholder="Special instructions or allergies..." 
-            value={orderNotes} 
-            onChange={e => setOrderNotes(e.target.value)}
-            className="w-full mt-3 p-2 border border-gray-200 rounded-lg text-sm" 
-            rows="2"
-          />
-          <div className="flex justify-between items-center mt-3 pt-3 border-t">
-            <span className="text-lg font-bold">Total: ${cartTotal.toFixed(2)}</span>
-            <button 
-              onClick={placeOrder} 
-              disabled={placingOrder}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50">
-              {placingOrder ? 'Placing...' : 'Place Order'}
-            </button>
-          </div>
         </div>
       )}
     </div>
