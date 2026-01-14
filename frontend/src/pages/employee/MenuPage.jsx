@@ -100,8 +100,7 @@ const MenuPage = () => {
   const getTotalPrice = () => meals.reduce((sum, meal) => sum + getMealPrice(meal), 0);
 
   const isMealComplete = (meal) => {
-    const requiredCats = Object.keys(groupedItems).filter(cat => getCatConfig(cat).required);
-    return requiredCats.every(cat => meal.selections[cat]);
+    return Object.keys(meal.selections).length > 0;
   };
 
   const allMealsComplete = () => meals.every(isMealComplete);
@@ -190,7 +189,7 @@ const MenuPage = () => {
       {/* Company Header */}
       <div className="bg-gradient-to-r from-green-600 to-green-700 text-white text-center py-4 rounded-xl">
         <h2 className="text-xl font-bold uppercase">{getCafeName()} - LUNCH MENU</h2>
-        <p className="text-sm text-green-100 mt-1">Please select 1 protein, 1 carbohydrate, and 1 fibre per meal</p>
+        <p className="text-sm text-green-100 mt-1">Tick your selections for each meal</p>
         {dailyMenu?.status !== 'published' && (
           <p className="text-yellow-200 text-sm mt-1">⚠️ Menu for this day has not been published yet</p>
         )}
@@ -260,7 +259,7 @@ const MenuPage = () => {
                       <div key={category} className="flex-shrink-0 w-40 border-r border-gray-200 last:border-r-0">
                         <div className={`${config.bg} text-white text-center py-2 px-2`}>
                           <h5 className="font-bold text-xs uppercase tracking-wide">{config.label}</h5>
-                          {config.required && <span className="text-xs opacity-75">*required</span>}
+                          
                         </div>
                         <div className={`${config.light} p-2 min-h-[150px] space-y-1`}>
                           {items.map(item => {
@@ -348,7 +347,7 @@ const MenuPage = () => {
             </button>
             {!allMealsComplete() && (
               <p className="text-center text-sm text-orange-600 mt-2">
-                ⚠️ Please select required items (protein, carbohydrate, fibre) for each meal
+                ⚠️ Please select at least one item for each meal
               </p>
             )}
           </div>
