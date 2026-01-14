@@ -50,7 +50,7 @@ export default function KitchenDashboard() {
       const [ordersRes, menusRes, itemsRes, issuesRes, messagesRes, companiesRes] = await Promise.all([
         orderAPI.getOrders({ limit: 200 }).catch(() => ({ data: { data: { orders: [] } } })),
         menuAPI.getMenus().catch(() => ({ data: { data: { menus: [] } } })),
-        menuAPI.getMenuItems().catch(() => ({ data: { data: { items: [] } } })),
+        catalogAPI.getItems().catch(() => ({ data: { data: { items: [] } } })),
         messageAPI.getFeedback().catch(() => ({ data: { data: { feedback: [] } } })),
         messageAPI.getInbox().catch(() => ({ data: { data: { messages: [], unreadCount: 0 } } })),
         companyAPI.getCompanies().catch(() => ({ data: { data: { companies: [] } } }))
