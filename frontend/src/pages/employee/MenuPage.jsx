@@ -88,16 +88,11 @@ const MenuPage = () => {
     }));
   };
 
-  const getMealPrice = (meal) => {
-    let price = 0;
-    Object.values(meal.selections).forEach(itemId => {
-      const item = menuItems.find(i => i.id === itemId);
-      if (item) price += parseFloat(item.price) || 0;
-    });
-    return price;
+  const getMealPrice = () => {
+    return parseFloat(dailyMenu?.meal_price) || 900.00;
   };
 
-  const getTotalPrice = () => meals.reduce((sum, meal) => sum + getMealPrice(meal), 0);
+  const getTotalPrice = () => meals.filter(m => Object.keys(m.selections).length > 0).length * getMealPrice();
 
   const isMealComplete = (meal) => {
     return Object.keys(meal.selections).length > 0;
@@ -129,6 +124,7 @@ const MenuPage = () => {
         mealType: 'lunch',
         orderDate: orderDate,
         items: allItems,
+        mealCount: meals.filter(m => Object.keys(m.selections).length > 0).length,
         notes: orderNotes
       });
       toast.success(`Order placed successfully! (${meals.length} meal${meals.length > 1 ? 's' : ''})`);
@@ -240,7 +236,7 @@ const MenuPage = () => {
               <div className="bg-gray-100 px-4 py-3 flex justify-between items-center">
                 <h4 className="font-bold text-gray-700">MEAL {mealIdx + 1}</h4>
                 <div className="flex items-center gap-4">
-                  <span className="text-green-600 font-semibold">${getMealPrice(meal).toFixed(2)}</span>
+                  <span className="text-green-600 font-semibold">${getMealPrice().toFixed(2)}</span>
                   {meals.length > 1 && (
                     <button onClick={() => removeMeal(meal.id)} className="text-red-500 hover:text-red-700 text-sm">
                       ✕ Remove
@@ -278,9 +274,7 @@ const MenuPage = () => {
                                 />
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-gray-800 leading-tight">{item.item_name || item.name}</p>
-                                  {parseFloat(item.price) > 0 && (
-                                    <p className="text-xs text-green-600 font-semibold">${parseFloat(item.price).toFixed(2)}</p>
-                                  )}
+                                  
                                   {item.is_sold_out && <p className="text-xs text-red-500">Sold Out</p>}
                                 </div>
                               </label>
@@ -317,7 +311,7 @@ const MenuPage = () => {
                         }).filter(Boolean).join(' + ')
                       : 'No selections'}
                   </span>
-                  <span className="font-medium">${getMealPrice(meal).toFixed(2)}</span>
+                  <span className="font-medium">${getMealPrice().toFixed(2)}</span>
                 </div>
               ))}
             </div>

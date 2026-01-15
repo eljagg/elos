@@ -15,6 +15,7 @@ export default function DailyMenuManagement() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [mealPrice, setMealPrice] = useState('900.00');
   const [selectedCategory, setSelectedCategory] = useState('');
 
   useEffect(() => {
@@ -115,6 +116,10 @@ export default function DailyMenuManagement() {
   };
 
   const handlePublishMenu = async () => {
+    if (!mealPrice || parseFloat(mealPrice) <= 0) {
+      toast.error('Please set a valid meal price');
+      return;
+    }
     if (!dailyMenu) {
       toast.error('Create a menu first');
       return;
@@ -125,7 +130,7 @@ export default function DailyMenuManagement() {
     }
     
     try {
-      await dailyMenuAPI.publishDailyMenu(dailyMenu.id);
+      await dailyMenuAPI.publishDailyMenu(dailyMenu.id, { mealPrice: parseFloat(mealPrice) });
       toast.success('Menu published! Employees can now place orders.');
       loadDailyMenu();
     } catch (error) {
@@ -169,12 +174,25 @@ export default function DailyMenuManagement() {
         </div>
         <div className="flex gap-2">
           {dailyMenu && dailyMenu.status !== 'published' && menuItems.length > 0 && (
-            <button
-              onClick={handlePublishMenu}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-            >
-              📢 Publish Menu
-            </button>
+            <>
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Meal Price: $</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={mealPrice}
+                  onChange={e => setMealPrice(e.target.value)}
+                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg"
+                  placeholder="900.00"
+                />
+              </div>
+              <button
+                onClick={handlePublishMenu}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+              >
+                📢 Publish Menu
+              </button>
+            </>
           )}
           <button
             onClick={() => setShowAddModal(true)}

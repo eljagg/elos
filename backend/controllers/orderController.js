@@ -1457,7 +1457,7 @@ const createDailyMenuOrder = async (req, res, next) => {
         const userCompanyId = req.user.companyId;
         const userDepartmentId = req.user.departmentId;
         
-        const { cafeteriaId, orderDate, items, notes } = req.body;
+        const { cafeteriaId, orderDate, items, notes, mealCount } = req.body;
         
         if (!items || items.length === 0) {
             return res.status(400).json({
@@ -1466,9 +1466,9 @@ const createDailyMenuOrder = async (req, res, next) => {
             });
         }
         
-        // Get daily menu for the date
+        // Get daily menu for the date (including meal_price)
         const dailyMenuResult = await db.query(
-            `SELECT id FROM daily_menus WHERE cafeteria_id = $1 AND menu_date = $2 AND status = 'published'`,
+            `SELECT id, meal_price FROM daily_menus WHERE cafeteria_id = $1 AND menu_date = $2 AND status = 'published'`,
             [cafeteriaId, orderDate]
         );
         
@@ -1479,17 +1479,19 @@ const createDailyMenuOrder = async (req, res, next) => {
             });
         }
         
-        const dailyMenuId = dailyMenuResult.rows[0].id;
+        const dailyMenu = dailyMenuResult.rows[0];
+        const mealPrice = parseFloat(dailyMenu.meal_price) || 900.00;
+        const numMeals = mealCount || 1;
         
         // Validate items exist in daily menu
         const itemIds = items.map(i => i.menuItemId);
         const itemsResult = await db.query(
-            `SELECT dmi.id, dmi.catalog_item_id, mic.name, mic.price, 
+            `SELECT dmi.id, dmi.catalog_item_id, mic.name,
                     (dmi.portions_available - dmi.portions_ordered) as portions_remaining
              FROM daily_menu_items dmi
              JOIN menu_item_catalog mic ON dmi.catalog_item_id = mic.id
              WHERE dmi.id = ANY($1) AND dmi.daily_menu_id = $2`,
-            [itemIds, dailyMenuId]
+            [itemIds, dailyMenu.id]
         );
         
         if (itemsResult.rows.length !== itemIds.length) {
@@ -1499,18 +1501,16 @@ const createDailyMenuOrder = async (req, res, next) => {
             });
         }
         
-        // Calculate total
-        let totalAmount = 0;
+        // Total is number of meals * meal price
+        const totalAmount = numMeals * mealPrice;
+        
         const orderItems = items.map(item => {
             const dbItem = itemsResult.rows.find(r => r.id === item.menuItemId);
-            const price = parseFloat(dbItem.price) || 0;
-            totalAmount += price * item.quantity;
             return {
                 dailyMenuItemId: item.menuItemId,
                 catalogItemId: dbItem.catalog_item_id,
                 name: dbItem.name,
                 quantity: item.quantity,
-                unitPrice: price,
                 specialInstructions: item.specialInstructions || ''
             };
         });
