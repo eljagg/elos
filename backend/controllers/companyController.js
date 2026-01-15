@@ -305,10 +305,10 @@ const getCafeterias = async (req, res, next) => {
         
         let query = `
             SELECT cf.*, b.name as building_name,
-                   (SELECT COUNT(*) FROM cafeteria_companies WHERE cafeteria_id = cf.id AND is_active = TRUE) as company_count
+                   (SELECT COUNT(*) FROM cafeteria_companies WHERE cafeteria_id = cf.id) as company_count
             FROM cafeterias cf
             LEFT JOIN buildings b ON cf.building_id = b.id
-            WHERE cf.is_active = TRUE
+            WHERE 1=1
         `;
         
         const params = [];

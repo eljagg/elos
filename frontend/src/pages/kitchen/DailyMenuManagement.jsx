@@ -32,13 +32,18 @@ export default function DailyMenuManagement() {
   const loadCafeterias = async () => {
     try {
       const res = await companyAPI.getCafeterias();
+      console.log('Cafeterias response:', res.data);
       const cafeteriaList = res.data?.data?.cafeterias || res.data?.cafeterias || [];
       setCafeterias(cafeteriaList);
       if (cafeteriaList.length > 0) {
         setSelectedCafeteria(cafeteriaList[0].id);
+      } else {
+        console.warn('No cafeterias found');
+        toast.error('No cafeterias available');
       }
     } catch (error) {
       console.error('Failed to load cafeterias:', error);
+      toast.error('Failed to load cafeterias');
     }
   };
 
