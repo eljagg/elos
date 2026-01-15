@@ -203,7 +203,7 @@ const createCatalogItem = async (req, res, next) => {
             categoryId,
             name,
             description,
-            price,
+            price = 0,
             imageUrl,
             prepTimeMinutes = 15,
             calories,
@@ -222,10 +222,10 @@ const createCatalogItem = async (req, res, next) => {
         } = req.body;
 
         // Validate required fields
-        if (!name || !price) {
+        if (!name) {
             return res.status(400).json({
                 success: false,
-                error: { code: 'VALIDATION_ERROR', message: 'Name and price are required' }
+                error: { code: 'VALIDATION_ERROR', message: 'Name is required' }
             });
         }
 
@@ -298,7 +298,7 @@ const updateCatalogItem = async (req, res, next) => {
             categoryId,
             name,
             description,
-            price,
+            price = 0,
             imageUrl,
             prepTimeMinutes,
             calories,
