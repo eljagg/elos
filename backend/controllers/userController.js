@@ -492,12 +492,7 @@ const updateUser = async (req, res, next) => {
         const updaterId = req.user.userId;
         const updaterRole = req.user.role;
         
-        console.log('UPDATE_USER_DEBUG:', { userId: id, updaterRole, body: req.body });
         
-        console.log('=== UPDATE USER DEBUG ===');
-        console.log('User ID to update:', id);
-        console.log('Updater role:', updaterRole);
-        console.log('Request body:', JSON.stringify(req.body, null, 2));
         
         const {
             firstName,
@@ -643,16 +638,10 @@ const updateUser = async (req, res, next) => {
         
         params.push(id);
         
-        console.log('Updates array:', updates);
-        console.log('Params:', params);
-        console.log('Final query:', `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex}`);
-        
         await db.query(
             `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
             params
         );
-        
-        console.log('UPDATE_USER_RESULT:', { updatesApplied: updates, paramsUsed: params.length });
         
         // Log audit
         await db.query(
