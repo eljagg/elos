@@ -138,7 +138,7 @@ const getUsers = async (req, res, next) => {
                    c.name as company_name,
                    d.name as department_name, d.code as department_code
             FROM users u
-            JOIN roles r ON u.role_id = r.id
+            LEFT JOIN roles r ON u.role_id = r.id
             LEFT JOIN companies c ON u.company_id = c.id
             LEFT JOIN departments d ON u.department_id = d.id
             WHERE 1=1
@@ -246,7 +246,7 @@ const getUserById = async (req, res, next) => {
                     c.name as company_name,
                     d.name as department_name, d.code as department_code
              FROM users u
-             JOIN roles r ON u.role_id = r.id
+             LEFT JOIN roles r ON u.role_id = r.id
              LEFT JOIN companies c ON u.company_id = c.id
              LEFT JOIN departments d ON u.department_id = d.id
              WHERE u.id = $1`,
@@ -387,7 +387,7 @@ const createUser = async (req, res, next) => {
         if (roleCode === 'SUPER_ADMIN') {
             const adminCount = await db.query(
                 `SELECT COUNT(*) FROM users u
-                 JOIN roles r ON u.role_id = r.id
+                 LEFT JOIN roles r ON u.role_id = r.id
                  WHERE r.code = 'SUPER_ADMIN' AND u.is_active = TRUE`
             );
             
@@ -508,7 +508,7 @@ const updateUser = async (req, res, next) => {
         const currentResult = await db.query(
             `SELECT u.*, r.code as role_code
              FROM users u
-             JOIN roles r ON u.role_id = r.id
+             LEFT JOIN roles r ON u.role_id = r.id
              WHERE u.id = $1`,
             [id]
         );
@@ -765,7 +765,7 @@ const resetPassword = async (req, res, next) => {
         const userResult = await db.query(
             `SELECT u.*, r.code as role_code 
              FROM users u 
-             JOIN roles r ON u.role_id = r.id 
+             LEFT JOIN roles r ON u.role_id = r.id 
              WHERE u.id = $1`,
             [id]
         );
@@ -1144,7 +1144,7 @@ const exportUsers = async (req, res, next) => {
                    c.name as company_name,
                    d.name as department_name
             FROM users u
-            JOIN roles r ON u.role_id = r.id
+            LEFT JOIN roles r ON u.role_id = r.id
             LEFT JOIN companies c ON u.company_id = c.id
             LEFT JOIN departments d ON u.department_id = d.id
             WHERE 1=1
