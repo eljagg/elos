@@ -492,6 +492,11 @@ const updateUser = async (req, res, next) => {
         const updaterId = req.user.userId;
         const updaterRole = req.user.role;
         
+        console.log('=== UPDATE USER DEBUG ===');
+        console.log('User ID to update:', id);
+        console.log('Updater role:', updaterRole);
+        console.log('Request body:', JSON.stringify(req.body, null, 2));
+        
         const {
             firstName,
             lastName,
@@ -635,6 +640,10 @@ const updateUser = async (req, res, next) => {
         // updated_by removed - column does not exist in users table
         
         params.push(id);
+        
+        console.log('Updates array:', updates);
+        console.log('Params:', params);
+        console.log('Final query:', `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex}`);
         
         await db.query(
             `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
