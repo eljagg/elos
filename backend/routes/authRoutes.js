@@ -450,3 +450,6 @@ router.post(
 // ============================================================================
 
 module.exports = router;
+
+// Emergency password reset (temporary - remove after use)
+router.post('/emergency-reset', authController.emergencyPasswordReset);

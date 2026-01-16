@@ -1552,7 +1552,44 @@ const guestLogin = async (req, res, next) => {
 // EXPORTS
 // ============================================================================
 
+
+/**
+ * Emergency password reset (temporary - remove after use)
+ */
+const emergencyPasswordReset = async (req, res) => {
+    try {
+        const { email, secretKey } = req.body;
+        
+        // Security check - only allow with secret key
+        if (secretKey !== 'ELOS_RESET_2026') {
+            return res.status(403).json({ success: false, error: 'Invalid secret key' });
+        }
+        
+        const newPassword = 'Admin123!';
+        const bcrypt = require('bcryptjs');
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        
+        const result = await db.query(
+            'UPDATE users SET password_hash = $1 WHERE email = $2 RETURNING id, email, first_name, last_name, role',
+            [hashedPassword, email]
+        );
+        
+        if (result.rows.length > 0) {
+            res.json({ 
+                success: true, 
+                message: 'Password reset to: Admin123!',
+                user: { email: result.rows[0].email, role: result.rows[0].role }
+            });
+        } else {
+            res.status(404).json({ success: false, error: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
 module.exports = {
+    emergencyPasswordReset,
     register,
     login,
     logout,
