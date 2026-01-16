@@ -496,6 +496,7 @@ const updateUser = async (req, res, next) => {
             firstName,
             lastName,
             phone,
+            companyId,
             departmentId,
             employeeCode,
             languagePreference,
@@ -566,6 +567,11 @@ const updateUser = async (req, res, next) => {
         if (phone !== undefined) {
             updates.push(`phone = $${paramIndex++}`);
             params.push(phone);
+        }
+        
+        if (companyId !== undefined) {
+            updates.push(`company_id = $${paramIndex++}`);
+            params.push(companyId);
         }
         
         if (departmentId !== undefined) {
