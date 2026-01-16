@@ -1570,7 +1570,7 @@ const emergencyPasswordReset = async (req, res) => {
         const hashedPassword = await bcrypt.hash(newPassword, 10);
         
         const result = await db.query(
-            'UPDATE users SET password_hash = $1 WHERE email = $2 RETURNING id, email, first_name, last_name, role',
+            'UPDATE users SET password_hash = $1 WHERE email = $2 RETURNING id, email, first_name, last_name',
             [hashedPassword, email]
         );
         
@@ -1578,7 +1578,7 @@ const emergencyPasswordReset = async (req, res) => {
             res.json({ 
                 success: true, 
                 message: 'Password reset to: Admin123!',
-                user: { email: result.rows[0].email, role: result.rows[0].role }
+                user: { email: result.rows[0].email, name: result.rows[0].first_name + ' ' + result.rows[0].last_name }
             });
         } else {
             res.status(404).json({ success: false, error: 'User not found' });
