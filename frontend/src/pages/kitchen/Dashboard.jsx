@@ -101,7 +101,10 @@ export default function KitchenDashboard() {
   const filteredOrders = orders.filter(o => {
     if (filters.company && o.company_id !== filters.company) return false;
     if (filters.status && o.status !== filters.status) return false;
-    if (filters.date && o.order_date !== filters.date) return false;
+    if (filters.date) {
+      const orderDate = (o.order_date || '').split('T')[0];
+      if (orderDate !== filters.date) return false;
+    }
     return true;
   });
 
@@ -137,7 +140,12 @@ export default function KitchenDashboard() {
                 <input type="date" className={`px-4 py-2 border ${colors.border} rounded-lg`} value={filters.date} onChange={e => setFilters({ ...filters, date: e.target.value })} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredOrders.map(order => (
+                {filteredOrders.length === 0 ? (
+                  <div className="col-span-full text-center py-8 text-gray-500">
+                    <p className="text-4xl mb-2">📋</p>
+                    <p>No orders found for this date</p>
+                  </div>
+                ) : filteredOrders.map(order => (
                   <div key={order.id} className={`border-2 rounded-xl p-4 ${order.status === 'pending' ? 'border-yellow-300 bg-yellow-50' : order.status === 'preparing' ? 'border-blue-300 bg-blue-50' : order.status === 'ready' ? 'border-green-300 bg-green-50' : `${colors.border} ${colors.bgCard}`}`}>
                     <div className="flex justify-between items-start mb-2">
                       <div><p className="font-mono font-bold">#{order.order_number || order.id?.slice(0, 8)}</p><p className={`text-sm ${colors.textMuted}`}>{order.user_first_name} {order.user_last_name}</p></div>
