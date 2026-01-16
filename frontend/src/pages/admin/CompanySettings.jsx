@@ -109,7 +109,7 @@ export default function CompanySettings() {
   const tabs = [
     { id: 'companies', label: 'Companies', icon: '🏢' },
     { id: 'departments', label: 'Departments', icon: '📁' },
-    { id: 'buildings', label: 'Buildings', icon: '🏗️' },
+    
     { id: 'cafeterias', label: 'Cafeterias', icon: '🍽️' }
   ];
 
