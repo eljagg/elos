@@ -91,6 +91,50 @@ export default function CompanySettings() {
     }
   };
 
+
+  const openCafeteriaModal = (cafeteria = null) => {
+    setSelectedCafeteria(cafeteria);
+    setCafeteriaForm(cafeteria ? {
+      name: cafeteria.name,
+      breakfastCutoff: (cafeteria.defaultBreakfastCutoff || cafeteria.default_breakfast_cutoff || '08:00:00').substring(0, 5),
+      lunchCutoff: (cafeteria.defaultLunchCutoff || cafeteria.default_lunch_cutoff || '10:00:00').substring(0, 5)
+    } : { name: '', breakfastCutoff: '08:00', lunchCutoff: '10:00' });
+    setShowCafeteriaModal(true);
+  };
+
+  const handleSaveCafeteria = async (e) => {
+    e.preventDefault();
+    try {
+      const data = {
+        name: cafeteriaForm.name,
+        defaultBreakfastCutoff: cafeteriaForm.breakfastCutoff,
+        defaultLunchCutoff: cafeteriaForm.lunchCutoff
+      };
+      if (selectedCafeteria) {
+        await companyAPI.updateCafeteria(selectedCafeteria.id, data);
+        toast.success('Cafeteria updated');
+      } else {
+        await companyAPI.createCafeteria(data);
+        toast.success('Cafeteria created');
+      }
+      setShowCafeteriaModal(false);
+      loadCafeterias();
+    } catch (error) {
+      toast.error('Failed to save cafeteria');
+    }
+  };
+
+  const handleDeleteCafeteria = async (cafeteria) => {
+    if (!confirm('Are you sure you want to delete "' + cafeteria.name + '"?')) return;
+    try {
+      await companyAPI.deleteCafeteria(cafeteria.id);
+      toast.success('Cafeteria deleted');
+      loadCafeterias();
+    } catch (error) {
+      toast.error('Failed to delete cafeteria');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
