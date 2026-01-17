@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import api from '../../services/api';
 import { companyAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -14,6 +15,8 @@ export default function CompanySettings() {
   const [departments, setDepartments] = useState([]);
   const [buildings, setBuildings] = useState([]);
   const [cafeterias, setCafeterias] = useState([]);
+  const [selectedCafeteria, setSelectedCafeteria] = useState(null);
+  const [showCafeteriaModal, setShowCafeteriaModal] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState(null);
   
   const [showModal, setShowModal] = useState(false);
@@ -263,15 +266,27 @@ export default function CompanySettings() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {cafeterias.map(cafeteria => (
                       <div key={cafeteria.id} className="border rounded-lg p-4">
-                        <div className="flex items-center mb-2">
-                          <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center text-lg mr-3">🍽️</div>
-                          <div>
-                            <h3 className="font-semibold text-gray-800">{cafeteria.name}</h3>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center">
+                            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center text-lg mr-3">🍽️</div>
+                            <div>
+                              <h3 className="font-semibold text-gray-800">{cafeteria.name}</h3>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => { setSelectedCafeteria(cafeteria); setShowCafeteriaModal(true); }}
+                              className="text-blue-600 hover:text-blue-800 text-sm"
+                            >Edit</button>
+                            <button 
+                              onClick={() => handleDeleteCafeteria(cafeteria)}
+                              className="text-red-600 hover:text-red-800 text-sm"
+                            >Delete</button>
                           </div>
                         </div>
                         <div className="text-sm text-gray-600 space-y-1">
-                          <p>🕐 Breakfast cutoff: {cafeteria.default_breakfast_cutoff || '08:00'}</p>
-                          <p>🕐 Lunch cutoff: {cafeteria.default_lunch_cutoff || '10:00'}</p>
+                          <p>🕐 Breakfast cutoff: {cafeteria.defaultBreakfastCutoff || cafeteria.default_breakfast_cutoff || '08:00'}</p>
+                          <p>🕐 Lunch cutoff: {cafeteria.defaultLunchCutoff || cafeteria.default_lunch_cutoff || '10:00'}</p>
                         </div>
                       </div>
                     ))}

@@ -507,7 +507,54 @@ const getCafeteriasByCompany = async (req, res, next) => {
     }
 };
 
+
+/**
+ * Delete a cafeteria
+ */
+const deleteCafeteria = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        
+        // Check if cafeteria has any orders
+        const ordersCheck = await db.query(
+            'SELECT COUNT(*) FROM orders WHERE cafeteria_id = $1',
+            [id]
+        );
+        
+        if (parseInt(ordersCheck.rows[0].count) > 0) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'HAS_ORDERS', message: 'Cannot delete cafeteria with existing orders' }
+            });
+        }
+        
+        // Delete cafeteria company links first
+        await db.query('DELETE FROM cafeteria_companies WHERE cafeteria_id = $1', [id]);
+        
+        // Delete the cafeteria
+        const result = await db.query(
+            'DELETE FROM cafeterias WHERE id = $1 RETURNING *',
+            [id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: { code: 'NOT_FOUND', message: 'Cafeteria not found' }
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Cafeteria deleted successfully'
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
+    deleteCafeteria,
     // Companies
     getCompanies,
     getCompanyById,

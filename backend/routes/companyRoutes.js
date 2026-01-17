@@ -10,6 +10,7 @@ const { authenticate, requireRole, requireSuperAdmin, requireHRStaff } = require
 router.get('/cafeterias', authenticate, companyController.getCafeterias);
 router.post('/cafeterias', authenticate, requireSuperAdmin, companyController.createCafeteria);
 router.post('/cafeterias/:id/companies', authenticate, requireSuperAdmin, companyController.linkCompanyToCafeteria);
+router.delete('/cafeterias/:id', authenticate, requireSuperAdmin, companyController.deleteCafeteria);
 
 // Get cafeterias for a specific company
 router.get('/:companyId/cafeterias', authenticate, companyController.getCafeteriasByCompany);
