@@ -301,26 +301,13 @@ const updateDepartment = async (req, res, next) => {
  */
 const getCafeterias = async (req, res, next) => {
     try {
-        const { buildingId } = req.query;
-        
-        let query = `
-            SELECT cf.*, b.name as building_name,
-                   (SELECT COUNT(*) FROM cafeteria_companies WHERE cafeteria_id = cf.id) as company_count
+        const query = `
+            SELECT cf.*
             FROM cafeterias cf
-            LEFT JOIN buildings b ON cf.building_id = b.id
-            WHERE 1=1
+            ORDER BY cf.name
         `;
         
-        const params = [];
-        
-        if (buildingId) {
-            query += ` AND cf.building_id = $1`;
-            params.push(buildingId);
-        }
-        
-        query += ` ORDER BY cf.name`;
-        
-        const result = await db.query(query, params);
+        const result = await db.query(query);
         
         res.status(200).json({
             success: true,
@@ -328,11 +315,8 @@ const getCafeterias = async (req, res, next) => {
                 cafeterias: result.rows.map(cf => ({
                     id: cf.id,
                     name: cf.name,
-                    buildingId: cf.building_id,
-                    buildingName: cf.building_name,
                     defaultBreakfastCutoff: cf.default_breakfast_cutoff,
-                    defaultLunchCutoff: cf.default_lunch_cutoff,
-                    companyCount: parseInt(cf.company_count)
+                    defaultLunchCutoff: cf.default_lunch_cutoff
                 }))
             }
         });
