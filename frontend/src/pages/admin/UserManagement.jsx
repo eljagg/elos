@@ -16,9 +16,9 @@ export default function UserManagement() {
   const [companies, setCompanies] = useState([]);
   const [filters, setFilters] = useState({
     search: '',
-    roleCode: '',
-    companyId: '',
-    isActive: ''
+    role: '',
+    company: '',
+    status: ''
   });
   const [pagination, setPagination] = useState({
     page: 1,
@@ -56,11 +56,11 @@ export default function UserManagement() {
         page: pagination.page,
         limit: pagination.limit
       };
-      // Only add non-empty filters
+      // Only add non-empty filters, mapping to backend expected names
       if (filters.search) params.search = filters.search;
-      if (filters.roleCode) params.roleCode = filters.roleCode;
-      if (filters.companyId) params.companyId = filters.companyId;
-      if (filters.isActive) params.isActive = filters.isActive;
+      if (filters.role) params.roleCode = filters.role;
+      if (filters.company) params.companyId = filters.company;
+      if (filters.status) params.isActive = filters.status;
       const response = await userAPI.getUsers(params);
       const data = response.data?.data || {};
       setUsers(data.users || []);
@@ -133,8 +133,8 @@ export default function UserManagement() {
           />
           <select
             className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={filters.roleCode}
-            onChange={(e) => setFilters({ ...filters, roleCode: e.target.value })}
+            value={filters.role}
+            onChange={(e) => setFilters({ ...filters, role: e.target.value })}
           >
             <option value="">All Roles</option>
             {roles.map(role => (
@@ -143,8 +143,8 @@ export default function UserManagement() {
           </select>
           <select
             className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={filters.companyId}
-            onChange={(e) => setFilters({ ...filters, companyId: e.target.value })}
+            value={filters.company}
+            onChange={(e) => setFilters({ ...filters, company: e.target.value })}
           >
             <option value="">All Companies</option>
             {companies.map(company => (
@@ -153,8 +153,8 @@ export default function UserManagement() {
           </select>
           <select
             className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={filters.isActive}
-            onChange={(e) => setFilters({ ...filters, isActive: e.target.value })}
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
           >
             <option value="">All Status</option>
             <option value="active">Active</option>
