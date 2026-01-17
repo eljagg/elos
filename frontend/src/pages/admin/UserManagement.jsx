@@ -54,9 +54,13 @@ export default function UserManagement() {
     try {
       const params = {
         page: pagination.page,
-        limit: pagination.limit,
-        ...filters
+        limit: pagination.limit
       };
+      // Only add non-empty filters
+      if (filters.search) params.search = filters.search;
+      if (filters.roleCode) params.roleCode = filters.roleCode;
+      if (filters.companyId) params.companyId = filters.companyId;
+      if (filters.isActive) params.isActive = filters.isActive;
       const response = await userAPI.getUsers(params);
       const data = response.data?.data || {};
       setUsers(data.users || []);
