@@ -195,7 +195,7 @@ const getUsers = async (req, res, next) => {
         }
         
         // Count total
-        const countQuery = query.replace(/SELECT u\.\*.*FROM/, 'SELECT COUNT(*) FROM');
+        const countQuery = 'SELECT COUNT(*) FROM users u LEFT JOIN roles r ON u.role_id = r.id LEFT JOIN companies c ON u.company_id = c.id LEFT JOIN departments d ON u.department_id = d.id' + query.substring(query.indexOf('WHERE'));
         const countResult = await db.query(countQuery, params);
         const totalCount = parseInt(countResult.rows[0].count);
         
