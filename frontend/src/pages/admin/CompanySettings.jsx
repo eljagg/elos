@@ -17,6 +17,7 @@ export default function CompanySettings() {
   const [cafeterias, setCafeterias] = useState([]);
   const [selectedCafeteria, setSelectedCafeteria] = useState(null);
   const [showCafeteriaModal, setShowCafeteriaModal] = useState(false);
+  const [cafeteriaForm, setCafeteriaForm] = useState({ name: '', breakfastCutoff: '08:00', lunchCutoff: '10:00' });
   const [selectedCompany, setSelectedCompany] = useState(null);
   
   const [showModal, setShowModal] = useState(false);
