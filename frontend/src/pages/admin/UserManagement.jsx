@@ -16,9 +16,9 @@ export default function UserManagement() {
   const [companies, setCompanies] = useState([]);
   const [filters, setFilters] = useState({
     search: '',
-    role: '',
-    company: '',
-    status: ''
+    roleCode: '',
+    companyId: '',
+    isActive: ''
   });
   const [pagination, setPagination] = useState({
     page: 1,
@@ -129,8 +129,8 @@ export default function UserManagement() {
           />
           <select
             className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={filters.role}
-            onChange={(e) => setFilters({ ...filters, role: e.target.value })}
+            value={filters.roleCode}
+            onChange={(e) => setFilters({ ...filters, roleCode: e.target.value })}
           >
             <option value="">All Roles</option>
             {roles.map(role => (
@@ -139,8 +139,8 @@ export default function UserManagement() {
           </select>
           <select
             className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={filters.company}
-            onChange={(e) => setFilters({ ...filters, company: e.target.value })}
+            value={filters.companyId}
+            onChange={(e) => setFilters({ ...filters, companyId: e.target.value })}
           >
             <option value="">All Companies</option>
             {companies.map(company => (
@@ -149,8 +149,8 @@ export default function UserManagement() {
           </select>
           <select
             className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            value={filters.isActive}
+            onChange={(e) => setFilters({ ...filters, isActive: e.target.value })}
           >
             <option value="">All Status</option>
             <option value="active">Active</option>
