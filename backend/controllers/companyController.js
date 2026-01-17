@@ -508,6 +508,43 @@ const getCafeteriasByCompany = async (req, res, next) => {
 };
 
 
+
+/**
+ * Update a cafeteria
+ */
+const updateCafeteria = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { name, defaultBreakfastCutoff, defaultLunchCutoff } = req.body;
+        
+        const result = await db.query(
+            `UPDATE cafeterias 
+             SET name = COALESCE($1, name),
+                 default_breakfast_cutoff = COALESCE($2, default_breakfast_cutoff),
+                 default_lunch_cutoff = COALESCE($3, default_lunch_cutoff),
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $4
+             RETURNING *`,
+            [name, defaultBreakfastCutoff, defaultLunchCutoff, id]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: { code: 'NOT_FOUND', message: 'Cafeteria not found' }
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Cafeteria updated successfully',
+            data: { cafeteria: result.rows[0] }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 /**
  * Delete a cafeteria
  */
@@ -554,6 +591,7 @@ const deleteCafeteria = async (req, res, next) => {
 };
 
 module.exports = {
+    updateCafeteria,
     deleteCafeteria,
     // Companies
     getCompanies,

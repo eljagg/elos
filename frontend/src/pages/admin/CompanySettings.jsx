@@ -275,7 +275,7 @@ export default function CompanySettings() {
                           </div>
                           <div className="flex gap-2">
                             <button 
-                              onClick={() => { setSelectedCafeteria(cafeteria); setShowCafeteriaModal(true); }}
+                              onClick={() => openCafeteriaModal(cafeteria)}
                               className="text-blue-600 hover:text-blue-800 text-sm"
                             >Edit</button>
                             <button 
@@ -347,6 +347,48 @@ export default function CompanySettings() {
                 <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg">
                   Create
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Cafeteria Modal */}
+      {showCafeteriaModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">{selectedCafeteria ? 'Edit' : 'Add'} Cafeteria</h2>
+            <form onSubmit={handleSaveCafeteria} className="space-y-4">
+              <input
+                type="text"
+                placeholder="Cafeteria Name"
+                value={cafeteriaForm.name}
+                onChange={e => setCafeteriaForm({ ...cafeteriaForm, name: e.target.value })}
+                className="w-full px-4 py-2 border rounded-lg"
+                required
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Breakfast Cutoff</label>
+                  <input
+                    type="time"
+                    value={cafeteriaForm.breakfastCutoff}
+                    onChange={e => setCafeteriaForm({ ...cafeteriaForm, breakfastCutoff: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Lunch Cutoff</label>
+                  <input
+                    type="time"
+                    value={cafeteriaForm.lunchCutoff}
+                    onChange={e => setCafeteriaForm({ ...cafeteriaForm, lunchCutoff: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3">
+                <button type="button" onClick={() => setShowCafeteriaModal(false)} className="px-4 py-2 border rounded-lg">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg">Save</button>
               </div>
             </form>
           </div>
