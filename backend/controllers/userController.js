@@ -171,7 +171,7 @@ const getUsers = async (req, res, next) => {
         }
         
         // Company filter (Super Admin only)
-        if (companyId && (userRole === 'SUPER_ADMIN' || userRole === 'SYSTEM_OWNER')) {
+        if (companyId && companyId !== '' && (userRole === 'SUPER_ADMIN' || userRole === 'SYSTEM_OWNER')) {
             query += ` AND u.company_id = $${paramIndex++}`;
             params.push(companyId);
         }
@@ -183,13 +183,13 @@ const getUsers = async (req, res, next) => {
         }
         
         // Role filter
-        if (roleCode) {
+        if (roleCode && roleCode !== '') {
             query += ` AND r.code = $${paramIndex++}`;
             params.push(roleCode);
         }
         
         // Active status filter
-        if (isActive !== undefined) {
+        if (isActive !== undefined && isActive !== '') {
             query += ` AND u.is_active = $${paramIndex++}`;
             params.push(isActive === 'true');
         }
@@ -606,7 +606,7 @@ const updateUser = async (req, res, next) => {
             if (roleId) {
                 // Direct roleId provided
                 newRoleIdValue = roleId;
-            } else if (roleCode) {
+            } else if (roleCode && roleCode !== '') {
                 // roleCode provided, look up the id
                 const newRoleResult = await db.query(
                     'SELECT id FROM roles WHERE code = $1',
