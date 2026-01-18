@@ -230,6 +230,15 @@ const createCatalogItem = async (req, res, next) => {
             });
         }
 
+        
+        // If category string provided, look up the category ID
+        let effectiveCategoryId = categoryId;
+        if (category && !categoryId) {
+            const catResult = await db.query('SELECT id FROM menu_categories WHERE LOWER(code) = LOWER($1) OR LOWER(name) = LOWER($1)', [category]);
+            if (catResult.rows.length > 0) {
+                effectiveCategoryId = catResult.rows[0].id;
+            }
+        }
         // Start transaction
         await db.query('BEGIN');
 
