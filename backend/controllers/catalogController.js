@@ -201,6 +201,7 @@ const createCatalogItem = async (req, res, next) => {
         const {
             cafeteriaId,
             categoryId,
+            category,
             name,
             description,
             price = 0,
@@ -242,7 +243,7 @@ const createCatalogItem = async (req, res, next) => {
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
             RETURNING *
         `, [
-            cafeteriaId || null, categoryId || null, name, description, price, imageUrl,
+            cafeteriaId || null, effectiveCategoryId || null, name, description, price, imageUrl,
             prepTimeMinutes, calories, isVegetarian, isVegan, isGlutenFree,
             isSpicy, spiceLevel, isFeatured, hasSizes, sizeSmallPrice || null,
             sizeMediumPrice || null, sizeLargePrice || null, userId
@@ -313,6 +314,15 @@ const updateCatalogItem = async (req, res, next) => {
             allergenIds
         } = req.body;
 
+        // If category string provided, look up or use it
+        let effectiveCategoryId = categoryId;
+        if (category && !categoryId) {
+            const catResult = await db.query('SELECT id FROM menu_categories WHERE LOWER(code) = LOWER($1) OR LOWER(name) = LOWER($1)', [category]);
+            if (catResult.rows.length > 0) {
+                effectiveCategoryId = catResult.rows[0].id;
+            }
+        }
+        
         // Check if item exists
         const existing = await db.query('SELECT * FROM menu_item_catalog WHERE id = $1', [id]);
         if (existing.rows.length === 0) {
@@ -348,7 +358,7 @@ const updateCatalogItem = async (req, res, next) => {
             WHERE id = $16
             RETURNING *
         `, [
-            cafeteriaId, categoryId, name, description, price, imageUrl,
+            cafeteriaId, effectiveCategoryId, name, description, price, imageUrl,
             prepTimeMinutes, calories, isVegetarian, isVegan, isGlutenFree,
             isSpicy, spiceLevel, isFeatured, isActive, id
         ]);
