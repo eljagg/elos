@@ -94,6 +94,15 @@ export default function KitchenDashboard() {
     } catch { toast.error('Failed'); }
   };
 
+  const handleDeleteItem = async (item) => {
+    if (!confirm('Are you sure you want to delete "' + item.name + '"?')) return;
+    try {
+      await catalogAPI.deleteItem(item.id);
+      toast.success('Item deleted');
+      loadData();
+    } catch { toast.error('Failed to delete item'); }
+  };
+
   const handleRespondIssue = async () => {
     try { await messageAPI.respondToFeedback(selectedIssue.id, issueResponse); await messageAPI.updateFeedbackStatus(selectedIssue.id, 'resolved'); toast.success('Responded & Resolved'); setShowIssueModal(false); loadData(); } catch { toast.error('Failed'); }
   };
@@ -189,7 +198,7 @@ export default function KitchenDashboard() {
             <div className="space-y-4">
               <div className="flex justify-end"><button onClick={() => { setSelectedItem(null); setItemForm({ name: '', description: '', category: 'protein', isVegan: false, isVegetarian: false, ingredients: '' }); setShowItemModal(true); }} className="px-4 py-2 bg-orange-600 text-white rounded-lg">+ Add Item</button></div>
               <table className="w-full"><thead className={colors.bgSecondary}><tr><th className={`px-4 py-3 text-left text-xs ${colors.textMuted}`}>Item</th><th className={`px-4 py-3 text-left text-xs ${colors.textMuted}`}>Category</th><th className={`px-4 py-3 text-left text-xs ${colors.textMuted}`}>Tags</th><th className={`px-4 py-3 text-right text-xs ${colors.textMuted}`}>Actions</th></tr></thead>
-                <tbody className={`divide-y ${colors.border}`}>{menuItems.map(item => <tr key={item.id}><td className={`px-4 py-3 ${colors.textPrimary}`}>{item.name}</td><td className={`px-4 py-3 ${colors.textSecondary}`}>{item.category}</td><td className="px-4 py-3"><div className="flex gap-1">{item.is_vegan && <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">Vegan</span>}{item.is_vegetarian && <span className="px-2 py-0.5 bg-lime-100 text-lime-700 text-xs rounded">Veg</span>}</div></td><td className="px-4 py-3 text-right"><button onClick={() => { setSelectedItem(item); setItemForm({ name: item.name, description: item.description || '', category: item.category || 'protein', isVegan: item.is_vegan, isVegetarian: item.is_vegetarian, ingredients: item.ingredients || '' }); setShowItemModal(true); }} className="text-blue-600 text-sm">Edit</button></td></tr>)}</tbody>
+                <tbody className={`divide-y ${colors.border}`}>{menuItems.map(item => <tr key={item.id}><td className={`px-4 py-3 ${colors.textPrimary}`}>{item.name}</td><td className={`px-4 py-3 ${colors.textSecondary}`}>{item.category || item.category_name || '-'}</td><td className="px-4 py-3"><div className="flex gap-1">{item.is_vegan && <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">Vegan</span>}{item.is_vegetarian && <span className="px-2 py-0.5 bg-lime-100 text-lime-700 text-xs rounded">Veg</span>}</div></td><td className="px-4 py-3 text-right"><button onClick={() => { setSelectedItem(item); setItemForm({ name: item.name, description: item.description || '', category: item.category || 'protein', isVegan: item.is_vegan, isVegetarian: item.is_vegetarian, ingredients: item.ingredients || '' }); setShowItemModal(true); }} className="text-blue-600 text-sm mr-3">Edit</button><button onClick={() => handleDeleteItem(item)} className="text-red-600 text-sm">Delete</button></td></tr>)}</tbody>
               </table>
             </div>
           )}
