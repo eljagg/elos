@@ -306,6 +306,7 @@ const updateCatalogItem = async (req, res, next) => {
         const {
             cafeteriaId,
             categoryId,
+            category,
             name,
             description,
             price = 0,
