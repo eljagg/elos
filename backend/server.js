@@ -286,6 +286,7 @@ const guestRoutes = require('./routes/guestRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
+const dailyMenuRoutes = require('./routes/dailyMenuRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
 /**
@@ -298,6 +299,7 @@ app.use('/api/auth', authRoutes);        // Authentication (login, register, etc
 app.use('/api/users', userRoutes);       // User management
 app.use('/api/companies', companyRoutes); // Company management
 app.use('/api/menus', menuRoutes);       // Menu management
+app.use('/api/daily-menus', dailyMenuRoutes); // Daily menu management
 app.use('/api/catalog', catalogRoutes);   // Dish catalog/library
 app.use('/api/orders', orderRoutes);     // Order management
 app.use('/api/guests', guestRoutes);     // Guest code management
