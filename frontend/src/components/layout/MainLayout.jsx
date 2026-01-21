@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { messageAPI } from '../../services/api';
@@ -13,6 +13,7 @@ const MainLayout = () => {
   const { user, logout } = useAuth();
   const { colors } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -146,12 +147,24 @@ const MainLayout = () => {
             <NavLink
               key={index}
               to={item.path}
-              className={({ isActive }) => {
-                // Custom active logic for query params
-                const currentPath = window.location.pathname + window.location.search;
+              className={() => {
+                // Use React Router's location for proper reactivity
+                const currentPath = location.pathname + location.search;
                 const itemPath = item.path;
-                const isCurrentlyActive = currentPath === itemPath || 
-                  (itemPath === '/dashboard' && currentPath === '/dashboard' && !window.location.search);
+                
+                // Exact match for paths with query params
+                // Dashboard only active when no query params
+                let isCurrentlyActive;
+                if (itemPath.includes('?')) {
+                  // For paths with query params, require exact match
+                  isCurrentlyActive = currentPath === itemPath;
+                } else if (itemPath === '/dashboard') {
+                  // Dashboard only active when path is exactly /dashboard with no query
+                  isCurrentlyActive = location.pathname === '/dashboard' && !location.search;
+                } else {
+                  // For other paths, standard matching
+                  isCurrentlyActive = currentPath === itemPath;
+                }
                 
                 return `
                   flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
