@@ -146,10 +146,16 @@ const MainLayout = () => {
             <NavLink
               key={index}
               to={item.path}
-              end={item.path === '/dashboard'}
-              className={({ isActive }) => `
-                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
-                ${isActive 
+              className={({ isActive }) => {
+                // Custom active logic for query params
+                const currentPath = window.location.pathname + window.location.search;
+                const itemPath = item.path;
+                const isCurrentlyActive = currentPath === itemPath || 
+                  (itemPath === '/dashboard' && currentPath === '/dashboard' && !window.location.search);
+                
+                return `
+                  flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
+                  ${isCurrentlyActive 
                   ? `${colors.sidebarItemActive} ${colors.sidebarTextActive} shadow-lg` 
                   : `${colors.sidebarText} ${colors.sidebarItem}`
                 }
