@@ -146,6 +146,7 @@ const MainLayout = () => {
             <NavLink
               key={index}
               to={item.path}
+              end={item.path === '/dashboard'}
               className={({ isActive }) => `
                 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
                 ${isActive 
