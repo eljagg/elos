@@ -172,7 +172,8 @@ const MainLayout = () => {
                   ? `${colors.sidebarItemActive} ${colors.sidebarTextActive} shadow-lg` 
                   : `${colors.sidebarText} ${colors.sidebarItem}`
                 }
-              `}
+              `;
+            }}
             >
               <span className="text-xl">{item.icon}</span>
               {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
