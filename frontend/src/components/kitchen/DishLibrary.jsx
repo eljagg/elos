@@ -160,34 +160,71 @@ export default function DishLibrary({ menuItems, onEdit, onDelete, onAdd }) {
           })}
         </div>
       ) : (
-        <table className="w-full">
-          <thead className={colors.bgSecondary}>
-            <tr>
-              <th className={`px-4 py-3 text-left text-xs ${colors.textMuted}`}>Item</th>
-              <th className={`px-4 py-3 text-left text-xs ${colors.textMuted}`}>Category</th>
-              <th className={`px-4 py-3 text-left text-xs ${colors.textMuted}`}>Tags</th>
-              <th className={`px-4 py-3 text-right text-xs ${colors.textMuted}`}>Actions</th>
-            </tr>
-          </thead>
-          <tbody className={`divide-y ${colors.border}`}>
-            {Object.values(groupedItems).flat().map(item => (
-              <tr key={item.id}>
-                <td className={`px-4 py-3 ${colors.textPrimary}`}>{item.name}</td>
-                <td className={`px-4 py-3 ${colors.textSecondary}`}>{item.category_name || item.category || '-'}</td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-1">
-                    {item.is_vegan && <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">Vegan</span>}
-                    {item.is_vegetarian && <span className="px-2 py-0.5 bg-lime-100 text-lime-700 text-xs rounded">Veg</span>}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button onClick={() => onEdit(item)} className="text-blue-600 text-sm mr-3">Edit</button>
-                  <button onClick={() => onDelete(item)} className="text-red-600 text-sm">Delete</button>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className={`${colors.bgSecondary} sticky top-0`}>
+              <tr>
+                <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${colors.textMuted}`}>Item</th>
+                <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${colors.textMuted}`}>Category</th>
+                <th className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${colors.textMuted}`}>Tags</th>
+                <th className={`px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider ${colors.textMuted}`}>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {Object.entries(groupedItems).map(([category, items]) => {
+                const catInfo = categoryInfo[category] || { name: category, emoji: '📦', color: 'bg-gray-50 border-gray-200' };
+                return items.map((item, index) => (
+                  <tr 
+                    key={item.id}
+                    className={`border-b ${colors.border} hover:bg-gray-50 transition-colors`}
+                  >
+                    <td className={`px-6 py-4 ${colors.textPrimary} font-medium`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{catInfo.emoji}</span>
+                        <span>{item.name}</span>
+                      </div>
+                    </td>
+                    <td className={`px-6 py-4`}>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${catInfo.color.replace('border-', 'text-').replace('-200', '-700')}`}>
+                        {catInfo.emoji} {catInfo.name}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex gap-2">
+                        {item.is_vegan && (
+                          <span className="inline-flex items-center px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                            🌱 Vegan
+                          </span>
+                        )}
+                        {item.is_vegetarian && (
+                          <span className="inline-flex items-center px-2.5 py-1 bg-lime-100 text-lime-700 text-xs font-medium rounded-full">
+                            🥬 Veg
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button 
+                          onClick={() => onEdit(item)} 
+                          className="px-3 py-1.5 text-blue-600 hover:bg-blue-50 text-sm font-medium rounded-lg transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => onDelete(item)} 
+                          className="px-3 py-1.5 text-red-600 hover:bg-red-50 text-sm font-medium rounded-lg transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ));
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
