@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { orderAPI, menuAPI, messageAPI, companyAPI, catalogAPI } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import DishLibrary from '../../components/kitchen/DishLibrary';
+import EnhancedPrepList from '../../components/kitchen/EnhancedPrepList';
 import toast from 'react-hot-toast';
 
 export default function KitchenDashboard() {
@@ -187,8 +188,9 @@ export default function KitchenDashboard() {
           )}
 
           {activeTab === 'prep' && (
-            <div><h3 className={`font-semibold mb-4 ${colors.textPrimary}`}>Today's Prep List</h3>
-              {Object.keys(prepList).length > 0 ? <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{Object.entries(prepList).map(([item, qty]) => <div key={item} className={`${colors.bgSecondary} rounded-xl p-4 text-center`}><p className={`text-3xl font-bold ${colors.textPrimary}`}>{qty}</p><p className={colors.textSecondary}>{item}</p></div>)}</div> : <p className={colors.textMuted}>No items to prep</p>}
+            <div>
+              <h3 className={`font-semibold mb-4 ${colors.textPrimary}`}>📋 Today's Prep List</h3>
+              <EnhancedPrepList orders={filteredOrders} />
             </div>
           )}
 
