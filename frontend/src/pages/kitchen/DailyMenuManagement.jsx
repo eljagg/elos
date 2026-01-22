@@ -65,7 +65,8 @@ export default function DailyMenuManagement() {
       setLoading(true);
       const res = await dailyMenuAPI.getDailyMenu({
         cafeteriaId: selectedCafeteria,
-        date: selectedDate
+        date: selectedDate,
+        mealType: 'lunch'
       });
       setDailyMenu(res.data?.data?.dailyMenu);
       setMenuItems(res.data?.data?.items || []);
@@ -83,6 +84,8 @@ export default function DailyMenuManagement() {
       await dailyMenuAPI.createDailyMenu({
         cafeteriaId: selectedCafeteria,
         date: selectedDate,
+        mealType: 'lunch'
+        mealType: 'lunch'
         mealType: 'lunch',
         cutoffTime: '10:00:00',
         items: items.map(item => ({
