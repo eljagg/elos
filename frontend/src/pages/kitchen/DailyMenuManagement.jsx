@@ -83,6 +83,7 @@ export default function DailyMenuManagement() {
       await dailyMenuAPI.createDailyMenu({
         cafeteriaId: selectedCafeteria,
         date: selectedDate,
+        mealType: 'lunch',
         items: items.map(item => ({
           catalogItemId: item.id,
           portionsAvailable: item.portions || 50
