@@ -87,7 +87,6 @@ const getDailyMenu = async (req, res, next) => {
                         'portions_available', dmi.portions_available,
                         'portions_ordered', dmi.portions_ordered,
                         'portions_remaining', (dmi.portions_available - COALESCE(dmi.portions_ordered, 0)),
-                        'is_available', dmi.is_available,
                         'is_sold_out', dmi.is_sold_out,
                         'sold_out_at', dmi.sold_out_at
                     ) ORDER BY mic.name
@@ -381,7 +380,7 @@ const addItemsToMenu = async (req, res, next) => {
 const updateMenuItem = async (req, res, next) => {
     try {
         const { menuId, itemId } = req.params;
-        const { portions_available, is_available } = req.body;
+        const { portions_available, is_active } = req.body;
 
         // Check menu status
         const menu = await db.query('SELECT status FROM daily_menus WHERE id = $1', [menuId]);
@@ -410,9 +409,9 @@ const updateMenuItem = async (req, res, next) => {
             values.push(portions_available);
         }
 
-        if (is_available !== undefined) {
-            updates.push(`is_available = $${paramCount++}`);
-            values.push(is_available);
+        if (is_active !== undefined) {
+            updates.push(`is_active = $${paramCount++}`);
+            values.push(is_active);
         }
 
         if (updates.length === 0) {
