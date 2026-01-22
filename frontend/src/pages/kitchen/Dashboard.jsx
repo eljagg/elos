@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { orderAPI, menuAPI, messageAPI, companyAPI, catalogAPI } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import toast from 'react-hot-toast';
@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 export default function KitchenDashboard() {
   const { colors, getStatCardColors } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   
   // Set active tab based on URL (query params or path)
   useEffect(() => {
@@ -148,7 +149,7 @@ export default function KitchenDashboard() {
 
       <div className={`${colors.bgCard} rounded-xl shadow-sm border ${colors.border}`}>
         <div className={`border-b ${colors.border} flex overflow-x-auto`}>
-          {[{ id: 'orders', l: '📦 Orders' }, { id: 'prep', l: '📋 Prep List' }, { id: 'deliveries', l: '🚚 Deliveries' }, { id: 'menus', l: '🍽️ Menus' }, { id: 'items', l: '🥗 Items' }, { id: 'issues', l: '⚠️ Issues' }, { id: 'messages', l: '📨 Messages' }].map(t => <button key={t.id} onClick={() => setActiveTab(t.id)} className={`px-6 py-4 text-sm font-medium whitespace-nowrap border-b-2 ${activeTab === t.id ? 'border-orange-500 text-orange-600' : `border-transparent ${colors.textMuted}`}`}>{t.l}</button>)}
+          {[{ id: 'orders', l: '📦 Orders' }, { id: 'prep', l: '📋 Prep List' }, { id: 'deliveries', l: '🚚 Deliveries' }, { id: 'menus', l: '🍽️ Menus' }, { id: 'items', l: '🥗 Items' }, { id: 'issues', l: '⚠️ Issues' }, { id: 'messages', l: '📨 Messages' }].map(t => <button key={t.id} onClick={() => navigate(`/dashboard?tab=${t.id}`)} className={`px-6 py-4 text-sm font-medium whitespace-nowrap border-b-2 ${activeTab === t.id ? 'border-orange-500 text-orange-600' : `border-transparent ${colors.textMuted}`}`}>{t.l}</button>)}
         </div>
 
         <div className="p-6">
