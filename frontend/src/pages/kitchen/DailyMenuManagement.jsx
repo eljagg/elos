@@ -84,6 +84,7 @@ export default function DailyMenuManagement() {
         cafeteriaId: selectedCafeteria,
         date: selectedDate,
         mealType: 'lunch',
+        cutoffTime: '10:00:00',
         items: items.map(item => ({
           catalogItemId: item.id,
           portionsAvailable: item.portions || 50
