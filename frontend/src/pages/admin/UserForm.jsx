@@ -69,8 +69,8 @@ export default function UserForm() {
         setFormData({
           email: user.email || '',
           password: '',
-          firstName: user.first_name || '',
-          lastName: user.last_name || '',
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
           phone: user.phone || '',
           employeeCode: user.employee_code || '',
           roleId: user.role_id || '',
