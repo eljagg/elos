@@ -71,7 +71,10 @@ export default function AdminDashboard() {
       setCompanies(companiesList);
       setOrders(ordersList);
       setRoles(rolesRes.data?.data?.roles || []);
-      const allDepts = [];
+      const allDepts = [], allDomains = [];
+      // Get all cafeterias directly
+      const allCafesRes = await companyAPI.getCafeterias().catch(() => ({ data: { data: { cafeterias: [] } } }));
+      const allCafes = allCafesRes.data?.data?.cafeterias || [];
       
       for (const c of companiesList) {
         const [dRes, domRes] = await Promise.all([
