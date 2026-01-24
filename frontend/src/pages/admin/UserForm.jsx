@@ -73,9 +73,9 @@ export default function UserForm() {
           lastName: user.lastName || '',
           phone: user.phone || '',
           employeeCode: user.employee_code || '',
-          roleId: user.role_id || '',
-          companyId: user.company_id || '',
-          departmentId: user.department_id || '',
+          roleId: user.roleId || '',
+          companyId: user.companyId || '',
+          departmentId: user.departmentId || '',
           languagePreference: user.preferred_language || 'en'
         });
       }
