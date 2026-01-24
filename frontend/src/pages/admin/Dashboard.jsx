@@ -79,7 +79,7 @@ export default function AdminDashboard() {
       for (const c of companiesList) {
         const [dRes, domRes] = await Promise.all([
           companyAPI.getDepartments(c.id).catch(() => ({ data: { data: { departments: [] } } })),
-          companyAPI.getDomains(c.id).catch(() => ({ data: { data: { domains: [] } } }))
+          adminAPI.getDomains(c.id).catch(() => ({ data: { data: { domains: [] } } }))
         ]);
         allDepts.push(...(dRes.data?.data?.departments || []).map(d => ({ ...d, company_name: c.name })));
         allDomains.push(...(domRes.data?.data?.domains || []).map(dm => ({ ...dm, company_name: c.name })));
@@ -153,8 +153,8 @@ export default function AdminDashboard() {
   const handleDeleteCafeteria = async (id) => { if (!confirm("Delete this cafeteria?")) return; try { await companyAPI.deleteCafeteria(id); toast.success("Deleted"); loadAllData(); } catch { toast.error("Failed"); } };
   const handleSaveDepartment = async (e) => { e.preventDefault(); try { if (selectedDepartment) { await companyAPI.updateDepartment(selectedDepartment.company_id, selectedDepartment.id, departmentForm); toast.success('Updated'); } else { await companyAPI.createDepartment(departmentForm.companyId, departmentForm); toast.success('Created'); } setShowDepartmentModal(false); loadAllData(); } catch { toast.error('Failed'); } };
   const handleSaveCafeteria = async (e) => { e.preventDefault(); try { if (selectedCafeteria) { await companyAPI.updateCafeteria(selectedCafeteria.company_id, selectedCafeteria.id, cafeteriaForm); toast.success('Updated'); } else { await companyAPI.createCafeteria(cafeteriaForm); toast.success('Created'); } setShowCafeteriaModal(false); loadAllData(); } catch { toast.error('Failed'); } };
-  const handleSaveDomain = async (e) => { e.preventDefault(); try { await companyAPI.addDomain(domainForm.companyId, domainForm.domain); toast.success('Added'); setShowDomainModal(false); loadAllData(); } catch { toast.error('Failed'); } };
-  const handleDeleteDomain = async (companyId, domain) => { if (!confirm('Delete this domain?')) return; try { await companyAPI.removeDomain(companyId, domain); toast.success('Deleted'); loadAllData(); } catch { toast.error('Failed'); } };
+  const handleSaveDomain = async (e) => { e.preventDefault(); try { await adminAPI.addDomain(domainForm.companyId, domainForm.domain); toast.success('Added'); setShowDomainModal(false); loadAllData(); } catch { toast.error('Failed'); } };
+  const handleDeleteDomain = async (companyId, domain) => { if (!confirm('Delete this domain?')) return; try { await adminAPI.removeDomain(companyId, domain); toast.success('Deleted'); loadAllData(); } catch { toast.error('Failed'); } };
   const handleSaveAnnouncement = async (e) => { e.preventDefault(); try { await messageAPI.createAnnouncement(announcementForm); toast.success('Created'); setShowAnnouncementModal(false); setAnnouncements([...announcements, { id: Date.now(), ...announcementForm }]); } catch { toast.error('Failed'); } };
   const handleThemeChange = (themeId) => { changeTheme(themeId); toast.success(`Theme changed to ${themeOptions.find(t => t.id === themeId)?.name}`); };
 
