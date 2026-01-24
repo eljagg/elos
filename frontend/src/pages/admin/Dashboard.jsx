@@ -72,18 +72,15 @@ export default function AdminDashboard() {
       setOrders(ordersList);
       setRoles(rolesRes.data?.data?.roles || []);
       const allDepts = [];
-      // Get all cafeterias directly
-      const allCafesRes = await companyAPI.getCafeterias().catch(() => ({ data: { data: { cafeterias: [] } } }));
-      const allCafes = allCafesRes.data?.data?.cafeterias || [];
       
-      const domainsRes = await adminAPI.getDomains().catch(() => ({ data: { data: { domains: [] } } }));
-      const allDomains = domainsRes.data?.data?.domains || [];
       for (const c of companiesList) {
         const [dRes, domRes] = await Promise.all([
           companyAPI.getDepartments(c.id).catch(() => ({ data: { data: { departments: [] } } })),
           adminAPI.getDomains().catch(() => ({ data: { data: { domains: [] } } }))
+        ]);
         allDepts.push(...(dRes.data?.data?.departments || []).map(d => ({ ...d, company_name: c.name })));
         allDomains.push(...(domRes.data?.data?.domains || []).map(dm => ({ ...dm, company_name: c.name })));
+      }
       setDepartments(allDepts); setCafeterias(allCafes); setDomains(allDomains);
       const today = new Date().toISOString().split('T')[0];
       setStats({ totalUsers: usersList.length, activeUsers: usersList.filter(u => u.is_active).length, companies: companiesList.length, ordersToday: ordersList.filter(o => o.order_date === today).length, lockedUsers: usersList.filter(u => u.locked_until && new Date(u.locked_until) > new Date()).length });
