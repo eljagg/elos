@@ -162,7 +162,7 @@ export default function AdminDashboard() {
     setShowPasswordModal(true);
   };
 
-  const filteredUsers = users.filter(u => { const s = filters.search.toLowerCase(); if (s && !`${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(s)) return false; if (filters.role && u.role_id !== filters.role) return false; if (filters.company && u.company_id !== filters.company) return false; if (filters.status === 'active' && !u.is_active) return false; if (filters.status === 'locked' && (!u.locked_until || new Date(u.locked_until) <= new Date())) return false; return true; });
+  const filteredUsers = users.filter(u => { const s = filters.search.toLowerCase(); if (s && !`${u.firstName} ${u.lastName} ${u.email} ${u.employeeCode || ""}`.toLowerCase().includes(s)) return false; if (filters.role && u.role_id !== filters.role) return false; if (filters.company && u.company_id !== filters.company) return false; if (filters.status === 'active' && !u.is_active) return false; if (filters.status === 'locked' && (!u.locked_until || new Date(u.locked_until) <= new Date())) return false; return true; });
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
 
