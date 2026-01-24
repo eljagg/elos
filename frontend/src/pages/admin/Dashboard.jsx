@@ -236,8 +236,8 @@ export default function AdminDashboard() {
                           <p className={`font-medium ${colors.textPrimary}`}>{u.first_name} {u.last_name}</p>
                           <p className={`text-sm ${colors.textMuted}`}>{u.email}</p>
                         </td>
-                        <td className={`px-4 py-3 text-sm ${colors.textSecondary}`}>{u.role_name || '-'}</td>
-                        <td className={`px-4 py-3 text-sm ${colors.textSecondary}`}>{u.company_name || '-'}</td>
+                        <td className={`px-4 py-3 text-sm ${colors.textSecondary}`}>{u.roleName || '-'}</td>
+                        <td className={`px-4 py-3 text-sm ${colors.textSecondary}`}>{u.companyName || '-'}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 text-xs rounded-full ${u.locked_until && new Date(u.locked_until) > new Date() ? 'bg-red-100 text-red-800' : u.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                             {u.locked_until && new Date(u.locked_until) > new Date() ? 'Locked' : u.is_active ? 'Active' : 'Inactive'}
