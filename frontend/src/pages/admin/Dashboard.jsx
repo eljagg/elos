@@ -79,7 +79,7 @@ export default function AdminDashboard() {
       for (const c of companiesList) {
         const [dRes, domRes] = await Promise.all([
           companyAPI.getDepartments(c.id).catch(() => ({ data: { data: { departments: [] } } })),
-          companyAPI.getDomains(c.id).catch(() => ({ data: { data: { domains: [] } } }))
+          adminAPI.getDomains().catch(() => ({ data: { data: { domains: [] } } }))
         ]);
         allDepts.push(...(dRes.data?.data?.departments || []).map(d => ({ ...d, company_name: c.name })));
         allDomains.push(...(domRes.data?.data?.domains || []).map(dm => ({ ...dm, company_name: c.name })));
