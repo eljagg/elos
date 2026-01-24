@@ -114,11 +114,19 @@ export default function UserForm() {
 
     setSaving(true);
     try {
+      // Clean up empty string values - convert to null for UUID fields
+      const cleanedData = {
+        ...formData,
+        roleId: formData.roleId || null,
+        companyId: formData.companyId || null,
+        departmentId: formData.departmentId || null,
+      };
+
       if (isEditing) {
-        await userAPI.updateUser(id, formData);
+        await userAPI.updateUser(id, cleanedData);
         toast.success('User updated successfully');
       } else {
-        await userAPI.createUser(formData);
+        await userAPI.createUser(cleanedData);
         toast.success('User created successfully');
       }
       navigate('/admin/users');
