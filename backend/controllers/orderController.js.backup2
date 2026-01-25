@@ -1486,7 +1486,7 @@ const createDailyMenuOrder = async (req, res, next) => {
         // Validate items exist in daily menu
         const itemIds = items.map(i => i.menuItemId);
         const itemsResult = await db.query(
-            `SELECT dmi.id, dmi.catalog_item_id, mic.name, mic.price,
+            `SELECT dmi.id, dmi.catalog_item_id, mic.name,
                     (dmi.portions_available - dmi.portions_ordered) as portions_remaining
              FROM daily_menu_items dmi
              JOIN menu_item_catalog mic ON dmi.catalog_item_id = mic.id
@@ -1511,7 +1511,6 @@ const createDailyMenuOrder = async (req, res, next) => {
                 catalogItemId: dbItem.catalog_item_id,
                 name: dbItem.name,
                 quantity: item.quantity,
-                unitPrice: parseFloat(dbItem.price),
                 specialInstructions: item.specialInstructions || ''
             };
         });
