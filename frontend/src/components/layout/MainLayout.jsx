@@ -51,7 +51,7 @@ const MainLayout = () => {
           { path: '/admin/users', icon: '👥', label: 'Users' },
           { path: '/admin/companies', icon: '🏢', label: 'Companies' },
           { path: '/admin/orders', icon: '📦', label: 'Orders' },
-          { path: '/dashboard?tab=items', icon: '📚', label: 'Dish Library' },
+          { path: '/admin/dish-library', icon: '📚', label: 'Dish Library' },
           { path: '/admin/menus', icon: '🍽️', label: 'Menus' },
           { path: '/admin/reports', icon: '📊', label: 'Reports' },
           { path: '/admin/settings', icon: '⚙️', label: 'Settings' },
@@ -62,7 +62,7 @@ const MainLayout = () => {
           { path: '/admin/users', icon: '👥', label: 'Users' },
           { path: '/admin/companies', icon: '🏢', label: 'Companies' },
           { path: '/admin/orders', icon: '📦', label: 'Orders' },
-          { path: '/dashboard?tab=items', icon: '📚', label: 'Dish Library' },
+          { path: '/admin/dish-library', icon: '📚', label: 'Dish Library' },
           { path: '/admin/menus', icon: '🍽️', label: 'Menus' },
           { path: '/admin/reports', icon: '📊', label: 'Reports' },
           { path: '/admin/settings', icon: '⚙️', label: 'Settings' },
@@ -79,7 +79,7 @@ const MainLayout = () => {
       case 'KITCHEN_STAFF':
         return [
           ...baseItems,
-          { path: '/dashboard?tab=items', icon: '📚', label: 'Dish Library' },
+          { path: '/admin/dish-library', icon: '📚', label: 'Dish Library' },
           { path: '/kitchen/daily-menu', icon: '📅', label: 'Daily Menu' },
           { path: '/kitchen/menu-calendar', icon: '🗓️', label: 'Menu Calendar' },
           { path: '/kitchen/orders', icon: '📦', label: 'Orders' },
