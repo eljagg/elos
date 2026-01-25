@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { userAPI, companyAPI, orderAPI, menuAPI, messageAPI } from '../../services/api';
+import { userAPI, companyAPI, orderAPI, menuAPI, messageAPI, adminAPI } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import LicenseManager from '../../components/LicenseManager';
@@ -71,18 +71,17 @@ export default function AdminDashboard() {
       setCompanies(companiesList);
       setOrders(ordersList);
       setRoles(rolesRes.data?.data?.roles || []);
-      const allDepts = [], allDomains = [];
-      // Get all cafeterias directly
+      const allDepts = [];
+      // Get all cafeterias and domains directly
       const allCafesRes = await companyAPI.getCafeterias().catch(() => ({ data: { data: { cafeterias: [] } } }));
       const allCafes = allCafesRes.data?.data?.cafeterias || [];
       
+      const domainsRes = await adminAPI.getDomains().catch(() => ({ data: { data: { domains: [] } } }));
+      const allDomains = domainsRes.data?.data?.domains || [];
+      
       for (const c of companiesList) {
-        const [dRes, domRes] = await Promise.all([
-          companyAPI.getDepartments(c.id).catch(() => ({ data: { data: { departments: [] } } })),
-          companyAPI.getDomains(c.id).catch(() => ({ data: { data: { domains: [] } } }))
-        ]);
+        const dRes = await companyAPI.getDepartments(c.id).catch(() => ({ data: { data: { departments: [] } } }));
         allDepts.push(...(dRes.data?.data?.departments || []).map(d => ({ ...d, company_name: c.name })));
-        allDomains.push(...(domRes.data?.data?.domains || []).map(dm => ({ ...dm, company_name: c.name })));
       }
       setDepartments(allDepts); setCafeterias(allCafes); setDomains(allDomains);
       const today = new Date().toISOString().split('T')[0];
@@ -153,8 +152,8 @@ export default function AdminDashboard() {
   const handleDeleteCafeteria = async (id) => { if (!confirm("Delete this cafeteria?")) return; try { await companyAPI.deleteCafeteria(id); toast.success("Deleted"); loadAllData(); } catch { toast.error("Failed"); } };
   const handleSaveDepartment = async (e) => { e.preventDefault(); try { if (selectedDepartment) { await companyAPI.updateDepartment(selectedDepartment.company_id, selectedDepartment.id, departmentForm); toast.success('Updated'); } else { await companyAPI.createDepartment(departmentForm.companyId, departmentForm); toast.success('Created'); } setShowDepartmentModal(false); loadAllData(); } catch { toast.error('Failed'); } };
   const handleSaveCafeteria = async (e) => { e.preventDefault(); try { if (selectedCafeteria) { await companyAPI.updateCafeteria(selectedCafeteria.company_id, selectedCafeteria.id, cafeteriaForm); toast.success('Updated'); } else { await companyAPI.createCafeteria(cafeteriaForm); toast.success('Created'); } setShowCafeteriaModal(false); loadAllData(); } catch { toast.error('Failed'); } };
-  const handleSaveDomain = async (e) => { e.preventDefault(); try { await companyAPI.addDomain(domainForm.companyId, domainForm.domain); toast.success('Added'); setShowDomainModal(false); loadAllData(); } catch { toast.error('Failed'); } };
-  const handleDeleteDomain = async (companyId, domain) => { if (!confirm('Delete this domain?')) return; try { await companyAPI.removeDomain(companyId, domain); toast.success('Deleted'); loadAllData(); } catch { toast.error('Failed'); } };
+  const handleSaveDomain = async (e) => { e.preventDefault(); try { await adminAPI.addDomain({ domain: domainForm.domain, companyId: domainForm.companyId }); toast.success('Added'); setShowDomainModal(false); loadAllData(); } catch { toast.error('Failed'); } };
+  const handleDeleteDomain = async (id) => { if (!confirm('Delete this domain?')) return; try { await adminAPI.removeDomain(id); toast.success('Deleted'); loadAllData(); } catch { toast.error('Failed'); } };
   const handleSaveAnnouncement = async (e) => { e.preventDefault(); try { await messageAPI.createAnnouncement(announcementForm); toast.success('Created'); setShowAnnouncementModal(false); setAnnouncements([...announcements, { id: Date.now(), ...announcementForm }]); } catch { toast.error('Failed'); } };
   const handleThemeChange = (themeId) => { changeTheme(themeId); toast.success(`Theme changed to ${themeOptions.find(t => t.id === themeId)?.name}`); };
 
@@ -287,7 +286,7 @@ export default function AdminDashboard() {
           {activeTab === 'domains' && (
             <div className="space-y-4">
               <div className="flex justify-end"><button onClick={() => { setDomainForm({ domain: '', companyId: '' }); setShowDomainModal(true); }} className={`px-4 py-2 ${colors.btnPrimary} rounded-lg`}>+ Add Domain</button></div>
-              <table className="w-full"><thead className={colors.bgSecondary}><tr><th className={`px-4 py-3 text-left text-xs ${colors.textMuted}`}>Domain</th><th className={`px-4 py-3 text-left text-xs ${colors.textMuted}`}>Company</th><th className={`px-4 py-3 text-right text-xs ${colors.textMuted}`}>Actions</th></tr></thead><tbody className={`divide-y ${colors.border}`}>{domains.map((d, i) => <tr key={i}><td className={`px-4 py-3 ${colors.textPrimary}`}>{d.domain}</td><td className={`px-4 py-3 ${colors.textSecondary}`}>{d.company_name}</td><td className="px-4 py-3 text-right"><button onClick={() => handleDeleteDomain(d.company_id, d.domain)} className="text-red-600 text-sm">Delete</button></td></tr>)}</tbody></table>
+              <table className="w-full"><thead className={colors.bgSecondary}><tr><th className={`px-4 py-3 text-left text-xs ${colors.textMuted}`}>Domain</th><th className={`px-4 py-3 text-left text-xs ${colors.textMuted}`}>Company</th><th className={`px-4 py-3 text-right text-xs ${colors.textMuted}`}>Actions</th></tr></thead><tbody className={`divide-y ${colors.border}`}>{domains.map((d, i) => <tr key={i}><td className={`px-4 py-3 ${colors.textPrimary}`}>{d.domain}</td><td className={`px-4 py-3 ${colors.textSecondary}`}>{d.companyName}</td><td className="px-4 py-3 text-right"><button onClick={() => handleDeleteDomain(d.id)} className="text-red-600 text-sm">Delete</button></td></tr>)}</tbody></table>
             </div>
           )}
 
