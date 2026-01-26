@@ -1531,14 +1531,14 @@ const createDailyMenuOrder = async (req, res, next) => {
                 order_number, user_id, company_id, department_id, cafeteria_id,
                 order_date, day_of_week, meal_type, status,
                 subtotal, tax, total,
-                notes, delivery_location, is_guest_order
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                notes, is_guest_order
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
             RETURNING *`,
             [
                 orderNumber, userId, userCompanyId, userDepartmentId, cafeteriaId,
                 orderDate, dayOfWeek, 'lunch', 'pending',
                 subtotal, tax, total,
-                notes || '', null, false
+                notes || '', false
             ]
         );
         
