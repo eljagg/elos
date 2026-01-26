@@ -1501,43 +1501,60 @@ const createDailyMenuOrder = async (req, res, next) => {
             });
         }
         
-        // Total is number of meals * meal price
-        const totalAmount = numMeals * mealPrice;
-        
+        // Map order items (items are just components, no individual prices)
         const orderItems = items.map(item => {
             const dbItem = itemsResult.rows.find(r => r.id === item.menuItemId);
             return {
                 dailyMenuItemId: item.menuItemId,
                 catalogItemId: dbItem.catalog_item_id,
                 name: dbItem.name,
-                unitPrice: parseFloat(dbItem.price),
                 quantity: item.quantity,
                 specialInstructions: item.specialInstructions || ''
             };
         });
         
+        // Calculate totals based on fixed meal price (subsidized by company)
+        // The entire meal (all items together) costs one fixed price
+        const numMeals = mealCount || 1;
+        const subtotal = numMeals * mealPrice;
+        const tax = 0; // No tax for now
+        const total = subtotal + tax;
+        
+        // Get day of week
+        const dayOfWeek = getDayOfWeek(orderDate);
+        
         // Generate order number
         const orderNumber = 'ORD-' + Date.now().toString(36).toUpperCase();
         
-        // Create order
+        // Create order with correct column names
         const orderResult = await db.query(
-            `INSERT INTO orders (order_number, user_id, company_id, department_id, cafeteria_id, 
-                                order_date, meal_type, status, total_amount, notes)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-             RETURNING *`,
-            [orderNumber, userId, userCompanyId, userDepartmentId, cafeteriaId,
-             orderDate, 'lunch', 'pending', totalAmount, notes || '']
+            `INSERT INTO orders (
+                order_number, user_id, company_id, department_id, cafeteria_id, building_id,
+                order_date, day_of_week, meal_type, status,
+                subtotal, tax, total,
+                notes, delivery_location, is_guest_order
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            RETURNING *`,
+            [
+                orderNumber, userId, userCompanyId, userDepartmentId, cafeteriaId, null,
+                orderDate, dayOfWeek, 'lunch', 'pending',
+                subtotal, tax, total,
+                notes || '', null, false
+            ]
         );
         
         const newOrder = orderResult.rows[0];
         
         // Insert order items
+        // Since meal price is fixed, divide it equally among all items
+        const pricePerItem = mealPrice / orderItems.length;
+        
         for (const item of orderItems) {
             await db.query(
                 `INSERT INTO order_items (order_id, menu_item_id, quantity, unit_price, total_price, special_instructions)
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-                [newOrder.id, item.catalogItemId, item.quantity, item.unitPrice, 
-                 item.unitPrice * item.quantity, item.specialInstructions]
+                [newOrder.id, item.catalogItemId, item.quantity, pricePerItem, 
+                 pricePerItem * item.quantity, item.specialInstructions]
             );
             
             // Update portions ordered
