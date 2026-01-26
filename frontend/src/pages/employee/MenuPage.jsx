@@ -142,7 +142,7 @@ const MenuPage = () => {
     const dates = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(weekStart);
-      d.setDate(weekStart.getDate() + i);
+      d.setDate(d.getDate() + i);
       dates.push(d);
     }
     return dates;
