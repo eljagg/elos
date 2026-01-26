@@ -34,8 +34,9 @@ const MenuPage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [weekStart, setWeekStart] = useState(() => {
     const today = new Date();
-    const dayOfWeek = today.getDay();
-    const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dayOfWeek);
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - today.getDay());
     return startDate;
   });
   const [placingOrder, setPlacingOrder] = useState(false);
@@ -143,11 +144,10 @@ const MenuPage = () => {
 
   const getWeekDates = () => {
     const dates = [];
-    const startYear = weekStart.getFullYear();
-    const startMonth = weekStart.getMonth();
-    const startDay = weekStart.getDate();
     for (let i = 0; i < 7; i++) {
-      dates.push(new Date(startYear, startMonth, startDay + i));
+      const d = new Date(weekStart);
+      d.setDate(weekStart.getDate() + i);
+      dates.push(d);
     }
     return dates;
   };
@@ -156,12 +156,14 @@ const MenuPage = () => {
   const isToday = (d) => d.toDateString() === new Date().toDateString();
   const isSelected = (d) => d.toDateString() === selectedDate.toDateString();
   const navigateWeek = (dir) => {
-    const newStart = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + (dir * 7));
+    const newStart = new Date(weekStart);
+    newStart.setDate(weekStart.getDate() + (dir * 7));
     setWeekStart(newStart);
     setSelectedDate(newStart);
   };
   const formatWeekRange = () => {
-    const endDate = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6);
+    const endDate = new Date(weekStart);
+    endDate.setDate(weekStart.getDate() + 6);
     return `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
   };
 
