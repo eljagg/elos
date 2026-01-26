@@ -62,14 +62,25 @@ export default function KitchenDashboard() {
     setLoading(true);
     try {
       const [ordersRes, menusRes, itemsRes, issuesRes, messagesRes, companiesRes] = await Promise.all([
-        orderAPI.getOrders({ limit: 200 }).catch(() => ({ data: { data: { orders: [] } } })),
+        orderAPI.getKitchenOrders().catch(() => ({ data: { data: { ordersByStatus: { pending: [], preparing: [], ready: [], completed: [], confirmed: [], delivered: [] }, summary: {} } } })),
         menuAPI.getMenus().catch(() => ({ data: { data: { menus: [] } } })),
         catalogAPI.getItems().catch(() => ({ data: { data: { items: [] } } })),
         messageAPI.getFeedback().catch(() => ({ data: { data: { feedback: [] } } })),
         messageAPI.getInbox().catch(() => ({ data: { data: { messages: [], unreadCount: 0 } } })),
         companyAPI.getCompanies().catch(() => ({ data: { data: { companies: [] } } }))
       ]);
-      const ordersList = ordersRes.data?.data?.orders || [];
+      
+      // Kitchen orders endpoint returns ordersByStatus, convert to flat array
+      const ordersByStatus = ordersRes.data?.data?.ordersByStatus || {};
+      const ordersList = [
+        ...(ordersByStatus.pending || []),
+        ...(ordersByStatus.confirmed || []),
+        ...(ordersByStatus.preparing || []),
+        ...(ordersByStatus.ready || []),
+        ...(ordersByStatus.delivered || []),
+        ...(ordersByStatus.completed || [])
+      ];
+      
       setOrders(ordersList);
       setMenus(menusRes.data?.data?.menus || []);
       setMenuItems(itemsRes.data?.data?.items || []);
