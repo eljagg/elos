@@ -730,13 +730,13 @@ const getOrderById = async (req, res, next) => {
         
         // Get order items
         const itemsResult = await db.query(
-            `SELECT oi.*, mi.name, mi.description, mi.image_url,
+            `SELECT oi.*, mic.name, mic.description, mic.image_url,
                     mc.name as category_name
              FROM order_items oi
-             JOIN menu_items mi ON oi.menu_item_id = mi.id
-             JOIN menu_categories mc ON mi.category_id = mc.id
+             JOIN menu_item_catalog mic ON oi.menu_item_id = mic.id
+             JOIN menu_categories mc ON mic.category_id = mc.id
              WHERE oi.order_id = $1
-             ORDER BY mc.display_order, mi.display_order`,
+             ORDER BY mc.display_order, mic.display_order`,
             [id]
         );
         
@@ -1244,15 +1244,15 @@ const getKitchenOrders = async (req, res, next) => {
                    (
                        SELECT json_agg(json_build_object(
                            'id', oi.id,
-                           'name', mi.name,
+                           'name', mic.name,
                            'quantity', oi.quantity,
                            'specialInstructions', oi.special_instructions,
                            'customRequest', oi.custom_request,
                            'categoryCode', mc.code
                        ))
                        FROM order_items oi
-                       JOIN menu_items mi ON oi.menu_item_id = mi.id
-                       JOIN menu_categories mc ON mi.category_id = mc.id
+                       JOIN menu_item_catalog mic ON oi.menu_item_id = mic.id
+                       JOIN menu_categories mc ON mic.category_id = mc.id
                        WHERE oi.order_id = o.id
                    ) as items
             FROM orders o
