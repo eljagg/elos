@@ -1515,7 +1515,6 @@ const createDailyMenuOrder = async (req, res, next) => {
         
         // Calculate totals based on fixed meal price (subsidized by company)
         // The entire meal (all items together) costs one fixed price
-        const numMeals = mealCount || 1;
         const subtotal = numMeals * mealPrice;
         const tax = 0; // No tax for now
         const total = subtotal + tax;
