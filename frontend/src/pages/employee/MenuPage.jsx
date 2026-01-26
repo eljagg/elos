@@ -33,7 +33,10 @@ const MenuPage = () => {
   const [selectedCafeteria, setSelectedCafeteria] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [weekStart, setWeekStart] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() - d.getDay()); return d;
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dayOfWeek);
+    return startDate;
   });
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderNotes, setOrderNotes] = useState('');
@@ -140,10 +143,11 @@ const MenuPage = () => {
 
   const getWeekDates = () => {
     const dates = [];
+    const startYear = weekStart.getFullYear();
+    const startMonth = weekStart.getMonth();
+    const startDay = weekStart.getDate();
     for (let i = 0; i < 7; i++) {
-      const d = new Date(weekStart);
-      d.setDate(d.getDate() + i);
-      dates.push(d);
+      dates.push(new Date(startYear, startMonth, startDay + i));
     }
     return dates;
   };
@@ -152,15 +156,13 @@ const MenuPage = () => {
   const isToday = (d) => d.toDateString() === new Date().toDateString();
   const isSelected = (d) => d.toDateString() === selectedDate.toDateString();
   const navigateWeek = (dir) => {
-    const n = new Date(weekStart);
-    n.setDate(n.getDate() + (dir * 7));
-    setWeekStart(n);
-    setSelectedDate(n);
+    const newStart = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + (dir * 7));
+    setWeekStart(newStart);
+    setSelectedDate(newStart);
   };
   const formatWeekRange = () => {
-    const e = new Date(weekStart);
-    e.setDate(weekStart.getDate() + 6);
-    return `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${e.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    const endDate = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6);
+    return `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
   };
 
   const groupedItems = menuItems.reduce((acc, item) => {
