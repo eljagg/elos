@@ -33,7 +33,7 @@ const MenuPage = () => {
   const [selectedCafeteria, setSelectedCafeteria] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [weekStart, setWeekStart] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() - d.getDay() + 1); return d;
+    const d = new Date(); const dayOfWeek = d.getDay(); const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; d.setDate(d.getDate() - daysToSubtract); return d;
   });
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderNotes, setOrderNotes] = useState('');
