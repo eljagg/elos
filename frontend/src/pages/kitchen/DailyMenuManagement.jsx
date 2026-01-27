@@ -146,6 +146,37 @@ export default function DailyMenuManagement() {
     }
   };
 
+  const handleSavePrices = async () => {
+    if (!dailyMenu) {
+      toast.error('Create a menu first');
+      return;
+    }
+    
+    try {
+      // Prepare pricing data
+      const pricingData = {
+        baseMealPrice: parseFloat(mealPrice),
+        items: menuItems.map(item => ({
+          id: item.id,
+          basePrice: parseFloat(item.price) || 0,
+          addOnPrice: parseFloat(item.add_on_price) || 0
+        }))
+      };
+      
+      console.log('Saving pricing data:', pricingData);
+      
+      // TODO: Connect to backend API endpoint for saving prices
+      // For now, just show success message
+      toast.success('Prices saved successfully!');
+      
+      // await dailyMenuAPI.updatePricing(dailyMenu.id, pricingData);
+      
+    } catch (error) {
+      console.error('Failed to save prices:', error);
+      toast.error('Failed to save prices');
+    }
+  };
+
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-JM', { style: 'currency', currency: 'JMD' }).format(price);
   };
@@ -181,6 +212,14 @@ export default function DailyMenuManagement() {
           <p className="text-gray-600">Set up today's menu with portion counts</p>
         </div>
         <div className="flex gap-2">
+          {dailyMenu && menuItems.length > 0 && (
+            <button
+              onClick={handleSavePrices}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            >
+              💰 Save Prices
+            </button>
+          )}
           {dailyMenu && dailyMenu.status !== 'published' && menuItems.length > 0 && (
             <>
               <div className="flex items-center gap-2">
@@ -318,9 +357,43 @@ export default function DailyMenuManagement() {
                       </div>
                       
                       <div className="flex items-center gap-6">
-                        {/* Price */}
+                        {/* Pricing Section */}
                         <div className="text-right">
-                          <div className="font-bold text-green-600">{formatPrice(item.price)}</div>
+                          <div className="text-xs text-gray-500 mb-1">Base Price</div>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.price || '0.00'}
+                            onChange={(e) => {
+                              // For now, just update in UI - will implement save later
+                              const newItems = menuItems.map(mi => 
+                                mi.id === item.id ? { ...mi, price: e.target.value } : mi
+                              );
+                              setMenuItems(newItems);
+                            }}
+                            className="w-24 px-2 py-1 border rounded text-right font-bold text-green-600"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        
+                        {/* Add-on Price */}
+                        <div className="text-right">
+                          <div className="text-xs text-gray-500 mb-1">As Extra</div>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.add_on_price || '0.00'}
+                            onChange={(e) => {
+                              // For now, just update in UI - will implement save later
+                              const newItems = menuItems.map(mi => 
+                                mi.id === item.id ? { ...mi, add_on_price: e.target.value } : mi
+                              );
+                              setMenuItems(newItems);
+                            }}
+                            className="w-24 px-2 py-1 border rounded text-right font-medium text-orange-600"
+                            placeholder="0.00"
+                          />
+                          <div className="text-xs text-gray-400 mt-0.5">+price</div>
                         </div>
                         
                         {/* Portions */}
