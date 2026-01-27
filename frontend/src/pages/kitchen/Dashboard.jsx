@@ -153,6 +153,32 @@ export default function KitchenDashboard() {
     }
   };
 
+  const handleBulkStatusUpdate = async (newStatus) => {
+    try {
+      const ordersToUpdate = filteredOrders.filter(order => 
+        order.status === 'pending' || order.status === 'confirmed'
+      );
+      
+      if (ordersToUpdate.length === 0) {
+        toast.error('No orders to update');
+        return;
+      }
+
+      const confirmMessage = `Start preparing ${ordersToUpdate.length} order${ordersToUpdate.length > 1 ? 's' : ''}?`;
+      if (!window.confirm(confirmMessage)) return;
+
+      await Promise.all(
+        ordersToUpdate.map(order => orderAPI.updateOrderStatus(order.id, newStatus))
+      );
+      
+      toast.success(`${ordersToUpdate.length} order${ordersToUpdate.length > 1 ? 's' : ''} updated to ${newStatus}`);
+      loadData();
+    } catch (error) {
+      console.error('Error bulk updating orders:', error);
+      toast.error('Failed to update some orders');
+    }
+  };
+
   const handleSaveMenu = async (e) => {
     e.preventDefault();
     try {
@@ -318,6 +344,18 @@ export default function KitchenDashboard() {
                 <p className={colors.textMuted}>Loading...</p>
               ) : filteredOrders.length > 0 ? (
                 <div className="space-y-4">
+                  {/* Bulk Action Button */}
+                  {filteredOrders.filter(o => o.status === 'pending' || o.status === 'confirmed').length > 0 && (
+                    <div className="flex justify-end mb-4">
+                      <button
+                        onClick={() => handleBulkStatusUpdate('preparing')}
+                        className="px-4 py-2 bg-cyan-600 text-white rounded-lg text-sm font-medium hover:bg-cyan-700 transition-colors"
+                      >
+                        🔥 Start Preparing All ({filteredOrders.filter(o => o.status === 'pending' || o.status === 'confirmed').length})
+                      </button>
+                    </div>
+                  )}
+                  
                   {filteredOrders.map(order => (
                     <div key={order.id} className={`border ${colors.border} rounded-xl p-4`}>
                       <div className="flex justify-between items-start mb-3">
