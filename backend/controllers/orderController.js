@@ -1233,9 +1233,9 @@ const updateOrderStatus = async (req, res, next) => {
  */
 const getKitchenOrders = async (req, res, next) => {
     try {
-        const { cafeteriaId, mealType, status, companyId, departmentId } = req.query;
-        // Use Jamaica timezone (UTC-5) instead of UTC
-        const today = new Intl.DateTimeFormat('en-CA', { 
+        const { cafeteriaId, mealType, status, companyId, departmentId, date } = req.query;
+        // Use provided date, or default to today in Jamaica timezone
+        const orderDate = date || new Intl.DateTimeFormat('en-CA', { 
             timeZone: 'America/Jamaica',
             year: 'numeric',
             month: '2-digit',
@@ -1269,7 +1269,7 @@ const getKitchenOrders = async (req, res, next) => {
               AND o.status != 'cancelled'
         `;
         
-        const params = [today];
+        const params = [orderDate];
         let paramIndex = 2;
         
         if (cafeteriaId) {
@@ -1344,7 +1344,7 @@ const getKitchenOrders = async (req, res, next) => {
         res.status(200).json({
             success: true,
             data: {
-                date: today,
+                date: orderDate,
                 summary,
                 ordersByStatus
             }

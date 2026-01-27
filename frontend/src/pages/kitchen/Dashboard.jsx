@@ -71,11 +71,19 @@ export default function KitchenDashboard() {
 
   useEffect(() => { loadData(); }, []);
 
-  const loadData = async () => {
+  // Reload orders when date filter changes
+  useEffect(() => {
+    if (filters.date) {
+      loadData(filters.date);
+    }
+  }, [filters.date]);
+
+  const loadData = async (customDate) => {
     setLoading(true);
     try {
+      const dateToFetch = customDate || filters.date;
       const [ordersRes, menusRes, itemsRes, issuesRes, messagesRes, companiesRes] = await Promise.all([
-        orderAPI.getKitchenOrders().catch(() => ({ data: { data: { ordersByStatus: { pending: [], preparing: [], ready: [], completed: [], confirmed: [], delivered: [] }, summary: {} } } })),
+        orderAPI.getKitchenOrders({ date: dateToFetch }).catch(() => ({ data: { data: { ordersByStatus: { pending: [], preparing: [], ready: [], completed: [], confirmed: [], delivered: [] }, summary: {} } } })),
         menuAPI.getMenus().catch(() => ({ data: { data: { menus: [] } } })),
         catalogAPI.getItems().catch(() => ({ data: { data: { items: [] } } })),
         messageAPI.getFeedback().catch(() => ({ data: { data: { feedback: [] } } })),
@@ -314,7 +322,7 @@ export default function KitchenDashboard() {
                             Order #{order.id?.slice(0, 8)}
                           </h3>
                           <p className={`text-sm ${colors.textMuted}`}>
-                            {order.company_name} • {order.orderDate}
+                            {order.company_name} • {order.delivery_date}
                           </p>
                         </div>
                         <span className={`px-3 py-1 text-sm rounded-full ${
