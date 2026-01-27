@@ -1,4 +1,3 @@
-// Force rebuild - 20260127-005457
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { orderAPI, menuAPI, messageAPI, companyAPI, catalogAPI } from '../../services/api';
@@ -11,6 +10,15 @@ export default function KitchenDashboard() {
   const { colors, getStatCardColors } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Helper function to get today's date in YYYY-MM-DD format using local timezone
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
   
   // Set active tab based on URL (query params or path)
   useEffect(() => {
@@ -47,7 +55,7 @@ export default function KitchenDashboard() {
   const [filters, setFilters] = useState({ 
     company: '', 
     status: '', 
-    date: new Date().toLocaleDateString('en-CA') // YYYY-MM-DD in local timezone
+    date: getTodayDate() // Use helper function for guaranteed local date
   });
   const [deliveryNotifications, setDeliveryNotifications] = useState([]);
 
@@ -94,112 +102,273 @@ export default function KitchenDashboard() {
       setUnreadCount(messagesRes.data?.data?.unreadCount || 0);
       setCompanies(companiesRes.data?.data?.companies || []);
 
-      const tracking = JSON.parse(localStorage.getItem('deliveryTracking') || '{}');
-      const today = new Date().toDateString();
-      setDeliveryNotifications(Object.entries(tracking).filter(([_, t]) => t.deliveryTime && new Date(t.deliveryTime).toDateString() === today).map(([id, t]) => ({ orderId: id, ...t })));
+      // Calculate stats
+      setStats({
+        pending: ordersByStatus.pending?.length || 0,
+        preparing: ordersByStatus.preparing?.length || 0,
+        ready: ordersByStatus.ready?.length || 0,
+        completed: ordersByStatus.completed?.length || 0,
+        inProcess: (ordersByStatus.confirmed?.length || 0) + (ordersByStatus.preparing?.length || 0),
+        issues: ((issuesRes.data?.data?.feedback || []).filter(f => f.type === 'issue' || f.status === 'escalated')).length
+      });
 
-      setStats({ pending: ordersList.filter(o => o.status === 'pending').length, preparing: ordersList.filter(o => o.status === 'preparing').length, ready: ordersList.filter(o => o.status === 'ready').length, completed: ordersList.filter(o => o.status === 'completed').length, issues: (issuesRes.data?.data?.feedback || []).filter(f => f.status !== 'resolved').length });
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+      // Track delivery notifications
+      const delivered = ordersByStatus.delivered || [];
+      setDeliveryNotifications(delivered.map(o => ({ orderId: o.id, companyName: o.company_name, confirmed: o.status === 'completed' })));
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast.error('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleUpdateOrderStatus = async (order, status) => {
-    try { await orderAPI.updateOrderStatus(order.id, status); toast.success(`Order ${status}`); loadData(); } catch { toast.error('Failed'); }
+  const filteredOrders = orders.filter(order => {
+    const matchCompany = !filters.company || order.company_id === filters.company;
+    const matchStatus = !filters.status || order.status === filters.status;
+    const matchDate = !filters.date || (order.delivery_date && order.delivery_date.startsWith(filters.date));
+    return matchCompany && matchStatus && matchDate;
+  });
+
+  const handleStatusUpdate = async (orderId, newStatus) => {
+    try {
+      await orderAPI.updateOrderStatus(orderId, newStatus);
+      toast.success(`Order ${newStatus}`);
+      loadData();
+    } catch (error) {
+      console.error('Error updating order:', error);
+      toast.error('Failed to update order');
+    }
   };
 
   const handleSaveMenu = async (e) => {
     e.preventDefault();
     try {
-      if (selectedMenu) { await menuAPI.updateMenu(selectedMenu.id, menuForm); toast.success('Updated'); }
-      else { await menuAPI.createMenu(menuForm); toast.success('Created'); }
-      setShowMenuModal(false); setMenuForm({ name: '', description: '', mealType: 'lunch', menuType: 'regular', isActive: true }); setSelectedMenu(null); loadData();
-    } catch { toast.error('Failed'); }
+      if (selectedMenu) {
+        await menuAPI.updateMenu(selectedMenu.id, menuForm);
+        toast.success('Menu updated');
+      } else {
+        await menuAPI.createMenu(menuForm);
+        toast.success('Menu created');
+      }
+      setShowMenuModal(false);
+      loadData();
+    } catch (error) {
+      console.error('Error saving menu:', error);
+      toast.error('Failed to save menu');
+    }
   };
 
   const handleSaveItem = async (e) => {
     e.preventDefault();
     try {
-      if (selectedItem) { await catalogAPI.updateItem(selectedItem.id, itemForm); toast.success('Updated'); }
-      else { await catalogAPI.createItem(itemForm); toast.success('Created'); }
-      setShowItemModal(false); setItemForm({ name: '', description: '', category: 'protein', isVegan: false, isVegetarian: false, ingredients: '' }); setSelectedItem(null); loadData();
-    } catch { toast.error('Failed'); }
+      const itemData = {
+        name: itemForm.name,
+        description: itemForm.description,
+        category_code: itemForm.category,
+        is_vegan: itemForm.isVegan,
+        is_vegetarian: itemForm.isVegetarian,
+        ingredients: itemForm.ingredients
+      };
+
+      if (selectedItem) {
+        await catalogAPI.updateItem(selectedItem.id, itemData);
+        toast.success('Item updated');
+      } else {
+        await catalogAPI.createItem(itemData);
+        toast.success('Item created');
+      }
+      setShowItemModal(false);
+      loadData();
+    } catch (error) {
+      console.error('Error saving item:', error);
+      toast.error('Failed to save item');
+    }
   };
 
-  const handleDeleteItem = async (item) => {
-    if (!confirm('Are you sure you want to delete "' + item.name + '"?')) return;
+  const handleDeleteItem = async (itemId) => {
+    if (!window.confirm('Are you sure you want to delete this item?')) return;
     try {
-      await catalogAPI.deleteItem(item.id);
+      await catalogAPI.deleteItem(itemId);
       toast.success('Item deleted');
       loadData();
-    } catch { toast.error('Failed to delete item'); }
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      toast.error('Failed to delete item');
+    }
   };
 
   const handleRespondIssue = async () => {
-    try { await messageAPI.respondToFeedback(selectedIssue.id, issueResponse); await messageAPI.updateFeedbackStatus(selectedIssue.id, 'resolved'); toast.success('Responded & Resolved'); setShowIssueModal(false); loadData(); } catch { toast.error('Failed'); }
+    try {
+      await messageAPI.respondToFeedback(selectedIssue.id, issueResponse);
+      toast.success('Issue resolved');
+      setShowIssueModal(false);
+      loadData();
+    } catch (error) {
+      console.error('Error responding to issue:', error);
+      toast.error('Failed to respond');
+    }
   };
 
-  const filteredOrders = orders.filter(o => {
-    if (filters.company && o.company_id !== filters.company) return false;
-    if (filters.status && o.status !== filters.status) return false;
-    if (filters.date) {
-      const orderDate = (o.order_date || '').split('T')[0];
-      if (orderDate !== filters.date) return false;
-    }
-    return true;
-  });
-
-  const prepList = filteredOrders.filter(o => ['pending', 'preparing'].includes(o.status)).reduce((acc, o) => {
-    (o.items || []).forEach(item => { acc[item.name] = (acc[item.name] || 0) + (item.quantity || 1); });
-    return acc;
-  }, {});
-
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div></div>;
-
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center"><div><h1 className={`text-2xl font-bold ${colors.textPrimary}`}>Kitchen Dashboard</h1><p className={colors.textMuted}>Manage orders, menus, and prep</p></div></div>
-
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {[{ l: 'Pending', v: stats.pending, color: 'yellow' }, { l: 'Preparing', v: stats.preparing, color: 'blue' }, { l: 'Ready', v: stats.ready, color: 'green' }, { l: 'Completed', v: stats.completed, color: 'gray' }, { l: 'Issues', v: stats.issues, color: 'red' }].map((s, i) => {
-          const c = getStatCardColors(i);
-          return <div key={i} className={`${c.bg} rounded-xl p-4 border-l-4 ${c.border}`}><p className={`text-sm ${c.text} opacity-80`}>{s.l}</p><p className={`text-2xl font-bold ${c.text}`}>{s.v}</p></div>;
-        })}
-      </div>
-
-      <div className={`${colors.bgCard} rounded-xl shadow-sm border ${colors.border}`}>
-        <div className={`border-b ${colors.border} flex overflow-x-auto`}>
-          {[{ id: 'orders', l: '📦 Orders' }, { id: 'prep', l: '📋 Prep List' }, { id: 'deliveries', l: '🚚 Deliveries' }, { id: 'menus', l: '🍽️ Menus' }, { id: 'items', l: '🥗 Items' }, { id: 'issues', l: '⚠️ Issues' }, { id: 'messages', l: '📨 Messages' }].map(t => <button key={t.id} onClick={() => navigate(`/dashboard?tab=${t.id}`)} className={`px-6 py-4 text-sm font-medium whitespace-nowrap border-b-2 ${activeTab === t.id ? 'border-orange-500 text-orange-600' : `border-transparent ${colors.textMuted}`}`}>{t.l}</button>)}
+    <div className={`min-h-screen ${colors.bgPrimary}`}>
+      <div className="container mx-auto p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className={`text-3xl font-bold ${colors.textPrimary}`}>Kitchen Dashboard</h1>
+            <p className={colors.textMuted}>Manage orders, menus, and prep</p>
+          </div>
         </div>
 
-        <div className="p-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+          {[
+            { label: 'Pending', value: stats.pending, color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+            { label: 'Preparing', value: stats.preparing, color: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
+            { label: 'Ready', value: stats.ready, color: 'bg-blue-100 text-blue-700 border-blue-200' },
+            { label: 'Completed', value: stats.completed, color: 'bg-green-100 text-green-700 border-green-200' },
+            { label: 'In-Process', value: stats.inProcess, color: 'bg-orange-100 text-orange-700 border-orange-200' },
+            { label: 'Issues', value: stats.issues, color: 'bg-red-100 text-red-700 border-red-200' }
+          ].map((stat, idx) => (
+            <div key={idx} className={`border rounded-xl p-4 ${stat.color}`}>
+              <p className="text-sm font-medium">{stat.label}</p>
+              <p className="text-3xl font-bold">{stat.value || 0}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+          {[
+            { id: 'orders', label: 'Orders', icon: '📦' },
+            { id: 'prep', label: 'Prep List', icon: '📋' },
+            { id: 'deliveries', label: 'Deliveries', icon: '🚚' },
+            { id: 'menus', label: 'Menus', icon: '📝' },
+            { id: 'items', label: 'Items', icon: '🍽️' },
+            { id: 'issues', label: 'Issues', icon: '⚠️' },
+            { id: 'messages', label: `Messages ${unreadCount > 0 ? `(${unreadCount})` : ''}`, icon: '💬' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-orange-600 text-white'
+                  : `${colors.bgCard} ${colors.textSecondary} hover:bg-orange-100`
+              }`}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content Area */}
+        <div className={`${colors.bgCard} rounded-xl p-6`}>
           {activeTab === 'orders' && (
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-4">
-                <select className={`px-4 py-2 border ${colors.border} rounded-lg`} value={filters.company} onChange={e => setFilters({ ...filters, company: e.target.value })}><option value="">All Companies</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
-                <select className={`px-4 py-2 border ${colors.border} rounded-lg`} value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}><option value="">All Status</option><option value="pending">Pending</option><option value="preparing">Preparing</option><option value="ready">Ready</option></select>
-                <input type="date" className={`px-4 py-2 border ${colors.border} rounded-lg`} value={filters.date} onChange={e => setFilters({ ...filters, date: e.target.value })} />
+            <div>
+              {/* Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <select
+                  value={filters.company}
+                  onChange={(e) => setFilters({ ...filters, company: e.target.value })}
+                  className={`px-4 py-2 border ${colors.border} rounded-lg`}
+                >
+                  <option value="">All Companies</option>
+                  {companies.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                  className={`px-4 py-2 border ${colors.border} rounded-lg`}
+                >
+                  <option value="">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="preparing">Preparing</option>
+                  <option value="ready">Ready</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="completed">Completed</option>
+                </select>
+
+                <input
+                  type="date"
+                  value={filters.date}
+                  onChange={(e) => setFilters({ ...filters, date: e.target.value })}
+                  className={`px-4 py-2 border ${colors.border} rounded-lg`}
+                />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredOrders.length === 0 ? (
-                  <div className="col-span-full text-center py-8 text-gray-500">
-                    <p className="text-4xl mb-2">📋</p>
-                    <p>No orders found for this date</p>
-                  </div>
-                ) : filteredOrders.map(order => (
-                  <div key={order.id} className={`border-2 rounded-xl p-4 ${order.status === 'pending' ? 'border-yellow-300 bg-yellow-50' : order.status === 'preparing' ? 'border-blue-300 bg-blue-50' : order.status === 'ready' ? 'border-green-300 bg-green-50' : `${colors.border} ${colors.bgCard}`}`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <div><p className="font-mono font-bold">#{order.order_number || order.id?.slice(0, 8)}</p><p className={`text-sm ${colors.textMuted}`}>{order.user_first_name} {order.user_last_name}</p></div>
-                      <span className={`px-2 py-1 text-xs rounded-full ${order.status === 'pending' ? 'bg-yellow-200 text-yellow-800' : order.status === 'preparing' ? 'bg-blue-200 text-blue-800' : order.status === 'ready' ? 'bg-green-200 text-green-800' : 'bg-gray-200 text-gray-800'}`}>{order.status}</span>
+
+              {/* Orders List */}
+              {loading ? (
+                <p className={colors.textMuted}>Loading...</p>
+              ) : filteredOrders.length > 0 ? (
+                <div className="space-y-4">
+                  {filteredOrders.map(order => (
+                    <div key={order.id} className={`border ${colors.border} rounded-xl p-4`}>
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className={`font-semibold ${colors.textPrimary}`}>
+                            Order #{order.id?.slice(0, 8)}
+                          </h3>
+                          <p className={`text-sm ${colors.textMuted}`}>
+                            {order.company_name} • {order.delivery_date}
+                          </p>
+                        </div>
+                        <span className={`px-3 py-1 text-sm rounded-full ${
+                          order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          order.status === 'preparing' ? 'bg-cyan-100 text-cyan-700' :
+                          order.status === 'ready' ? 'bg-blue-100 text-blue-700' :
+                          'bg-green-100 text-green-700'
+                        }`}>
+                          {order.status}
+                        </span>
+                      </div>
+
+                      {/* Order Items */}
+                      <div className="space-y-2 mb-3">
+                        {order.items?.map((item, idx) => (
+                          <div key={idx} className={`text-sm ${colors.textSecondary}`}>
+                            • {item.quantity}x {item.name}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2">
+                        {order.status === 'pending' && (
+                          <button
+                            onClick={() => handleStatusUpdate(order.id, 'preparing')}
+                            className="px-3 py-1 bg-cyan-600 text-white rounded-lg text-sm"
+                          >
+                            Start Preparing
+                          </button>
+                        )}
+                        {order.status === 'preparing' && (
+                          <button
+                            onClick={() => handleStatusUpdate(order.id, 'ready')}
+                            className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm"
+                          >
+                            Mark Ready
+                          </button>
+                        )}
+                        {order.status === 'ready' && (
+                          <button
+                            onClick={() => handleStatusUpdate(order.id, 'delivered')}
+                            className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm"
+                          >
+                            Mark Delivered
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <p className={`text-sm ${colors.textSecondary} mb-1`}>{order.company_name}</p>
-                    {order.notes && <div className={`${colors.bgSecondary} rounded p-2 text-sm mb-2`}>📝 {order.notes}</div>}
-                    <div className="flex gap-2 mt-3">
-                      {order.status === 'pending' && <button onClick={() => handleUpdateOrderStatus(order, 'preparing')} className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm">Start Prep</button>}
-                      {order.status === 'preparing' && <button onClick={() => handleUpdateOrderStatus(order, 'ready')} className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm">Mark Ready</button>}
-                      {order.status === 'ready' && <button onClick={() => handleUpdateOrderStatus(order, 'completed')} className="flex-1 px-3 py-2 bg-gray-600 text-white rounded-lg text-sm">Complete</button>}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={colors.textMuted}>No orders found for this date</p>
+              )}
             </div>
           )}
 
