@@ -321,13 +321,22 @@ export default function KitchenDashboard() {
                   {filteredOrders.map(order => (
                     <div key={order.id} className={`border ${colors.border} rounded-xl p-4`}>
                       <div className="flex justify-between items-start mb-3">
-                        <div>
+                        <div className="flex-1">
                           <h3 className={`font-semibold ${colors.textPrimary}`}>
-                            Order #{order.id?.slice(0, 8)}
+                            Order #{order.orderNumber || order.id?.slice(0, 8)}
                           </h3>
-                          <p className={`text-sm ${colors.textMuted}`}>
-                            {order.company_name} • {order.delivery_date}
+                          <p className={`text-sm ${colors.textMuted} mt-1`}>
+                            <span className="font-medium">Customer:</span> {order.userName}
                           </p>
+                          <p className={`text-sm ${colors.textMuted}`}>
+                            <span className="font-medium">Company:</span> {order.companyName}
+                            {order.departmentName && ` • ${order.departmentName}`}
+                          </p>
+                          {order.orderDate && (
+                            <p className={`text-xs ${colors.textMuted} mt-1`}>
+                              {order.orderDate}
+                            </p>
+                          )}
                         </div>
                         <span className={`px-3 py-1 text-sm rounded-full ${
                           order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
@@ -344,6 +353,9 @@ export default function KitchenDashboard() {
                         {order.items?.map((item, idx) => (
                           <div key={idx} className={`text-sm ${colors.textSecondary}`}>
                             • {item.quantity}x {item.name}
+                            {item.specialInstructions && (
+                              <span className="text-xs italic ml-2">({item.specialInstructions})</span>
+                            )}
                           </div>
                         ))}
                       </div>
