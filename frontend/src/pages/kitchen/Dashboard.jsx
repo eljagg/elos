@@ -280,7 +280,7 @@ export default function KitchenDashboard() {
           {[
             { id: 'orders', label: 'Orders', icon: '📦' },
             { id: 'prep', label: 'Prep List', icon: '📋' },
-            { id: 'deliveries', label: 'Deliveries', icon: '🚚' },
+            { id: 'deliveries', label: `Deliveries ${stats.ready > 0 ? `(${stats.ready})` : ''}`, icon: '🚚' },
             { id: 'menus', label: 'Menus', icon: '📝' },
             { id: 'items', label: 'Items', icon: '🍽️' },
             { id: 'issues', label: 'Issues', icon: '⚠️' },
@@ -442,8 +442,143 @@ export default function KitchenDashboard() {
           )}
 
           {activeTab === 'deliveries' && (
-            <div><h3 className={`font-semibold mb-4 ${colors.textPrimary}`}>Today's Delivery Updates</h3>
-              {deliveryNotifications.length > 0 ? <div className="space-y-3">{deliveryNotifications.map((d, i) => <div key={i} className={`border rounded-lg p-4 ${d.confirmed ? 'bg-green-50 border-green-200' : 'bg-cyan-50 border-cyan-200'}`}><div className="flex justify-between"><div><p className="font-mono font-bold">#{d.orderId?.slice(0, 8)}</p><p className={`text-sm ${colors.textMuted}`}>{d.companyName}</p></div><span className={`px-2 py-1 text-xs rounded-full ${d.confirmed ? 'bg-green-200 text-green-800' : 'bg-cyan-200 text-cyan-800'}`}>{d.confirmed ? '✓ Confirmed' : '🚚 Delivered'}</span></div></div>)}</div> : <p className={colors.textMuted}>No deliveries today</p>}
+            <div>
+              <h3 className={`font-semibold mb-4 ${colors.textPrimary}`}>Delivery Management</h3>
+              
+              {(() => {
+                // Group ready orders by company and department
+                const readyOrders = orders.filter(o => o.status === 'ready');
+                const deliveryGroups = {};
+                
+                readyOrders.forEach(order => {
+                  const key = `${order.companyName || 'Unknown Company'}${order.departmentName ? ` - ${order.departmentName}` : ''}`;
+                  if (!deliveryGroups[key]) {
+                    deliveryGroups[key] = {
+                      company: order.companyName,
+                      department: order.departmentName,
+                      companyId: order.companyId,
+                      orders: []
+                    };
+                  }
+                  deliveryGroups[key].orders.push(order);
+                });
+
+                const groupKeys = Object.keys(deliveryGroups);
+
+                return groupKeys.length > 0 ? (
+                  <div className="space-y-6">
+                    {/* Summary Stats */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className={`${colors.bgCard} border ${colors.border} rounded-lg p-4`}>
+                        <p className={`text-sm ${colors.textMuted}`}>Ready for Delivery</p>
+                        <p className={`text-2xl font-bold ${colors.textPrimary}`}>{readyOrders.length}</p>
+                        <p className="text-xs text-gray-500">orders</p>
+                      </div>
+                      <div className={`${colors.bgCard} border ${colors.border} rounded-lg p-4`}>
+                        <p className={`text-sm ${colors.textMuted}`}>Delivery Locations</p>
+                        <p className={`text-2xl font-bold ${colors.textPrimary}`}>{groupKeys.length}</p>
+                        <p className="text-xs text-gray-500">companies/departments</p>
+                      </div>
+                      <div className={`${colors.bgCard} border ${colors.border} rounded-lg p-4`}>
+                        <p className={`text-sm ${colors.textMuted}`}>Total Items</p>
+                        <p className={`text-2xl font-bold ${colors.textPrimary}`}>
+                          {readyOrders.reduce((sum, o) => sum + (o.items?.length || 0), 0)}
+                        </p>
+                        <p className="text-xs text-gray-500">food items</p>
+                      </div>
+                    </div>
+
+                    {/* Delivery Groups */}
+                    <div className="space-y-4">
+                      {groupKeys.map(groupKey => {
+                        const group = deliveryGroups[groupKey];
+                        return (
+                          <div key={groupKey} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}>
+                            {/* Group Header */}
+                            <div className="flex justify-between items-start mb-4">
+                              <div>
+                                <h4 className={`font-bold text-lg ${colors.textPrimary}`}>
+                                  🏢 {group.company}
+                                </h4>
+                                {group.department && (
+                                  <p className={`text-sm ${colors.textMuted}`}>
+                                    📍 {group.department} Department
+                                  </p>
+                                )}
+                                <p className={`text-xs ${colors.textMuted} mt-1`}>
+                                  {group.orders.length} order{group.orders.length > 1 ? 's' : ''} ready
+                                </p>
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm(`Mark ${group.orders.length} order(s) for ${group.company} as delivered?`)) {
+                                    try {
+                                      await Promise.all(
+                                        group.orders.map(order => orderAPI.updateOrderStatus(order.id, 'delivered'))
+                                      );
+                                      toast.success(`${group.orders.length} order(s) marked as delivered`);
+                                      loadData();
+                                    } catch (error) {
+                                      toast.error('Failed to update delivery status');
+                                    }
+                                  }
+                                }}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                              >
+                                🚚 Mark All as Delivered
+                              </button>
+                            </div>
+
+                            {/* Orders in this group */}
+                            <div className="space-y-2">
+                              {group.orders.map(order => (
+                                <div key={order.id} className={`border ${colors.border} rounded-lg p-3 bg-white`}>
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <p className={`font-semibold ${colors.textPrimary}`}>
+                                        Order #{order.orderNumber}
+                                      </p>
+                                      <p className={`text-sm ${colors.textMuted}`}>
+                                        For: {order.userName}
+                                      </p>
+                                      <div className="mt-2 space-y-1">
+                                        {order.items?.map((item, idx) => (
+                                          <p key={idx} className="text-sm text-gray-600">
+                                            • {item.quantity}x {item.name}
+                                          </p>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          await orderAPI.updateOrderStatus(order.id, 'delivered');
+                                          toast.success('Order marked as delivered');
+                                          loadData();
+                                        } catch (error) {
+                                          toast.error('Failed to update status');
+                                        }
+                                      }}
+                                      className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                                    >
+                                      ✓ Delivered
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className={`text-lg ${colors.textMuted}`}>No orders ready for delivery</p>
+                    <p className={`text-sm ${colors.textMuted} mt-2`}>Orders will appear here when marked as "Ready"</p>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
