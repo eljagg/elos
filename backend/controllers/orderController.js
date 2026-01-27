@@ -1232,8 +1232,14 @@ const updateOrderStatus = async (req, res, next) => {
  */
 const getKitchenOrders = async (req, res, next) => {
     try {
-        const { cafeteriaId, mealType, status, companyId, departmentId } = req.query;
-        const today = new Date().toISOString().split('T')[0];
+        const { cafeteriaId, mealType, status, companyId, departmentId, date } = req.query;
+        // Use provided date, or default to today in Jamaica timezone
+        const orderDate = date || new Intl.DateTimeFormat('en-CA', { 
+            timeZone: 'America/Jamaica',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(new Date());
         
         let query = `
             SELECT o.*,
@@ -1261,7 +1267,7 @@ const getKitchenOrders = async (req, res, next) => {
               AND o.status != 'cancelled'
         `;
         
-        const params = [today];
+        const params = [orderDate];
         let paramIndex = 2;
         
         if (cafeteriaId) {
@@ -1336,7 +1342,7 @@ const getKitchenOrders = async (req, res, next) => {
         res.status(200).json({
             success: true,
             data: {
-                date: today,
+                date: orderDate,
                 summary,
                 ordersByStatus
             }
