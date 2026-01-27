@@ -1,3 +1,4 @@
+// Force rebuild - 20260127-005457
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { orderAPI, menuAPI, messageAPI, companyAPI, catalogAPI } from '../../services/api';
