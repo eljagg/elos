@@ -43,7 +43,11 @@ export default function KitchenDashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [companies, setCompanies] = useState([]);
   const [stats, setStats] = useState({});
-  const [filters, setFilters] = useState({ company: '', status: '', date: new Date().toISOString().split('T')[0] });
+  const [filters, setFilters] = useState({ 
+    company: '', 
+    status: '', 
+    date: new Date().toLocaleDateString('en-CA') // YYYY-MM-DD in local timezone
+  });
   const [deliveryNotifications, setDeliveryNotifications] = useState([]);
 
   const [showMenuModal, setShowMenuModal] = useState(false);
