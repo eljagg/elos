@@ -365,12 +365,12 @@ const createOrder = async (req, res, next) => {
                 await client.query(
                     `INSERT INTO order_items (
                         order_id, menu_item_id, quantity, unit_price, total_price,
-                        special_instructions, custom_request
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                        special_instructions
+                    ) VALUES ($1, $2, $3, $4, $5, $6)`,
                     [
                         newOrder.id, item.menuItemId, item.quantity,
                         item.unitPrice, item.unitPrice * item.quantity,
-                        item.specialInstructions, item.customRequest
+                        item.specialInstructions
                     ]
                 );
                 
@@ -768,7 +768,6 @@ const getOrderById = async (req, res, next) => {
                     unitPrice: parseFloat(item.unit_price),
                     totalPrice: parseFloat(item.total_price),
                     specialInstructions: item.special_instructions,
-                    customRequest: item.custom_request,
                     status: item.status
                 })),
                 statusHistory: historyResult.rows.map(h => ({
