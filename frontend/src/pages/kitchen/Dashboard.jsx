@@ -126,7 +126,7 @@ export default function KitchenDashboard() {
   const filteredOrders = orders.filter(order => {
     const matchCompany = !filters.company || order.company_id === filters.company;
     const matchStatus = !filters.status || order.status === filters.status;
-    const matchDate = !filters.date || (order.delivery_date && order.delivery_date.startsWith(filters.date));
+    const matchDate = !filters.date || (order.orderDate && order.orderDate.startsWith(filters.date));
     return matchCompany && matchStatus && matchDate;
   });
 
@@ -314,7 +314,7 @@ export default function KitchenDashboard() {
                             Order #{order.id?.slice(0, 8)}
                           </h3>
                           <p className={`text-sm ${colors.textMuted}`}>
-                            {order.company_name} • {order.delivery_date}
+                            {order.company_name} • {order.orderDate}
                           </p>
                         </div>
                         <span className={`px-3 py-1 text-sm rounded-full ${
