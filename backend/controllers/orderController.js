@@ -1233,6 +1233,7 @@ const updateOrderStatus = async (req, res, next) => {
 const getKitchenOrders = async (req, res, next) => {
     try {
         const { cafeteriaId, mealType, status, companyId, departmentId, date } = req.query;
+        
         // Use provided date, or default to today in Jamaica timezone
         const orderDate = date || new Intl.DateTimeFormat('en-CA', { 
             timeZone: 'America/Jamaica',
@@ -1240,6 +1241,8 @@ const getKitchenOrders = async (req, res, next) => {
             month: '2-digit',
             day: '2-digit'
         }).format(new Date());
+        
+        console.log('[getKitchenOrders] Fetching orders for date:', orderDate);
         
         let query = `
             SELECT o.*,
@@ -1314,10 +1317,12 @@ const getKitchenOrders = async (req, res, next) => {
                 ordersByStatus[order.status].push({
                     id: order.id,
                     orderNumber: order.order_number,
+                    orderDate: order.order_date,
                     mealType: order.meal_type,
                     status: order.status,
                     userName: `${order.user_first_name} ${order.user_last_name}`,
                     companyName: order.company_name,
+                    companyId: order.company_id,
                     departmentName: order.department_name,
                     total: parseFloat(order.total),
                     notes: order.notes,

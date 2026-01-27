@@ -71,25 +71,27 @@ export default function KitchenDashboard() {
 
   useEffect(() => { loadData(); }, []);
 
-  // Reload orders when date filter changes
   useEffect(() => {
     if (filters.date) {
-      loadData(filters.date);
+      loadData();
     }
   }, [filters.date]);
 
-  const loadData = async (customDate) => {
+  const loadData = async () => {
     setLoading(true);
     try {
-      const dateToFetch = customDate || filters.date;
+      console.log('[Dashboard] Loading orders for date:', filters.date);
+      
       const [ordersRes, menusRes, itemsRes, issuesRes, messagesRes, companiesRes] = await Promise.all([
-        orderAPI.getKitchenOrders({ date: dateToFetch }).catch(() => ({ data: { data: { ordersByStatus: { pending: [], preparing: [], ready: [], completed: [], confirmed: [], delivered: [] }, summary: {} } } })),
+        orderAPI.getKitchenOrders({ date: filters.date }).catch(() => ({ data: { data: { ordersByStatus: { pending: [], preparing: [], ready: [], completed: [], confirmed: [], delivered: [] }, summary: {} } } })),
         menuAPI.getMenus().catch(() => ({ data: { data: { menus: [] } } })),
         catalogAPI.getItems().catch(() => ({ data: { data: { items: [] } } })),
         messageAPI.getFeedback().catch(() => ({ data: { data: { feedback: [] } } })),
         messageAPI.getInbox().catch(() => ({ data: { data: { messages: [], unreadCount: 0 } } })),
         companyAPI.getCompanies().catch(() => ({ data: { data: { companies: [] } } }))
       ]);
+      
+      console.log('[Dashboard] API Response:', ordersRes.data);
       
       // Kitchen orders endpoint returns ordersByStatus, convert to flat array
       const ordersByStatus = ordersRes.data?.data?.ordersByStatus || {};
@@ -101,6 +103,8 @@ export default function KitchenDashboard() {
         ...(ordersByStatus.delivered || []),
         ...(ordersByStatus.completed || [])
       ];
+      
+      console.log('[Dashboard] Orders loaded:', ordersList.length);
       
       setOrders(ordersList);
       setMenus(menusRes.data?.data?.menus || []);
@@ -122,7 +126,7 @@ export default function KitchenDashboard() {
 
       // Track delivery notifications
       const delivered = ordersByStatus.delivered || [];
-      setDeliveryNotifications(delivered.map(o => ({ orderId: o.id, companyName: o.company_name, confirmed: o.status === 'completed' })));
+      setDeliveryNotifications(delivered.map(o => ({ orderId: o.id, companyName: o.companyName, confirmed: o.status === 'completed' })));
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Failed to load data');
@@ -132,9 +136,9 @@ export default function KitchenDashboard() {
   };
 
   const filteredOrders = orders.filter(order => {
-    const matchCompany = !filters.company || order.company_id === filters.company;
+    const matchCompany = !filters.company || order.companyId === filters.company;
     const matchStatus = !filters.status || order.status === filters.status;
-    const matchDate = !filters.date || (order.orderDate && order.orderDate.startsWith(filters.date));
+    const matchDate = !filters.date || (order.orderDate && order.orderDate.toString().startsWith(filters.date));
     return matchCompany && matchStatus && matchDate;
   });
 
