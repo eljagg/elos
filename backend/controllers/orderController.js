@@ -730,13 +730,13 @@ const getOrderById = async (req, res, next) => {
         
         // Get order items
         const itemsResult = await db.query(
-            `SELECT oi.*, mic.name, mic.description, mic.image_url,
+            `SELECT oi.*, mi.name, mi.description, mi.image_url,
                     mc.name as category_name
              FROM order_items oi
-             JOIN menu_item_catalog mic ON oi.menu_item_id = mic.id
-             JOIN menu_categories mc ON mic.category_id = mc.id
+             JOIN menu_items mi ON oi.menu_item_id = mi.id
+             JOIN menu_categories mc ON mi.category_id = mc.id
              WHERE oi.order_id = $1
-             ORDER BY mc.display_order, mic.display_order`,
+             ORDER BY mc.display_order, mi.display_order`,
             [id]
         );
         
@@ -1244,15 +1244,15 @@ const getKitchenOrders = async (req, res, next) => {
                    (
                        SELECT json_agg(json_build_object(
                            'id', oi.id,
-                           'name', mic.name,
+                           'name', mi.name,
                            'quantity', oi.quantity,
                            'specialInstructions', oi.special_instructions,
                            'customRequest', oi.custom_request,
                            'categoryCode', mc.code
                        ))
                        FROM order_items oi
-                       JOIN menu_item_catalog mic ON oi.menu_item_id = mic.id
-                       JOIN menu_categories mc ON mic.category_id = mc.id
+                       JOIN menu_items mi ON oi.menu_item_id = mi.id
+                       JOIN menu_categories mc ON mi.category_id = mc.id
                        WHERE oi.order_id = o.id
                    ) as items
             FROM orders o
@@ -1311,6 +1311,7 @@ const getKitchenOrders = async (req, res, next) => {
                     id: order.id,
                     orderNumber: order.order_number,
                     mealType: order.meal_type,
+                    orderDate: order.order_date,
                     status: order.status,
                     userName: `${order.user_first_name} ${order.user_last_name}`,
                     companyName: order.company_name,
@@ -1486,7 +1487,7 @@ const createDailyMenuOrder = async (req, res, next) => {
         // Validate items exist in daily menu
         const itemIds = items.map(i => i.menuItemId);
         const itemsResult = await db.query(
-            `SELECT dmi.id, dmi.catalog_item_id, mic.name, mic.price,
+            `SELECT dmi.id, dmi.catalog_item_id, mic.name,
                     (dmi.portions_available - dmi.portions_ordered) as portions_remaining
              FROM daily_menu_items dmi
              JOIN menu_item_catalog mic ON dmi.catalog_item_id = mic.id
@@ -1501,7 +1502,9 @@ const createDailyMenuOrder = async (req, res, next) => {
             });
         }
         
-        // Map order items (items are just components, no individual prices)
+        // Total is number of meals * meal price
+        const totalAmount = numMeals * mealPrice;
+        
         const orderItems = items.map(item => {
             const dbItem = itemsResult.rows.find(r => r.id === item.menuItemId);
             return {
@@ -1513,47 +1516,28 @@ const createDailyMenuOrder = async (req, res, next) => {
             };
         });
         
-        // Calculate totals based on fixed meal price (subsidized by company)
-        // The entire meal (all items together) costs one fixed price
-        const subtotal = numMeals * mealPrice;
-        const tax = 0; // No tax for now
-        const total = subtotal + tax;
-        
-        // Get day of week
-        const dayOfWeek = getDayOfWeek(orderDate);
-        
         // Generate order number
         const orderNumber = 'ORD-' + Date.now().toString(36).toUpperCase();
         
-        // Create order with correct column names
+        // Create order
         const orderResult = await db.query(
-            `INSERT INTO orders (
-                order_number, user_id, company_id, department_id, cafeteria_id,
-                order_date, day_of_week, meal_type, status,
-                subtotal, tax, total,
-                notes, is_guest_order
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-            RETURNING *`,
-            [
-                orderNumber, userId, userCompanyId, userDepartmentId, cafeteriaId,
-                orderDate, dayOfWeek, 'lunch', 'pending',
-                subtotal, tax, total,
-                notes || '', false
-            ]
+            `INSERT INTO orders (order_number, user_id, company_id, department_id, cafeteria_id, 
+                                order_date, meal_type, status, total_amount, notes)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+             RETURNING *`,
+            [orderNumber, userId, userCompanyId, userDepartmentId, cafeteriaId,
+             orderDate, 'lunch', 'pending', totalAmount, notes || '']
         );
         
         const newOrder = orderResult.rows[0];
         
         // Insert order items
-        // Since meal price is fixed, divide it equally among all items
-        const pricePerItem = mealPrice / orderItems.length;
-        
         for (const item of orderItems) {
             await db.query(
                 `INSERT INTO order_items (order_id, menu_item_id, quantity, unit_price, total_price, special_instructions)
                  VALUES ($1, $2, $3, $4, $5, $6)`,
-                [newOrder.id, item.catalogItemId, item.quantity, pricePerItem, 
-                 pricePerItem * item.quantity, item.specialInstructions]
+                [newOrder.id, item.catalogItemId, item.quantity, item.unitPrice, 
+                 item.unitPrice * item.quantity, item.specialInstructions]
             );
             
             // Update portions ordered
@@ -1598,4 +1582,3 @@ module.exports = {
     getFavorites,
     deleteFavorite
 };
-// Force rebuild Mon Jan 26 23:47:15 UTC 2026
