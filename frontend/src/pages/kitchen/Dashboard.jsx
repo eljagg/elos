@@ -66,7 +66,16 @@ export default function KitchenDashboard() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [menuForm, setMenuForm] = useState({ name: '', description: '', mealType: 'lunch', menuType: 'regular', isActive: true });
-  const [itemForm, setItemForm] = useState({ name: '', description: '', category: 'protein', isVegan: false, isVegetarian: false, ingredients: '' });
+  const [itemForm, setItemForm] = useState({ 
+    name: '', 
+    description: '', 
+    category: 'protein', 
+    isVegan: false, 
+    isVegetarian: false, 
+    ingredients: '',
+    basePrice: '0.00',
+    addOnPrice: '0.00'
+  });
   const [issueResponse, setIssueResponse] = useState('');
 
   // Load data on mount and when date changes
@@ -206,7 +215,9 @@ export default function KitchenDashboard() {
         category_code: itemForm.category,
         is_vegan: itemForm.isVegan,
         is_vegetarian: itemForm.isVegetarian,
-        ingredients: itemForm.ingredients
+        ingredients: itemForm.ingredients,
+        price: parseFloat(itemForm.basePrice) || 0,
+        add_on_price: parseFloat(itemForm.addOnPrice) || 0
       };
 
       if (selectedItem) {
@@ -602,7 +613,9 @@ export default function KitchenDashboard() {
                   category: item.category_code || item.category || 'protein',
                   isVegan: item.is_vegan,
                   isVegetarian: item.is_vegetarian,
-                  ingredients: item.ingredients || ''
+                  ingredients: item.ingredients || '',
+                  basePrice: item.price || item.base_price || '0.00',
+                  addOnPrice: item.add_on_price || '0.00'
                 });
                 setShowItemModal(true);
               }}
@@ -615,7 +628,9 @@ export default function KitchenDashboard() {
                   category: 'protein',
                   isVegan: false,
                   isVegetarian: false,
-                  ingredients: ''
+                  ingredients: '',
+                  basePrice: '0.00',
+                  addOnPrice: '0.00'
                 });
                 setShowItemModal(true);
               }}
@@ -655,7 +670,141 @@ export default function KitchenDashboard() {
 
       {showMenuModal && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-lg`}><h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>{selectedMenu ? 'Edit' : 'Add'} Menu</h2><form onSubmit={handleSaveMenu} className="space-y-4"><input placeholder="Menu Name" value={menuForm.name} onChange={e => setMenuForm({ ...menuForm, name: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} required /><textarea placeholder="Description" value={menuForm.description} onChange={e => setMenuForm({ ...menuForm, description: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} rows="2" /><div className="grid grid-cols-2 gap-4"><select value={menuForm.mealType} onChange={e => setMenuForm({ ...menuForm, mealType: e.target.value })} className={`px-4 py-2 border ${colors.border} rounded-lg`}><option value="breakfast">Breakfast</option><option value="lunch">Lunch</option></select><select value={menuForm.menuType} onChange={e => setMenuForm({ ...menuForm, menuType: e.target.value })} className={`px-4 py-2 border ${colors.border} rounded-lg`}><option value="regular">Regular</option><option value="soup">Soup</option><option value="vegan">Vegan</option><option value="special">Special</option></select></div><label className="flex items-center gap-2"><input type="checkbox" checked={menuForm.isActive} onChange={e => setMenuForm({ ...menuForm, isActive: e.target.checked })} /> Active</label><div className="flex justify-end gap-3"><button type="button" onClick={() => setShowMenuModal(false)} className={`px-4 py-2 border ${colors.border} rounded-lg`}>Cancel</button><button type="submit" className="px-4 py-2 bg-orange-600 text-white rounded-lg">Save</button></div></form></div></div>}
 
-      {showItemModal && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-lg`}><h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>{selectedItem ? 'Edit' : 'Add'} Item</h2><form onSubmit={handleSaveItem} className="space-y-4"><input placeholder="Item Name" value={itemForm.name} onChange={e => setItemForm({ ...itemForm, name: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} required /><textarea placeholder="Description" value={itemForm.description} onChange={e => setItemForm({ ...itemForm, description: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} rows="2" /><div><label className="block text-sm font-medium mb-1">Category</label><select value={itemForm.category} onChange={e => setItemForm({ ...itemForm, category: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}><option value="protein">Protein</option><option value="carbohydrate">Carbohydrate</option><option value="fibre">Fibre / Vegetable</option><option value="soup">Soup</option><option value="vegetarian">Vegetarian</option><option value="done_to_order">Done to Order</option><option value="beverage">Beverage</option><option value="dessert">Dessert</option><option value="specials">Specials</option></select></div><textarea placeholder="Ingredients (for soups)" value={itemForm.ingredients} onChange={e => setItemForm({ ...itemForm, ingredients: e.target.value })} className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} rows="2" /><div className="flex gap-4"><label className="flex items-center gap-2"><input type="checkbox" checked={itemForm.isVegan} onChange={e => setItemForm({ ...itemForm, isVegan: e.target.checked })} /> Vegan</label><label className="flex items-center gap-2"><input type="checkbox" checked={itemForm.isVegetarian} onChange={e => setItemForm({ ...itemForm, isVegetarian: e.target.checked })} /> Vegetarian</label></div><div className="flex justify-end gap-3"><button type="button" onClick={() => setShowItemModal(false)} className={`px-4 py-2 border ${colors.border} rounded-lg`}>Cancel</button><button type="submit" className="px-4 py-2 bg-orange-600 text-white rounded-lg">Save</button></div></form></div></div>}
+      {showItemModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto`}>
+            <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>
+              {selectedItem ? 'Edit' : 'Add'} Item
+            </h2>
+            
+            <form onSubmit={handleSaveItem} className="space-y-4">
+              {/* Item Name */}
+              <input
+                placeholder="Item Name"
+                value={itemForm.name}
+                onChange={e => setItemForm({ ...itemForm, name: e.target.value })}
+                className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}
+                required
+              />
+              
+              {/* Description */}
+              <textarea
+                placeholder="Description"
+                value={itemForm.description}
+                onChange={e => setItemForm({ ...itemForm, description: e.target.value })}
+                className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}
+                rows="2"
+              />
+              
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Category</label>
+                <select
+                  value={itemForm.category}
+                  onChange={e => setItemForm({ ...itemForm, category: e.target.value })}
+                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}
+                >
+                  <option value="protein">Protein</option>
+                  <option value="carbohydrate">Carbohydrate</option>
+                  <option value="fibre">Fibre / Vegetable</option>
+                  <option value="soup">Soup</option>
+                  <option value="vegetarian">Vegetarian</option>
+                  <option value="done_to_order">Done to Order</option>
+                  <option value="beverage">Beverage</option>
+                  <option value="dessert">Dessert</option>
+                  <option value="specials">Specials</option>
+                </select>
+              </div>
+              
+              {/* PRICING SECTION */}
+              <div className="border-t pt-4">
+                <h3 className="font-semibold text-sm mb-3 text-gray-700">💰 Centralized Pricing</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700">
+                      Base Price ($)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={itemForm.basePrice}
+                      onChange={e => setItemForm({ ...itemForm, basePrice: e.target.value })}
+                      className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}
+                      placeholder="0.00"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Price when included in meal</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-orange-700">
+                      As Extra (+$)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={itemForm.addOnPrice}
+                      onChange={e => setItemForm({ ...itemForm, addOnPrice: e.target.value })}
+                      className={`w-full px-4 py-2 border border-orange-300 rounded-lg`}
+                      placeholder="0.00"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Price when added as extra</p>
+                  </div>
+                </div>
+                <div className="mt-2 p-2 bg-blue-50 rounded text-xs text-gray-600">
+                  ℹ️ These prices will be used across all menus and orders
+                </div>
+              </div>
+              
+              {/* Ingredients */}
+              <textarea
+                placeholder="Ingredients (for soups)"
+                value={itemForm.ingredients}
+                onChange={e => setItemForm({ ...itemForm, ingredients: e.target.value })}
+                className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}
+                rows="2"
+              />
+              
+              {/* Checkboxes */}
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={itemForm.isVegan}
+                    onChange={e => setItemForm({ ...itemForm, isVegan: e.target.checked })}
+                  />
+                  Vegan
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={itemForm.isVegetarian}
+                    onChange={e => setItemForm({ ...itemForm, isVegetarian: e.target.checked })}
+                  />
+                  Vegetarian
+                </label>
+              </div>
+              
+              {/* Buttons */}
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowItemModal(false)}
+                  className={`px-4 py-2 border ${colors.border} rounded-lg`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg"
+                >
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {showIssueModal && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-lg`}><h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>Respond to Issue</h2><div className={`${colors.bgSecondary} rounded-lg p-4 mb-4`}><h3 className={colors.textPrimary}>{selectedIssue?.subject}</h3><p className={`text-sm ${colors.textMuted}`}>{selectedIssue?.message}</p></div><textarea placeholder="Your response..." value={issueResponse} onChange={e => setIssueResponse(e.target.value)} className={`w-full px-4 py-2 border ${colors.border} rounded-lg mb-4`} rows="4" /><div className="flex justify-end gap-3"><button onClick={() => setShowIssueModal(false)} className={`px-4 py-2 border ${colors.border} rounded-lg`}>Cancel</button><button onClick={handleRespondIssue} className="px-4 py-2 bg-green-600 text-white rounded-lg">Resolve</button></div></div></div>}
     </div>
