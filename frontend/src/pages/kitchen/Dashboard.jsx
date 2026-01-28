@@ -69,12 +69,12 @@ export default function KitchenDashboard() {
   const [itemForm, setItemForm] = useState({ name: '', description: '', category: 'protein', isVegan: false, isVegetarian: false, ingredients: '' });
   const [issueResponse, setIssueResponse] = useState('');
 
-  useEffect(() => { loadData(); }, []);
-
+  // Load data on mount and when date changes
   useEffect(() => {
     if (filters.date) {
       loadData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.date]);
 
   const loadData = async () => {
