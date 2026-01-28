@@ -23,6 +23,6 @@ router.get('/kitchen/today', authenticate, requireKitchenStaff, orderController.
 router.get('/:id', authenticate, orderController.getOrderById);
 router.put('/:id', authenticate, orderController.updateOrder);
 router.post('/:id/cancel', authenticate, orderController.cancelOrder);
-router.put('/:id/status', authenticate, requireKitchenStaff, orderController.updateOrderStatus);
+router.patch('/:id/status', authenticate, requireKitchenStaff, orderController.updateOrderStatus); // FIXED: Changed PUT to PATCH
 
 module.exports = router;
