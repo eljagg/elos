@@ -1125,7 +1125,7 @@ const updateOrderStatus = async (req, res, next) => {
         
         // Valid status transitions
         const validTransitions = {
-            pending: ['confirmed', 'cancelled'],
+            pending: ['confirmed', 'preparing', 'cancelled'], // Added 'preparing' for direct kitchen workflow
             confirmed: ['preparing', 'cancelled'],
             preparing: ['ready'],
             ready: ['delivered', 'completed'],
