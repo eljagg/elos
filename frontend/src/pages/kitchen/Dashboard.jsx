@@ -58,6 +58,10 @@ export default function KitchenDashboard() {
     date: getTodayDate() // Use helper function for guaranteed local date
   });
   const [deliveryNotifications, setDeliveryNotifications] = useState([]);
+  
+  // Loading states for preventing rapid clicks
+  const [updatingOrders, setUpdatingOrders] = useState(new Set()); // Track which orders are being updated
+  const [bulkUpdating, setBulkUpdating] = useState(false); // Track bulk operations
 
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [showItemModal, setShowItemModal] = useState(false);
@@ -152,17 +156,39 @@ export default function KitchenDashboard() {
   });
 
   const handleStatusUpdate = async (orderId, newStatus) => {
+    // Prevent multiple simultaneous updates to the same order
+    if (updatingOrders.has(orderId)) {
+      console.log(`[handleStatusUpdate] Order ${orderId} is already being updated`);
+      return;
+    }
+
     try {
+      // Mark order as updating
+      setUpdatingOrders(prev => new Set([...prev, orderId]));
+      
       await orderAPI.updateOrderStatus(orderId, newStatus);
       toast.success(`Order ${newStatus}`);
       loadData();
     } catch (error) {
       console.error('Error updating order:', error);
       toast.error('Failed to update order');
+    } finally {
+      // Remove order from updating set
+      setUpdatingOrders(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(orderId);
+        return newSet;
+      });
     }
   };
 
   const handleBulkStatusUpdate = async (newStatus) => {
+    // Prevent multiple simultaneous bulk updates
+    if (bulkUpdating) {
+      console.log('[handleBulkStatusUpdate] Bulk update already in progress');
+      return;
+    }
+
     try {
       const ordersToUpdate = filteredOrders.filter(order => 
         order.status === 'pending' || order.status === 'confirmed'
@@ -176,6 +202,8 @@ export default function KitchenDashboard() {
       const confirmMessage = `Start preparing ${ordersToUpdate.length} order${ordersToUpdate.length > 1 ? 's' : ''}?`;
       if (!window.confirm(confirmMessage)) return;
 
+      setBulkUpdating(true);
+
       await Promise.all(
         ordersToUpdate.map(order => orderAPI.updateOrderStatus(order.id, newStatus))
       );
@@ -185,6 +213,8 @@ export default function KitchenDashboard() {
     } catch (error) {
       console.error('Error bulk updating orders:', error);
       toast.error('Failed to update some orders');
+    } finally {
+      setBulkUpdating(false);
     }
   };
 
@@ -360,9 +390,18 @@ export default function KitchenDashboard() {
                     <div className="flex justify-end mb-4">
                       <button
                         onClick={() => handleBulkStatusUpdate('preparing')}
-                        className="px-4 py-2 bg-cyan-600 text-white rounded-lg text-sm font-medium hover:bg-cyan-700 transition-colors"
+                        disabled={bulkUpdating}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          bulkUpdating
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-cyan-600 hover:bg-cyan-700'
+                        } text-white`}
                       >
-                        🔥 Start Preparing All ({filteredOrders.filter(o => o.status === 'pending' || o.status === 'confirmed').length})
+                        {bulkUpdating ? (
+                          <>⏳ Updating...</>
+                        ) : (
+                          <>🔥 Start Preparing All ({filteredOrders.filter(o => o.status === 'pending' || o.status === 'confirmed').length})</>
+                        )}
                       </button>
                     </div>
                   )}
@@ -414,25 +453,40 @@ export default function KitchenDashboard() {
                         {order.status === 'pending' && (
                           <button
                             onClick={() => handleStatusUpdate(order.id, 'preparing')}
-                            className="px-3 py-1 bg-cyan-600 text-white rounded-lg text-sm"
+                            disabled={updatingOrders.has(order.id)}
+                            className={`px-3 py-1 rounded-lg text-sm text-white ${
+                              updatingOrders.has(order.id)
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-cyan-600 hover:bg-cyan-700'
+                            }`}
                           >
-                            Start Preparing
+                            {updatingOrders.has(order.id) ? '⏳ Updating...' : 'Start Preparing'}
                           </button>
                         )}
                         {order.status === 'preparing' && (
                           <button
                             onClick={() => handleStatusUpdate(order.id, 'ready')}
-                            className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm"
+                            disabled={updatingOrders.has(order.id)}
+                            className={`px-3 py-1 rounded-lg text-sm text-white ${
+                              updatingOrders.has(order.id)
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-blue-600 hover:bg-blue-700'
+                            }`}
                           >
-                            Mark Ready
+                            {updatingOrders.has(order.id) ? '⏳ Updating...' : 'Mark Ready'}
                           </button>
                         )}
                         {order.status === 'ready' && (
                           <button
                             onClick={() => handleStatusUpdate(order.id, 'delivered')}
-                            className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm"
+                            disabled={updatingOrders.has(order.id)}
+                            className={`px-3 py-1 rounded-lg text-sm text-white ${
+                              updatingOrders.has(order.id)
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-green-600 hover:bg-green-700'
+                            }`}
                           >
-                            Mark Delivered
+                            {updatingOrders.has(order.id) ? '⏳ Updating...' : 'Mark Delivered'}
                           </button>
                         )}
                       </div>
@@ -522,8 +576,12 @@ export default function KitchenDashboard() {
                               </div>
                               <button
                                 onClick={async () => {
+                                  // Prevent multiple clicks
+                                  if (bulkUpdating) return;
+                                  
                                   if (window.confirm(`Mark ${group.orders.length} order(s) for ${group.company} as delivered?`)) {
                                     try {
+                                      setBulkUpdating(true);
                                       await Promise.all(
                                         group.orders.map(order => orderAPI.updateOrderStatus(order.id, 'delivered'))
                                       );
@@ -531,12 +589,19 @@ export default function KitchenDashboard() {
                                       loadData();
                                     } catch (error) {
                                       toast.error('Failed to update delivery status');
+                                    } finally {
+                                      setBulkUpdating(false);
                                     }
                                   }
                                 }}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                                disabled={bulkUpdating}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                  bulkUpdating
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-blue-600 hover:bg-blue-700'
+                                } text-white`}
                               >
-                                🚚 Mark All as Delivered
+                                {bulkUpdating ? '⏳ Updating...' : '🚚 Mark All as Delivered'}
                               </button>
                             </div>
 
@@ -561,18 +626,15 @@ export default function KitchenDashboard() {
                                       </div>
                                     </div>
                                     <button
-                                      onClick={async () => {
-                                        try {
-                                          await orderAPI.updateOrderStatus(order.id, 'delivered');
-                                          toast.success('Order marked as delivered');
-                                          loadData();
-                                        } catch (error) {
-                                          toast.error('Failed to update status');
-                                        }
-                                      }}
-                                      className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                                      onClick={() => handleStatusUpdate(order.id, 'delivered')}
+                                      disabled={updatingOrders.has(order.id)}
+                                      className={`px-3 py-1 rounded text-xs text-white ${
+                                        updatingOrders.has(order.id)
+                                          ? 'bg-gray-400 cursor-not-allowed'
+                                          : 'bg-blue-500 hover:bg-blue-600'
+                                      }`}
                                     >
-                                      ✓ Delivered
+                                      {updatingOrders.has(order.id) ? '⏳...' : '✓ Delivered'}
                                     </button>
                                   </div>
                                 </div>
