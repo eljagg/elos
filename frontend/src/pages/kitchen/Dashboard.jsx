@@ -265,9 +265,11 @@ export default function KitchenDashboard() {
     }
   };
 
-  const handleDeleteItem = async (itemId) => {
+  const handleDeleteItem = async (item) => {
     if (!window.confirm('Are you sure you want to delete this item?')) return;
     try {
+      // Extract ID from item object (item could be object or string)
+      const itemId = typeof item === 'string' ? item : item.id;
       await catalogAPI.deleteItem(itemId);
       toast.success('Item deleted');
       loadData();
