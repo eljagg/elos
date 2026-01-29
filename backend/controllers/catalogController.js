@@ -205,6 +205,7 @@ const createCatalogItem = async (req, res, next) => {
             name,
             description,
             price = 0,
+            add_on_price = 0,  // NEW: Add-on price when item is added as extra
             imageUrl,
             prepTimeMinutes = 15,
             calories,
@@ -242,17 +243,17 @@ const createCatalogItem = async (req, res, next) => {
         // Start transaction
         await db.query('BEGIN');
 
-        // Insert catalog item
+        // Insert catalog item (NOW WITH add_on_price)
         const result = await db.query(`
             INSERT INTO menu_item_catalog (
-                cafeteria_id, category_id, name, description, price, image_url,
+                cafeteria_id, category_id, name, description, price, add_on_price, image_url,
                 prep_time_minutes, calories, is_vegetarian, is_vegan, is_gluten_free,
                 is_spicy, spice_level, is_featured, has_sizes, size_small_price, 
                 size_medium_price, size_large_price, created_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
             RETURNING *
         `, [
-            cafeteriaId || null, effectiveCategoryId || null, name, description, price, imageUrl,
+            cafeteriaId || null, effectiveCategoryId || null, name, description, price, add_on_price, imageUrl,
             prepTimeMinutes, calories, isVegetarian, isVegan, isGlutenFree,
             isSpicy, spiceLevel, isFeatured, hasSizes, sizeSmallPrice || null,
             sizeMediumPrice || null, sizeLargePrice || null, userId
@@ -309,7 +310,8 @@ const updateCatalogItem = async (req, res, next) => {
             category,
             name,
             description,
-            price = 0,
+            price,
+            add_on_price,  // NEW: Add-on price when item is added as extra
             imageUrl,
             prepTimeMinutes,
             calories,
@@ -346,7 +348,7 @@ const updateCatalogItem = async (req, res, next) => {
 
         await db.query('BEGIN');
 
-        // Update catalog item
+        // Update catalog item (NOW WITH add_on_price)
         const result = await db.query(`
             UPDATE menu_item_catalog SET
                 cafeteria_id = COALESCE($1, cafeteria_id),
@@ -354,21 +356,22 @@ const updateCatalogItem = async (req, res, next) => {
                 name = COALESCE($3, name),
                 description = COALESCE($4, description),
                 price = COALESCE($5, price),
-                image_url = COALESCE($6, image_url),
-                prep_time_minutes = COALESCE($7, prep_time_minutes),
-                calories = COALESCE($8, calories),
-                is_vegetarian = COALESCE($9, is_vegetarian),
-                is_vegan = COALESCE($10, is_vegan),
-                is_gluten_free = COALESCE($11, is_gluten_free),
-                is_spicy = COALESCE($12, is_spicy),
-                spice_level = COALESCE($13, spice_level),
-                is_featured = COALESCE($14, is_featured),
-                is_active = COALESCE($15, is_active),
+                add_on_price = COALESCE($6, add_on_price),
+                image_url = COALESCE($7, image_url),
+                prep_time_minutes = COALESCE($8, prep_time_minutes),
+                calories = COALESCE($9, calories),
+                is_vegetarian = COALESCE($10, is_vegetarian),
+                is_vegan = COALESCE($11, is_vegan),
+                is_gluten_free = COALESCE($12, is_gluten_free),
+                is_spicy = COALESCE($13, is_spicy),
+                spice_level = COALESCE($14, spice_level),
+                is_featured = COALESCE($15, is_featured),
+                is_active = COALESCE($16, is_active),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $16
+            WHERE id = $17
             RETURNING *
         `, [
-            cafeteriaId, effectiveCategoryId, name, description, price, imageUrl,
+            cafeteriaId, effectiveCategoryId, name, description, price, add_on_price, imageUrl,
             prepTimeMinutes, calories, isVegetarian, isVegan, isGlutenFree,
             isSpicy, spiceLevel, isFeatured, isActive, id
         ]);
