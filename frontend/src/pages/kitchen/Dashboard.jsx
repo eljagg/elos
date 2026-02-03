@@ -81,6 +81,14 @@ export default function KitchenDashboard() {
     addOnPrice: '0.00'
   });
   const [issueResponse, setIssueResponse] = useState('');
+  
+  // Phase 3: Menu-Catalog Item Management
+  const [selectedMenuForItems, setSelectedMenuForItems] = useState(null);
+  const [showAddItemsModal, setShowAddItemsModal] = useState(false);
+  const [menuCatalogItems, setMenuCatalogItems] = useState([]);
+  const [availableCatalogItems, setAvailableCatalogItems] = useState([]);
+  const [selectedCatalogItems, setSelectedCatalogItems] = useState([]);
+  const [showMenuItemsView, setShowMenuItemsView] = useState(false);
 
   // Load data on mount and when date changes
   useEffect(() => {
@@ -294,6 +302,120 @@ export default function KitchenDashboard() {
       console.error('Error responding to issue:', error);
       toast.error('Failed to respond');
     }
+  };
+
+  // =========================================================================
+  // PHASE 3: MENU-CATALOG ITEM MANAGEMENT
+  // =========================================================================
+  
+  const loadMenuCatalogItems = async (menuId) => {
+    try {
+      const response = await fetch(`/api/menus/${menuId}/catalog-items`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setMenuCatalogItems(data.data.items || []);
+      }
+    } catch (error) {
+      console.error('Error loading menu catalog items:', error);
+      toast.error('Failed to load menu items');
+    }
+  };
+  
+  const loadAvailableCatalogItems = async (menuId) => {
+    try {
+      const response = await fetch(`/api/menus/${menuId}/available-catalog-items`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setAvailableCatalogItems(data.data.items || []);
+      }
+    } catch (error) {
+      console.error('Error loading available items:', error);
+      toast.error('Failed to load available items');
+    }
+  };
+  
+  const handleManageMenuItems = async (menu) => {
+    setSelectedMenuForItems(menu);
+    setShowMenuItemsView(true);
+    await loadMenuCatalogItems(menu.id);
+  };
+  
+  const handleAddItemsToMenu = async () => {
+    if (selectedCatalogItems.length === 0) {
+      toast.error('Please select at least one item');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/menus/${selectedMenuForItems.id}/catalog-items`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          catalogItemIds: selectedCatalogItems
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`Added ${selectedCatalogItems.length} item(s) to menu`);
+        setShowAddItemsModal(false);
+        setSelectedCatalogItems([]);
+        await loadMenuCatalogItems(selectedMenuForItems.id);
+      } else {
+        toast.error(data.error?.message || 'Failed to add items');
+      }
+    } catch (error) {
+      console.error('Error adding items to menu:', error);
+      toast.error('Failed to add items');
+    }
+  };
+  
+  const handleRemoveItemFromMenu = async (catalogItemId) => {
+    if (!window.confirm('Remove this item from the menu?')) return;
+    
+    try {
+      const response = await fetch(`/api/menus/${selectedMenuForItems.id}/catalog-items/${catalogItemId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Item removed from menu');
+        await loadMenuCatalogItems(selectedMenuForItems.id);
+      } else {
+        toast.error(data.error?.message || 'Failed to remove item');
+      }
+    } catch (error) {
+      console.error('Error removing item:', error);
+      toast.error('Failed to remove item');
+    }
+  };
+  
+  const handleOpenAddItemsModal = async () => {
+    setShowAddItemsModal(true);
+    await loadAvailableCatalogItems(selectedMenuForItems.id);
+  };
+  
+  const toggleCatalogItemSelection = (itemId) => {
+    setSelectedCatalogItems(prev => 
+      prev.includes(itemId) 
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    );
   };
 
   return (
@@ -662,12 +784,143 @@ export default function KitchenDashboard() {
             </div>
           )}
 
-          {activeTab === 'menus' && (
+          {activeTab === 'menus' && !showMenuItemsView && (
             <div className="space-y-4">
-              <div className="flex justify-end"><button onClick={() => { setSelectedMenu(null); setMenuForm({ name: '', description: '', mealType: 'lunch', menuType: 'regular', isActive: true }); setShowMenuModal(true); }} className="px-4 py-2 bg-orange-600 text-white rounded-lg">+ Add Menu</button></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {menus.map(m => <div key={m.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}><div className="flex justify-between mb-2"><h3 className={`font-semibold ${colors.textPrimary}`}>{m.name}</h3><span className={`px-2 py-1 text-xs rounded-full ${m.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{m.is_active ? 'Active' : 'Inactive'}</span></div><p className={`text-sm ${colors.textMuted} mb-2`}>{m.meal_type} • {m.menu_type || 'Regular'}</p><button onClick={() => { setSelectedMenu(m); setMenuForm({ name: m.name, description: m.description || '', mealType: m.meal_type, menuType: m.menu_type || 'regular', isActive: m.is_active }); setShowMenuModal(true); }} className="text-blue-600 text-sm">Edit</button></div>)}
+              <div className="flex justify-end">
+                <button 
+                  onClick={() => { 
+                    setSelectedMenu(null); 
+                    setMenuForm({ name: '', description: '', mealType: 'lunch', menuType: 'regular', isActive: true }); 
+                    setShowMenuModal(true); 
+                  }} 
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                >
+                  + Add Menu
+                </button>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {menus.map(m => (
+                  <div key={m.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className={`font-semibold ${colors.textPrimary}`}>{m.name}</h3>
+                      <span className={`px-2 py-1 text-xs rounded-full ${m.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {m.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <p className={`text-sm ${colors.textMuted} mb-3`}>
+                      {m.meal_type} • {m.menu_type || 'Regular'}
+                    </p>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => { 
+                          setSelectedMenu(m); 
+                          setMenuForm({ 
+                            name: m.name, 
+                            description: m.description || '', 
+                            mealType: m.meal_type, 
+                            menuType: m.menu_type || 'regular', 
+                            isActive: m.is_active 
+                          }); 
+                          setShowMenuModal(true); 
+                        }} 
+                        className="text-blue-600 text-sm hover:underline"
+                      >
+                        Edit
+                      </button>
+                      <span className={`text-sm ${colors.textMuted}`}>•</span>
+                      <button 
+                        onClick={() => handleManageMenuItems(m)} 
+                        className="text-orange-600 text-sm hover:underline font-medium"
+                      >
+                        📋 Manage Items
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* PHASE 3: Menu Items View */}
+          {activeTab === 'menus' && showMenuItemsView && selectedMenuForItems && (
+            <div className="space-y-4">
+              {/* Header with Back Button */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => {
+                      setShowMenuItemsView(false);
+                      setSelectedMenuForItems(null);
+                      setMenuCatalogItems([]);
+                    }}
+                    className={`px-3 py-2 border ${colors.border} rounded-lg hover:bg-gray-50`}
+                  >
+                    ← Back to Menus
+                  </button>
+                  <div>
+                    <h2 className={`text-2xl font-bold ${colors.textPrimary}`}>
+                      {selectedMenuForItems.name}
+                    </h2>
+                    <p className={`text-sm ${colors.textMuted}`}>
+                      {selectedMenuForItems.meal_type} • {selectedMenuForItems.menu_type || 'Regular'}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={handleOpenAddItemsModal}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                >
+                  + Add Items from Catalog
+                </button>
+              </div>
+              
+              {/* Menu Items Grid */}
+              {menuCatalogItems.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {menuCatalogItems.map(item => (
+                    <div key={item.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className={`font-semibold ${colors.textPrimary}`}>{item.name}</h3>
+                        <button 
+                          onClick={() => handleRemoveItemFromMenu(item.catalog_item_id)}
+                          className="text-red-600 text-sm hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      {item.description && (
+                        <p className={`text-sm ${colors.textMuted} mb-2`}>{item.description}</p>
+                      )}
+                      <div className="flex gap-4 text-sm">
+                        <div>
+                          <span className={`font-medium ${colors.textPrimary}`}>Base: </span>
+                          <span className="text-green-600 font-semibold">${parseFloat(item.price || 0).toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className={`font-medium ${colors.textPrimary}`}>Extra: </span>
+                          <span className="text-blue-600 font-semibold">${parseFloat(item.add_on_price || 0).toFixed(2)}</span>
+                        </div>
+                      </div>
+                      {item.category && (
+                        <p className={`text-xs ${colors.textMuted} mt-2`}>
+                          Category: {item.category}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={`text-center py-12 border ${colors.border} rounded-xl ${colors.bgCard}`}>
+                  <p className={`text-lg ${colors.textMuted} mb-2`}>No items in this menu yet</p>
+                  <p className={`text-sm ${colors.textMuted} mb-4`}>Add items from your catalog to get started</p>
+                  <button 
+                    onClick={handleOpenAddItemsModal}
+                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                  >
+                    + Add Items from Catalog
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -871,6 +1124,108 @@ export default function KitchenDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* PHASE 3: Add Items from Catalog Modal */}
+      {showAddItemsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto`}>
+            <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>
+              Add Items to {selectedMenuForItems?.name}
+            </h2>
+            
+            <p className={`text-sm ${colors.textMuted} mb-4`}>
+              Select items from your catalog to add to this menu. Prices will be inherited from the catalog.
+            </p>
+            
+            {/* Selected Count */}
+            {selectedCatalogItems.length > 0 && (
+              <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                <p className="text-sm text-orange-700 font-medium">
+                  {selectedCatalogItems.length} item(s) selected
+                </p>
+              </div>
+            )}
+            
+            {/* Available Items Grid */}
+            {availableCatalogItems.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                {availableCatalogItems.map(item => {
+                  const isSelected = selectedCatalogItems.includes(item.id);
+                  return (
+                    <div 
+                      key={item.id} 
+                      onClick={() => toggleCatalogItemSelection(item.id)}
+                      className={`border ${isSelected ? 'border-orange-500 bg-orange-50' : colors.border} rounded-xl p-4 cursor-pointer hover:shadow-md transition-all ${isSelected ? 'ring-2 ring-orange-200' : ''}`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className={`font-semibold ${colors.textPrimary} flex-1`}>
+                          {item.name}
+                        </h3>
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected ? 'border-orange-500 bg-orange-500' : 'border-gray-300'}`}>
+                          {isSelected && <span className="text-white text-xs">✓</span>}
+                        </div>
+                      </div>
+                      {item.description && (
+                        <p className={`text-sm ${colors.textMuted} mb-3`}>{item.description}</p>
+                      )}
+                      <div className="flex gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-500">Base:</span>
+                          <span className="text-green-600 font-semibold ml-1">
+                            ${parseFloat(item.price || 0).toFixed(2)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Extra:</span>
+                          <span className="text-blue-600 font-semibold ml-1">
+                            ${parseFloat(item.add_on_price || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                      {item.category && (
+                        <p className={`text-xs ${colors.textMuted} mt-2`}>
+                          📦 {item.category}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className={`text-lg ${colors.textMuted} mb-2`}>
+                  No available items
+                </p>
+                <p className={`text-sm ${colors.textMuted}`}>
+                  All catalog items are already in this menu
+                </p>
+              </div>
+            )}
+            
+            {/* Buttons */}
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddItemsModal(false);
+                  setSelectedCatalogItems([]);
+                  setAvailableCatalogItems([]);
+                }}
+                className={`px-4 py-2 border ${colors.border} rounded-lg`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddItemsToMenu}
+                disabled={selectedCatalogItems.length === 0}
+                className={`px-4 py-2 rounded-lg ${selectedCatalogItems.length > 0 ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+              >
+                Add {selectedCatalogItems.length > 0 ? `${selectedCatalogItems.length} ` : ''}Item(s) to Menu
+              </button>
+            </div>
           </div>
         </div>
       )}
