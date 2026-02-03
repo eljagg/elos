@@ -317,7 +317,7 @@ export default function KitchenDashboard() {
       });
       const data = await response.json();
       if (data.success) {
-        setMenuCatalogItems(data.data.items || []);
+        setMenuCatalogItems(data.data || []);
       }
     } catch (error) {
       console.error('Error loading menu catalog items:', error);
@@ -334,7 +334,7 @@ export default function KitchenDashboard() {
       });
       const data = await response.json();
       if (data.success) {
-        setAvailableCatalogItems(data.data.items || []);
+        setAvailableCatalogItems(data.data || []);
       }
     } catch (error) {
       console.error('Error loading available items:', error);
