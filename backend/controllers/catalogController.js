@@ -194,6 +194,10 @@ const getCatalogItem = async (req, res, next) => {
 
 /**
  * Create a new catalog item
+ * 
+ * SECURITY FEATURES:
+ * - Price validation (range, format, negatives)
+ * - Initial price logging
  */
 const createCatalogItem = async (req, res, next) => {
     try {
@@ -205,7 +209,7 @@ const createCatalogItem = async (req, res, next) => {
             name,
             description,
             price = 0,
-            add_on_price = 0,  // NEW: Add-on price when item is added as extra
+            add_on_price = 0,
             imageUrl,
             prepTimeMinutes = 15,
             calories,
@@ -231,6 +235,72 @@ const createCatalogItem = async (req, res, next) => {
             });
         }
 
+        // =====================================================================
+        // SECURITY: PRICE VALIDATION
+        // =====================================================================
+        
+        // Validate base price
+        const priceNum = parseFloat(price);
+        if (isNaN(priceNum)) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'INVALID_PRICE', message: 'Price must be a valid number' }
+            });
+        }
+        
+        if (priceNum < 0) {
+            logger.security('NEGATIVE_PRICE_ATTEMPT', {
+                userId,
+                itemName: name,
+                attemptedPrice: priceNum,
+                ip: req.ip
+            });
+            
+            return res.status(400).json({
+                success: false,
+                error: { code: 'NEGATIVE_PRICE', message: 'Price cannot be negative' }
+            });
+        }
+        
+        const MAX_PRICE = 10000.00;
+        if (priceNum > MAX_PRICE) {
+            logger.security('EXCESSIVE_PRICE_ATTEMPT', {
+                userId,
+                itemName: name,
+                attemptedPrice: priceNum,
+                maxAllowed: MAX_PRICE,
+                ip: req.ip
+            });
+            
+            return res.status(400).json({
+                success: false,
+                error: { code: 'PRICE_TOO_HIGH', message: `Price cannot exceed $${MAX_PRICE.toFixed(2)}` }
+            });
+        }
+        
+        if (!/^\d+(\.\d{1,2})?$/.test(price.toString())) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'INVALID_PRICE_FORMAT', message: 'Price must have at most 2 decimal places' }
+            });
+        }
+        
+        // Validate add-on price
+        const addOnPriceNum = parseFloat(add_on_price);
+        if (isNaN(addOnPriceNum) || addOnPriceNum < 0 || addOnPriceNum > 10000.00) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'INVALID_ADDON_PRICE', message: 'Add-on price must be between $0 and $10,000' }
+            });
+        }
+        
+        if (!/^\d+(\.\d{1,2})?$/.test(add_on_price.toString())) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'INVALID_ADDON_PRICE_FORMAT', message: 'Add-on price must have at most 2 decimal places' }
+            });
+        }
+
         
         // If category string provided, look up the category ID
         let effectiveCategoryId = categoryId;
@@ -243,7 +313,7 @@ const createCatalogItem = async (req, res, next) => {
         // Start transaction
         await db.query('BEGIN');
 
-        // Insert catalog item (NOW WITH add_on_price)
+        // Insert catalog item
         const result = await db.query(`
             INSERT INTO menu_item_catalog (
                 cafeteria_id, category_id, name, description, price, add_on_price, image_url,
@@ -283,7 +353,7 @@ const createCatalogItem = async (req, res, next) => {
 
         await db.query('COMMIT');
 
-        logger.info('Catalog item created:', { itemId: newItem.id, name, userId });
+        logger.info('Catalog item created:', { itemId: newItem.id, name, price, userId });
 
         res.status(201).json({
             success: true,
@@ -299,6 +369,13 @@ const createCatalogItem = async (req, res, next) => {
 
 /**
  * Update a catalog item
+ * 
+ * SECURITY FEATURES:
+ * - Price validation (range, format, negatives)
+ * - Business rules (max change percentage)
+ * - Comprehensive audit logging
+ * - Change detection (only log if actually changed)
+ * - Security alerts for suspicious changes
  */
 const updateCatalogItem = async (req, res, next) => {
     try {
@@ -311,7 +388,7 @@ const updateCatalogItem = async (req, res, next) => {
             name,
             description,
             price,
-            add_on_price,  // NEW: Add-on price when item is added as extra
+            add_on_price,
             imageUrl,
             prepTimeMinutes,
             calories,
@@ -325,6 +402,110 @@ const updateCatalogItem = async (req, res, next) => {
             dietaryTagIds,
             allergenIds
         } = req.body;
+
+        // =====================================================================
+        // SECURITY: PRICE VALIDATION
+        // =====================================================================
+        
+        // Validate base price if provided
+        if (price !== undefined && price !== null) {
+            const priceNum = parseFloat(price);
+            
+            // Check if price is a valid number
+            if (isNaN(priceNum)) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        code: 'INVALID_PRICE',
+                        message: 'Price must be a valid number'
+                    }
+                });
+            }
+            
+            // Check for negative prices
+            if (priceNum < 0) {
+                logger.security('NEGATIVE_PRICE_ATTEMPT', {
+                    userId,
+                    itemId: id,
+                    attemptedPrice: priceNum,
+                    ip: req.ip
+                });
+                
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        code: 'NEGATIVE_PRICE',
+                        message: 'Price cannot be negative'
+                    }
+                });
+            }
+            
+            // Check for unreasonably high prices (configurable limit)
+            const MAX_PRICE = 10000.00; // $10,000 max
+            if (priceNum > MAX_PRICE) {
+                logger.security('EXCESSIVE_PRICE_ATTEMPT', {
+                    userId,
+                    itemId: id,
+                    attemptedPrice: priceNum,
+                    maxAllowed: MAX_PRICE,
+                    ip: req.ip
+                });
+                
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        code: 'PRICE_TOO_HIGH',
+                        message: `Price cannot exceed $${MAX_PRICE.toFixed(2)}`
+                    }
+                });
+            }
+            
+            // Validate decimal places (max 2 decimal places for currency)
+            if (!/^\d+(\.\d{1,2})?$/.test(price.toString())) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        code: 'INVALID_PRICE_FORMAT',
+                        message: 'Price must have at most 2 decimal places'
+                    }
+                });
+            }
+        }
+        
+        // Validate add-on price if provided
+        if (add_on_price !== undefined && add_on_price !== null) {
+            const addOnPriceNum = parseFloat(add_on_price);
+            
+            if (isNaN(addOnPriceNum) || addOnPriceNum < 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        code: 'INVALID_ADDON_PRICE',
+                        message: 'Add-on price must be a valid non-negative number'
+                    }
+                });
+            }
+            
+            if (addOnPriceNum > 10000.00) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        code: 'ADDON_PRICE_TOO_HIGH',
+                        message: 'Add-on price cannot exceed $10,000.00'
+                    }
+                });
+            }
+            
+            if (!/^\d+(\.\d{1,2})?$/.test(add_on_price.toString())) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        code: 'INVALID_ADDON_PRICE_FORMAT',
+                        message: 'Add-on price must have at most 2 decimal places'
+                    }
+                });
+            }
+        }
 
         // If category string provided, look up or use it
         let effectiveCategoryId = categoryId;
@@ -346,9 +527,45 @@ const updateCatalogItem = async (req, res, next) => {
 
         const oldItem = existing.rows[0];
 
+        // =====================================================================
+        // SECURITY: BUSINESS RULES - MAX PRICE CHANGE PERCENTAGE
+        // =====================================================================
+        
+        if (price !== undefined && price !== null) {
+            const oldPrice = parseFloat(oldItem.price);
+            const newPrice = parseFloat(price);
+            
+            // Only check if old price is not zero (to allow initial price setting)
+            if (oldPrice > 0 && newPrice !== oldPrice) {
+                const changePercent = Math.abs((newPrice - oldPrice) / oldPrice * 100);
+                const MAX_CHANGE_PERCENT = 200; // 200% max change (3x increase or 67% decrease)
+                
+                if (changePercent > MAX_CHANGE_PERCENT) {
+                    logger.security('EXCESSIVE_PRICE_CHANGE', {
+                        userId,
+                        itemId: id,
+                        itemName: oldItem.name,
+                        oldPrice,
+                        newPrice,
+                        changePercent: changePercent.toFixed(2),
+                        maxAllowed: MAX_CHANGE_PERCENT,
+                        ip: req.ip
+                    });
+                    
+                    return res.status(400).json({
+                        success: false,
+                        error: {
+                            code: 'EXCESSIVE_PRICE_CHANGE',
+                            message: `Price change of ${changePercent.toFixed(1)}% exceeds the maximum allowed change of ${MAX_CHANGE_PERCENT}%. Old price: $${oldPrice.toFixed(2)}, New price: $${newPrice.toFixed(2)}. Please contact a supervisor for large price changes.`
+                        }
+                    });
+                }
+            }
+        }
+
         await db.query('BEGIN');
 
-        // Update catalog item (NOW WITH add_on_price)
+        // Update catalog item
         const result = await db.query(`
             UPDATE menu_item_catalog SET
                 cafeteria_id = COALESCE($1, cafeteria_id),
@@ -376,12 +593,68 @@ const updateCatalogItem = async (req, res, next) => {
             isSpicy, spiceLevel, isFeatured, isActive, id
         ]);
 
-        // Record price change if price changed
-        if (price && parseFloat(price) !== parseFloat(oldItem.price)) {
-            await db.query(`
-                INSERT INTO catalog_item_price_history (catalog_item_id, old_price, new_price, changed_by, reason)
-                VALUES ($1, $2, $3, $4, 'Price update')
-            `, [id, oldItem.price, price, userId]);
+        // =====================================================================
+        // SECURITY: COMPREHENSIVE AUDIT LOGGING
+        // =====================================================================
+        
+        // Record base price change if price actually changed
+        if (price !== undefined && price !== null) {
+            const oldPrice = parseFloat(oldItem.price);
+            const newPrice = parseFloat(price);
+            
+            if (oldPrice !== newPrice) {
+                const changePercent = oldPrice > 0 ? ((newPrice - oldPrice) / oldPrice * 100) : 0;
+                const changeDollar = newPrice - oldPrice;
+                
+                await db.query(`
+                    INSERT INTO catalog_item_price_history 
+                    (catalog_item_id, old_price, new_price, changed_by, reason)
+                    VALUES ($1, $2, $3, $4, $5)
+                `, [
+                    id, 
+                    oldPrice, 
+                    newPrice, 
+                    userId,
+                    `Price ${changeDollar >= 0 ? 'increased' : 'decreased'} by $${Math.abs(changeDollar).toFixed(2)} (${Math.abs(changePercent).toFixed(1)}%)`
+                ]);
+                
+                // Log significant price changes for security monitoring
+                if (Math.abs(changePercent) > 50) {
+                    logger.security('SIGNIFICANT_PRICE_CHANGE', {
+                        userId,
+                        itemId: id,
+                        itemName: oldItem.name,
+                        oldPrice,
+                        newPrice,
+                        changePercent: changePercent.toFixed(2),
+                        changeDollar: changeDollar.toFixed(2),
+                        ip: req.ip
+                    });
+                }
+            }
+        }
+        
+        // Record add-on price change if changed
+        if (add_on_price !== undefined && add_on_price !== null) {
+            const oldAddOnPrice = parseFloat(oldItem.add_on_price || 0);
+            const newAddOnPrice = parseFloat(add_on_price);
+            
+            if (oldAddOnPrice !== newAddOnPrice) {
+                const changePercent = oldAddOnPrice > 0 ? ((newAddOnPrice - oldAddOnPrice) / oldAddOnPrice * 100) : 0;
+                const changeDollar = newAddOnPrice - oldAddOnPrice;
+                
+                await db.query(`
+                    INSERT INTO catalog_item_price_history 
+                    (catalog_item_id, old_price, new_price, changed_by, reason)
+                    VALUES ($1, $2, $3, $4, $5)
+                `, [
+                    id, 
+                    oldAddOnPrice, 
+                    newAddOnPrice, 
+                    userId,
+                    `Add-on price ${changeDollar >= 0 ? 'increased' : 'decreased'} by $${Math.abs(changeDollar).toFixed(2)} (${Math.abs(changePercent).toFixed(1)}%)`
+                ]);
+            }
         }
 
         // Update dietary tags if provided
@@ -406,7 +679,13 @@ const updateCatalogItem = async (req, res, next) => {
 
         await db.query('COMMIT');
 
-        logger.info('Catalog item updated:', { itemId: id, userId });
+        logger.info('Catalog item updated:', { 
+            itemId: id, 
+            itemName: oldItem.name,
+            userId,
+            priceChanged: price !== undefined && parseFloat(price) !== parseFloat(oldItem.price),
+            addOnPriceChanged: add_on_price !== undefined && parseFloat(add_on_price || 0) !== parseFloat(oldItem.add_on_price || 0)
+        });
 
         res.json({
             success: true,
