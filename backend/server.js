@@ -276,6 +276,7 @@ const menuRoutes = require('./routes/menuRoutes');
 let catalogRoutes;
 try {
   catalogRoutes = require('./routes/catalogRoutes');
+const menuCatalogRoutes = require('./routes/menuCatalogRoutes');
   console.log('✅ Catalog routes loaded successfully - v3');
 } catch (err) {
   console.error('❌ Failed to load catalog routes:', err.message);
@@ -298,6 +299,7 @@ const adminRoutes = require('./routes/adminRoutes');
 app.use('/api/auth', authRoutes);        // Authentication (login, register, etc.)
 app.use('/api/users', userRoutes);       // User management
 app.use('/api/companies', companyRoutes); // Company management
+app.use('/api/menus', menuCatalogRoutes);  // Menu-catalog linking
 app.use('/api/menus', menuRoutes);       // Menu management
 app.use('/api/daily-menus', dailyMenuRoutes); // Daily menu management
 app.use('/api/catalog', catalogRoutes);   // Dish catalog/library
