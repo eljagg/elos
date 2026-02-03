@@ -247,7 +247,11 @@ export default function KitchenDashboard() {
         is_vegetarian: itemForm.isVegetarian,
         ingredients: itemForm.ingredients,
         price: parseFloat(itemForm.basePrice) || 0,
-        add_on_price: parseFloat(itemForm.addOnPrice) || 0
+        add_on_price: parseFloat(itemForm.addOnPrice) || 0,
+        // IMPORTANT: Always send dietary tags and allergens arrays
+        // Even if empty, this clears them in the database
+        dietaryTagIds: [],  // TODO: Connect to actual dietary tag checkboxes when implemented
+        allergenIds: []     // TODO: Connect to actual allergen checkboxes when implemented
       };
 
       if (selectedItem) {

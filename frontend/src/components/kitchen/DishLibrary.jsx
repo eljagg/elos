@@ -8,15 +8,26 @@ export default function DishLibrary({ menuItems, onEdit, onDelete, onAdd }) {
   const [viewMode, setViewMode] = useState('grid');
 
   const categoryInfo = {
-    protein: { name: 'Proteins', emoji: '🍗', color: 'bg-red-50 border-red-200' },
-    carbohydrate: { name: 'Carbohydrates', emoji: '🍚', color: 'bg-yellow-50 border-yellow-200' },
-    fibre: { name: 'Vegetables', emoji: '🥗', color: 'bg-green-50 border-green-200' },
-    soup: { name: 'Soups', emoji: '🍲', color: 'bg-orange-50 border-orange-200' },
-    vegetarian: { name: 'Vegetarian', emoji: '🌱', color: 'bg-lime-50 border-lime-200' },
-    done_to_order: { name: 'Made to Order', emoji: '👨‍🍳', color: 'bg-blue-50 border-blue-200' },
-    beverage: { name: 'Beverages', emoji: '🥤', color: 'bg-cyan-50 border-cyan-200' },
-    dessert: { name: 'Desserts', emoji: '🍰', color: 'bg-pink-50 border-pink-200' },
-    specials: { name: 'Specials', emoji: '⭐', color: 'bg-purple-50 border-purple-200' }
+    // Use UPPERCASE keys to match database codes
+    'PROTEIN': { name: 'Proteins', emoji: '🍗', color: 'bg-red-50 border-red-200' },
+    'CARBS': { name: 'Carbohydrates', emoji: '🍚', color: 'bg-yellow-50 border-yellow-200' },
+    'VEG': { name: 'Vegetables', emoji: '🥗', color: 'bg-green-50 border-green-200' },
+    'SOUP': { name: 'Soups', emoji: '🍲', color: 'bg-orange-50 border-orange-200' },
+    'DRINKS': { name: 'Beverages', emoji: '🥤', color: 'bg-cyan-50 border-cyan-200' },
+    'SPECIAL': { name: 'Specials', emoji: '⭐', color: 'bg-purple-50 border-purple-200' },
+    'DESSERT': { name: 'Desserts', emoji: '🍰', color: 'bg-pink-50 border-pink-200' },
+    'SIDES': { name: 'Sides', emoji: '🍟', color: 'bg-gray-50 border-gray-200' },
+    
+    // Also support lowercase for backward compatibility
+    'protein': { name: 'Proteins', emoji: '🍗', color: 'bg-red-50 border-red-200' },
+    'carbohydrate': { name: 'Carbohydrates', emoji: '🍚', color: 'bg-yellow-50 border-yellow-200' },
+    'fibre': { name: 'Vegetables', emoji: '🥗', color: 'bg-green-50 border-green-200' },
+    'soup': { name: 'Soups', emoji: '🍲', color: 'bg-orange-50 border-orange-200' },
+    'vegetarian': { name: 'Vegetarian', emoji: '🌱', color: 'bg-lime-50 border-lime-200' },
+    'done_to_order': { name: 'Made to Order', emoji: '👨‍🍳', color: 'bg-blue-50 border-blue-200' },
+    'beverage': { name: 'Beverages', emoji: '🥤', color: 'bg-cyan-50 border-cyan-200' },
+    'dessert': { name: 'Desserts', emoji: '🍰', color: 'bg-pink-50 border-pink-200' },
+    'specials': { name: 'Specials', emoji: '⭐', color: 'bg-purple-50 border-purple-200' }
   };
 
   const groupedItems = useMemo(() => {
@@ -49,7 +60,11 @@ export default function DishLibrary({ menuItems, onEdit, onDelete, onAdd }) {
     });
     return Object.keys(counts).map(key => ({
       key,
-      ...categoryInfo[key],
+      ...(categoryInfo[key] || {
+        name: key.charAt(0).toUpperCase() + key.slice(1).toLowerCase(), // Fallback: capitalize first letter
+        emoji: '📦',
+        color: 'bg-gray-50 border-gray-200'
+      }),
       count: counts[key]
     }));
   }, [menuItems]);
