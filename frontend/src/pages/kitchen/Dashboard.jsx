@@ -243,8 +243,9 @@ export default function KitchenDashboard() {
         name: itemForm.name,
         description: itemForm.description,
         category_code: itemForm.category,
-        is_vegan: itemForm.isVegan,
-        is_vegetarian: itemForm.isVegetarian,
+        // FIXED: Use camelCase to match backend (was is_vegan, is_vegetarian)
+        isVegan: itemForm.isVegan,
+        isVegetarian: itemForm.isVegetarian,
         ingredients: itemForm.ingredients,
         price: parseFloat(itemForm.basePrice) || 0,
         add_on_price: parseFloat(itemForm.addOnPrice) || 0,
