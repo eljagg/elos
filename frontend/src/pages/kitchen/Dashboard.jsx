@@ -59,7 +59,7 @@ export default function KitchenDashboard() {
   });
   const [deliveryNotifications, setDeliveryNotifications] = useState([]);
   
-  // Loading states for preventing rapid clicks
+  // Loading states for preventing rapid clicks. Checking
   const [updatingOrders, setUpdatingOrders] = useState(new Set()); // Track which orders are being updated
   const [bulkUpdating, setBulkUpdating] = useState(false); // Track bulk operations
 
