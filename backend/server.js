@@ -276,7 +276,6 @@ const menuRoutes = require('./routes/menuRoutes');
 let catalogRoutes;
 try {
   catalogRoutes = require('./routes/catalogRoutes');
-const menuCatalogRoutes = require('./routes/menuCatalogRoutes');
   console.log('✅ Catalog routes loaded successfully - v3');
 } catch (err) {
   console.error('❌ Failed to load catalog routes:', err.message);
@@ -286,6 +285,7 @@ const orderRoutes = require('./routes/orderRoutes');
 const guestRoutes = require('./routes/guestRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const menuCatalogRoutes = require('./routes/menuCatalogRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
 const dailyMenuRoutes = require('./routes/dailyMenuRoutes');
 const adminRoutes = require('./routes/adminRoutes');
