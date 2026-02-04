@@ -1,6 +1,6 @@
 process.on("uncaughtException", (err) => { console.error("[ERROR] UNCAUGHT EXCEPTION:", err); process.exit(1); });
 process.on("unhandledRejection", (err) => { console.error("[ERROR] UNHANDLED REJECTION:", err); process.exit(1); });
-console.log("[STARTUP] Server.js is loading...");
+process.stdout.write("[STARTUP] Server.js loading...\n");
 
 // === STARTUP DIAGNOSTICS ===
 console.log("=== ELOS SERVER v4 STARTING ===");
@@ -312,6 +312,12 @@ app.use('/api/messages', messageRoutes); // Messaging system
 app.use('/api/reports', reportRoutes);   // Reports and analytics
 app.use('/api/delivery', deliveryRoutes); // Delivery management
 app.use('/api/admin', adminRoutes);      // Admin functions
+
+// PHASE 3 TEST: Direct inline route
+app.get("/api/menu-catalog-test", (req, res) => {
+  res.json({ success: true, message: "Route works!", timestamp: new Date() });
+});
+
 
 // ============================================================================
 // ============================================================================
