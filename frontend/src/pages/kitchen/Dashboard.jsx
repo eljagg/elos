@@ -310,7 +310,7 @@ export default function KitchenDashboard() {
   
   const loadMenuCatalogItems = async (menuId) => {
     try {
-      const response = await fetch(`/api/menus/${menuId}/catalog-items`, {
+      const response = await fetch(`/api/menu-catalog/${menuId}/catalog-items`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -327,7 +327,7 @@ export default function KitchenDashboard() {
   
   const loadAvailableCatalogItems = async (menuId) => {
     try {
-      const response = await fetch(`/api/menus/${menuId}/available-catalog-items`, {
+      const response = await fetch(`/api/menu-catalog/${menuId}/available-catalog-items`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -355,7 +355,7 @@ export default function KitchenDashboard() {
     }
     
     try {
-      const response = await fetch(`/api/menus/${selectedMenuForItems.id}/catalog-items`, {
+      const response = await fetch(`/api/menu-catalog/${selectedMenuForItems.id}/catalog-items`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -385,7 +385,7 @@ export default function KitchenDashboard() {
     if (!window.confirm('Remove this item from the menu?')) return;
     
     try {
-      const response = await fetch(`/api/menus/${selectedMenuForItems.id}/catalog-items/${catalogItemId}`, {
+      const response = await fetch(`/api/menu-catalog/${selectedMenuForItems.id}/catalog-items/${catalogItemId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

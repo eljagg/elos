@@ -299,7 +299,7 @@ const adminRoutes = require('./routes/adminRoutes');
 app.use('/api/auth', authRoutes);        // Authentication (login, register, etc.)
 app.use('/api/users', userRoutes);       // User management
 app.use('/api/companies', companyRoutes); // Company management
-app.use('/api/menus', menuCatalogRoutes);  // Menu-catalog linking
+app.use('/api/menu-catalog', menuCatalogRoutes);  // Menu-catalog linking
 app.use('/api/menus', menuRoutes);       // Menu management
 app.use('/api/daily-menus', dailyMenuRoutes); // Daily menu management
 app.use('/api/catalog', catalogRoutes);   // Dish catalog/library
