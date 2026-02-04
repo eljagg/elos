@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-console.log('🔥 MENU CATALOG ROUTES LOADING...');
+console.log('[ROUTES] Menu catalog routes loading');
 const { authenticate, requireRole } = require('../middleware/auth');
 const {
   getMenuCatalogItems,
