@@ -3,3 +3,6 @@
 Error: Database connection failed
     at startServer (/workspaces/elos/backend/server.js:373:19)
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+2026-02-04 02:34:07 [INFO]: 🚀 Checking database connection... {"service":"elos-api","type":"startup"}
+2026-02-04 02:34:08 [INFO]: 🚀 ELOS API Server started {"service":"elos-api","type":"startup","port":"5000","environment":"development","nodeVersion":"v24.11.1"}
+2026-02-04 02:34:46 [INFO]: 🛑 Received SIGINT, starting graceful shutdown... {"service":"elos-api","type":"shutdown"}

@@ -1311,6 +1311,7 @@ const getKitchenOrders = async (req, res, next) => {
                     id: order.id,
                     orderNumber: order.order_number,
                     mealType: order.meal_type,
+                    orderDate: order.order_date,
                     status: order.status,
                     userName: `${order.user_first_name} ${order.user_last_name}`,
                     companyName: order.company_name,
