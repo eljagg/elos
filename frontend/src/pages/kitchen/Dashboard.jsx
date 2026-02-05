@@ -38,6 +38,41 @@ export default function KitchenDashboard() {
       else if (path.includes('/menus')) setActiveTab('menus');
       else if (path.includes('/items')) setActiveTab('items');
       else if (path.includes('/issues')) setActiveTab('issues');
+
+  // Delete menu handler
+  const handleDeleteMenu = async (menu) => {
+    setMenuToDelete(menu);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteMenu = async () => {
+    if (!menuToDelete) return;
+    
+    try {
+      const response = await fetch(`/api/menus/${menuToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete menu');
+      }
+
+      // Remove from state
+      setMenus(menus.filter(m => m.id !== menuToDelete.id));
+      
+      // Close modal
+      setShowDeleteConfirm(false);
+      setMenuToDelete(null);
+      
+      alert('Menu deleted successfully');
+    } catch (error) {
+      console.error('Error deleting menu:', error);
+      alert('Failed to delete menu. Please try again.');
+    }
+  };
       else if (path.includes('/messages')) setActiveTab('messages');
       else setActiveTab('orders'); // Default tab
     }
@@ -69,6 +104,9 @@ export default function KitchenDashboard() {
   const [selectedMenu, setSelectedMenu] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedIssue, setSelectedIssue] = useState(null);
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [menuToDelete, setMenuToDelete] = useState(null);
   const [menuForm, setMenuForm] = useState({ name: '', description: '', mealType: 'lunch', menuType: 'regular', isActive: true });
   const [itemForm, setItemForm] = useState({ 
     name: '', 
@@ -834,6 +872,13 @@ export default function KitchenDashboard() {
                       >
                         📋 Manage Items
                       </button>
+                      <span className={`text-sm ${colors.textMuted}`}>•</span>
+                      <button 
+                        onClick={() => handleDeleteMenu(m)} 
+                        className="text-red-600 text-sm hover:underline font-medium"
+                      >
+                        🗑️ Delete
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1189,6 +1234,36 @@ export default function KitchenDashboard() {
                         <p className={`text-xs ${colors.textMuted} mt-2`}>
                           📦 {item.category}
                         </p>
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-md`}>
+            <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>Delete Menu</h2>
+            <p className={`mb-6 ${colors.textSecondary}`}>
+              Are you sure you want to delete <strong>{menuToDelete?.name}</strong>?
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setMenuToDelete(null);
+                }}
+                className={`px-4 py-2 border ${colors.border} rounded-lg`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteMenu}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Delete Menu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
                       )}
                     </div>
                   );
