@@ -1,6 +1,6 @@
 {
   "name": "elos",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Employee Lunch Ordering System",
   "private": true,
   "main": "server.js",
