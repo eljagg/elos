@@ -142,22 +142,26 @@ app.use(cors(corsOptions));
  * This limits how many requests a single IP can make in a given time period.
  * Essential for preventing brute-force attacks and DoS.
  */
+// Apply rate limiting ONLY to unauthenticated requests
 const generalLimiter = rateLimit({
     windowMs: security.rateLimit.general.windowMs,
     max: security.rateLimit.general.max,
     message: security.rateLimit.general.message,
-    standardHeaders: true, // Return rate limit info in headers
-    legacyHeaders: false,  // Disable X-RateLimit-* headers
-    // Skip rate limiting for certain IPs (e.g., monitoring services)
+    standardHeaders: true,
+    legacyHeaders: false,
+    // Skip rate limiting for authenticated users and certain IPs
     skip: (req) => {
+        // Skip if user is authenticated (has valid token)
+        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+            return true;
+        }
+        // Skip certain IPs (monitoring, etc.)
         const skipIPs = process.env.RATE_LIMIT_SKIP_IPS?.split(',') || [];
         return skipIPs.includes(req.ip);
     }
 });
-
 // Apply rate limiting to all requests
 app.use('/api/', generalLimiter);
-
 // ============================================================================
 // REQUEST PROCESSING MIDDLEWARE
 // ============================================================================
