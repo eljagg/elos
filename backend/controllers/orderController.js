@@ -1513,6 +1513,8 @@ const createDailyMenuOrder = async (req, res, next) => {
         // Total is number of meals * meal price
         const totalAmount = numMeals * mealPrice;
         
+        // For daily menu orders, individual items don't have separate prices
+        // The total is based on meal_price * number of meals
         const orderItems = items.map(item => {
             const dbItem = itemsResult.rows.find(r => r.id === item.menuItemId);
             return {
@@ -1520,6 +1522,7 @@ const createDailyMenuOrder = async (req, res, next) => {
                 catalogItemId: dbItem.catalog_item_id,
                 name: dbItem.name,
                 quantity: item.quantity,
+                unitPrice: 0, // Daily menu uses flat meal pricing, not per-item
                 specialInstructions: item.specialInstructions || ''
             };
         });

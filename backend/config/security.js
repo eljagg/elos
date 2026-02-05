@@ -46,14 +46,33 @@ dotenv.config();
  * This approach balances security (short access token) with usability
  * (users don't have to log in constantly).
  */
+
+// Validate JWT secrets - NEVER use defaults in production
+const DEFAULT_ACCESS_SECRET = 'CHANGE_THIS_TO_A_SECURE_RANDOM_STRING_64_CHARS_MIN';
+const DEFAULT_REFRESH_SECRET = 'CHANGE_THIS_TO_ANOTHER_SECURE_RANDOM_STRING_64_CHARS';
+
+const accessSecret = process.env.JWT_ACCESS_SECRET || DEFAULT_ACCESS_SECRET;
+const refreshSecret = process.env.JWT_REFRESH_SECRET || DEFAULT_REFRESH_SECRET;
+
+// Warn or error if using default secrets
+if (process.env.NODE_ENV === 'production') {
+    if (accessSecret === DEFAULT_ACCESS_SECRET || refreshSecret === DEFAULT_REFRESH_SECRET) {
+        console.error('CRITICAL SECURITY ERROR: JWT secrets are not configured!');
+        console.error('Please set JWT_ACCESS_SECRET and JWT_REFRESH_SECRET environment variables.');
+        process.exit(1);
+    }
+} else if (accessSecret === DEFAULT_ACCESS_SECRET || refreshSecret === DEFAULT_REFRESH_SECRET) {
+    console.warn('⚠️  WARNING: Using default JWT secrets. This is only acceptable in development.');
+}
+
 const jwtConfig = {
     // Secret key for signing access tokens
     // IMPORTANT: Use a long, random string in production!
     // Generate with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-    accessSecret: process.env.JWT_ACCESS_SECRET || 'CHANGE_THIS_TO_A_SECURE_RANDOM_STRING_64_CHARS_MIN',
+    accessSecret: accessSecret,
     
     // Secret key for signing refresh tokens (different from access!)
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'CHANGE_THIS_TO_ANOTHER_SECURE_RANDOM_STRING_64_CHARS',
+    refreshSecret: refreshSecret,
     
     // Access token expiration (short for security)
     // Format: '15m' = 15 minutes, '1h' = 1 hour, '7d' = 7 days

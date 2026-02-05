@@ -69,7 +69,31 @@ export default function EmployeeDashboard() {
   const cartTotal = cart.reduce((sum, item) => sum + (parseFloat(item.price) || 0) * item.quantity, 0);
 
   const handlePlaceOrder = async () => {
-    try { await orderAPI.createOrder({ items: cart.map(c => ({ menuItemId: c.id, quantity: c.quantity, specialInstructions: c.note || '' })), notes: orderNotes }); toast.success('Order placed!'); setCart([]); setOrderNotes(''); setShowCartModal(false); loadData(); } catch { toast.error('Failed'); }
+    if (!selectedCafeteria) {
+      toast.error('Please select a cafeteria');
+      return;
+    }
+    if (cart.length === 0) {
+      toast.error('Your cart is empty');
+      return;
+    }
+    try { 
+      await orderAPI.createDailyOrder({ 
+        cafeteriaId: selectedCafeteria,
+        orderDate: selectedDate.toISOString().split('T')[0],
+        items: cart.map(c => ({ menuItemId: c.id, quantity: c.quantity, specialInstructions: c.note || '' })), 
+        notes: orderNotes,
+        mealCount: 1
+      }); 
+      toast.success('Order placed!'); 
+      setCart([]); 
+      setOrderNotes(''); 
+      setShowCartModal(false); 
+      loadData(); 
+    } catch (error) { 
+      console.error('Order failed:', error);
+      toast.error(error.response?.data?.error?.message || 'Failed to place order'); 
+    }
   };
 
   const handleCancelOrder = async (order) => {

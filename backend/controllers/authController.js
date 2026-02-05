@@ -449,7 +449,8 @@ const login = async (req, res, next) => {
         }
         
         // Check if account is temporarily disabled
-        if (user.disabled_reason && new Date(user.disabled_reason) > new Date()) {
+        // disabled_reason is a text field explaining why the account is disabled
+        if (user.disabled_reason) {
             logger.security('LOGIN_FAILED', { email: normalizedEmail, reason: 'ACCOUNT_DISABLED', ip: clientIp });
             
             return res.status(403).json({
@@ -1356,7 +1357,7 @@ const verify2FA = async (req, res, next) => {
         await db.query(
             `UPDATE users 
              SET failed_login_attempts = 0, last_login_at = CURRENT_TIMESTAMP
-             WHERE id = $2`,
+             WHERE id = $1`,
             [user.id]
         );
         
