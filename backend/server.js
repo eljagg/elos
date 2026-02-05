@@ -521,3 +521,4 @@ startServer();
 
 // Export app for testing
 module.exports = app;
+// Force rebuild Thu Feb  5 01:14:55 UTC 2026
