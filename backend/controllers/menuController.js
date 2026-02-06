@@ -764,6 +764,157 @@ const deleteMenu = async (req, res, next) => {
     }
 };
 
+/**
+ * PUT /api/menus/:id/archive
+ * Archive a published menu (preserves historical data)
+ */
+const archiveMenu = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        
+        // Check if menu exists
+        const menuResult = await db.query(
+            'SELECT id, name, status FROM menus WHERE id = $1',
+            [id]
+        );
+        
+        if (menuResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: {
+                    code: 'MENU_NOT_FOUND',
+                    message: 'Menu not found'
+                }
+            });
+        }
+        
+        const menu = menuResult.rows[0];
+        
+        // Can archive from any status except already archived
+        if (menu.status === 'archived') {
+            return res.status(400).json({
+                success: false,
+                error: {
+                    code: 'ALREADY_ARCHIVED',
+                    message: 'Menu is already archived'
+                }
+            });
+        }
+        
+        // Archive the menu
+        await db.query(
+            `UPDATE menus 
+             SET status = 'archived', 
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $1`,
+            [id]
+        );
+        
+        res.status(200).json({
+            success: true,
+            message: `Menu "${menu.name}" has been archived`
+        });
+        
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * PUT /api/menus/:id/restore
+ * Restore an archived menu to draft status
+ */
+const restoreMenu = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        
+        // Check if menu exists and is archived
+        const menuResult = await db.query(
+            'SELECT id, name, status FROM menus WHERE id = $1',
+            [id]
+        );
+        
+        if (menuResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: {
+                    code: 'MENU_NOT_FOUND',
+                    message: 'Menu not found'
+                }
+            });
+        }
+        
+        const menu = menuResult.rows[0];
+        
+        if (menu.status !== 'archived') {
+            return res.status(400).json({
+                success: false,
+                error: {
+                    code: 'NOT_ARCHIVED',
+                    message: 'Only archived menus can be restored'
+                }
+            });
+        }
+        
+        // Restore to draft status
+        await db.query(
+            `UPDATE menus 
+             SET status = 'draft', 
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $1`,
+            [id]
+        );
+        
+        res.status(200).json({
+            success: true,
+            message: `Menu "${menu.name}" has been restored to draft status`
+        });
+        
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * GET /api/menus/archived
+ * Get all archived menus
+ */
+const getArchivedMenus = async (req, res, next) => {
+    try {
+        const result = await db.query(
+            `SELECT m.*, 
+                    u.first_name || ' ' || u.last_name as created_by_name,
+                    (SELECT COUNT(*) FROM menu_items mi WHERE mi.menu_id = m.id AND mi.is_active = true) as item_count
+             FROM menus m
+             LEFT JOIN users u ON m.created_by = u.id
+             WHERE m.status = 'archived'
+             ORDER BY m.updated_at DESC`
+        );
+        
+        res.status(200).json({
+            success: true,
+            data: {
+                menus: result.rows.map(menu => ({
+                    id: menu.id,
+                    name: menu.name,
+                    description: menu.description,
+                    weekStartDate: menu.week_start_date,
+                    weekEndDate: menu.week_end_date,
+                    status: menu.status,
+                    itemCount: parseInt(menu.item_count) || 0,
+                    createdBy: menu.created_by_name,
+                    createdAt: menu.created_at,
+                    updatedAt: menu.updated_at,
+                    publishedAt: menu.published_at
+                }))
+            }
+        });
+        
+    } catch (error) {
+        next(error);
+    }
+};
+
 // ============================================================================
 // MENU ITEMS
 // ============================================================================
@@ -1134,6 +1285,9 @@ module.exports = {
     publishMenu,
     unpublishMenu,
     deleteMenu,
+    archiveMenu,
+    restoreMenu,
+    getArchivedMenus,
     
     // Menu Items
     addMenuItem,

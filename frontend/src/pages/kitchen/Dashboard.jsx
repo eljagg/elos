@@ -51,6 +51,11 @@ export default function KitchenDashboard() {
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [menuToDelete, setMenuToDelete] = useState(null);
+  // Archive state
+  const [menusSubTab, setMenusSubTab] = useState('active'); // 'active' or 'archived'
+  const [archivedMenus, setArchivedMenus] = useState([]);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [menuToArchive, setMenuToArchive] = useState(null);
   const [menuForm, setMenuForm] = useState({ name: '', description: '', mealType: 'lunch', menuType: 'regular', isActive: true });
   const [itemForm, setItemForm] = useState({ 
     name: '', 
@@ -120,6 +125,85 @@ export default function KitchenDashboard() {
       toast.error('Failed to delete menu. Please try again.');
     }
   };
+
+  // Archive menu handlers
+  const handleArchiveMenu = (menu) => {
+    setMenuToArchive(menu);
+    setShowArchiveConfirm(true);
+  };
+
+  const confirmArchiveMenu = async () => {
+    if (!menuToArchive) return;
+    
+    try {
+      const response = await fetch(`/api/menus/${menuToArchive.id}/archive`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error?.message || 'Failed to archive menu');
+      }
+
+      // Remove from active menus
+      setMenus(menus.filter(m => m.id !== menuToArchive.id));
+      
+      // Close modal
+      setShowArchiveConfirm(false);
+      setMenuToArchive(null);
+      
+      toast.success('Menu archived successfully');
+    } catch (error) {
+      console.error('Error archiving menu:', error);
+      toast.error(error.message || 'Failed to archive menu');
+    }
+  };
+
+  const loadArchivedMenus = async () => {
+    try {
+      const response = await fetch('/api/menus/archived', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setArchivedMenus(data.data.menus || []);
+      }
+    } catch (error) {
+      console.error('Error loading archived menus:', error);
+      toast.error('Failed to load archived menus');
+    }
+  };
+
+  const handleRestoreMenu = async (menu) => {
+    try {
+      const response = await fetch(`/api/menus/${menu.id}/restore`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error?.message || 'Failed to restore menu');
+      }
+
+      // Remove from archived and reload active menus
+      setArchivedMenus(archivedMenus.filter(m => m.id !== menu.id));
+      loadData(); // Reload active menus
+      
+      toast.success('Menu restored to draft status');
+    } catch (error) {
+      console.error('Error restoring menu:', error);
+      toast.error(error.message || 'Failed to restore menu');
+    }
+  };
+
   const [issueResponse, setIssueResponse] = useState('');
   
   // Phase 3: Menu-Catalog Item Management
@@ -826,65 +910,152 @@ export default function KitchenDashboard() {
 
           {activeTab === 'menus' && !showMenuItemsView && (
             <div className="space-y-4">
-              <div className="flex justify-end">
-                <button 
-                  onClick={() => { 
-                    setSelectedMenu(null); 
-                    setMenuForm({ name: '', description: '', mealType: 'lunch', menuType: 'regular', isActive: true }); 
-                    setShowMenuModal(true); 
-                  }} 
-                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
-                >
-                  + Add Menu
-                </button>
+              {/* Sub-tabs for Active/Archived */}
+              <div className="flex items-center justify-between">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setMenusSubTab('active')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      menusSubTab === 'active' 
+                        ? 'bg-orange-600 text-white' 
+                        : `${colors.bgSecondary} ${colors.textSecondary} hover:bg-orange-100`
+                    }`}
+                  >
+                    Active Menus ({menus.length})
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenusSubTab('archived');
+                      loadArchivedMenus();
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      menusSubTab === 'archived' 
+                        ? 'bg-gray-600 text-white' 
+                        : `${colors.bgSecondary} ${colors.textSecondary} hover:bg-gray-100`
+                    }`}
+                  >
+                    📦 Archived ({archivedMenus.length})
+                  </button>
+                </div>
+                {menusSubTab === 'active' && (
+                  <button 
+                    onClick={() => { 
+                      setSelectedMenu(null); 
+                      setMenuForm({ name: '', description: '', mealType: 'lunch', menuType: 'regular', isActive: true }); 
+                      setShowMenuModal(true); 
+                    }} 
+                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+                  >
+                    + Add Menu
+                  </button>
+                )}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {menus.map(m => (
-                  <div key={m.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className={`font-semibold ${colors.textPrimary}`}>{m.name}</h3>
-                      <span className={`px-2 py-1 text-xs rounded-full ${m.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                        {m.is_active ? 'Active' : 'Inactive'}
-                      </span>
+
+              {/* Active Menus */}
+              {menusSubTab === 'active' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {menus.length > 0 ? menus.map(m => (
+                    <div key={m.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className={`font-semibold ${colors.textPrimary}`}>{m.name}</h3>
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          m.status === 'published' ? 'bg-green-100 text-green-700' : 
+                          m.status === 'draft' ? 'bg-yellow-100 text-yellow-700' : 
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {m.status || (m.is_active ? 'Active' : 'Draft')}
+                        </span>
+                      </div>
+                      <p className={`text-sm ${colors.textMuted} mb-3`}>
+                        {m.meal_type} • {m.menu_type || 'Regular'}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <button 
+                          onClick={() => { 
+                            setSelectedMenu(m); 
+                            setMenuForm({ 
+                              name: m.name, 
+                              description: m.description || '', 
+                              mealType: m.meal_type, 
+                              menuType: m.menu_type || 'regular', 
+                              isActive: m.is_active 
+                            }); 
+                            setShowMenuModal(true); 
+                          }} 
+                          className="text-blue-600 text-sm hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <span className={`text-sm ${colors.textMuted}`}>•</span>
+                        <button 
+                          onClick={() => handleManageMenuItems(m)} 
+                          className="text-orange-600 text-sm hover:underline font-medium"
+                        >
+                          📋 Manage Items
+                        </button>
+                        <span className={`text-sm ${colors.textMuted}`}>•</span>
+                        {/* Show Delete only for draft menus, Archive for published */}
+                        {m.status === 'published' || m.is_active ? (
+                          <button 
+                            onClick={() => handleArchiveMenu(m)} 
+                            className="text-amber-600 text-sm hover:underline font-medium"
+                          >
+                            📦 Archive
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => handleDeleteMenu(m)} 
+                            className="text-red-600 text-sm hover:underline font-medium"
+                          >
+                            🗑️ Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <p className={`text-sm ${colors.textMuted} mb-3`}>
-                      {m.meal_type} • {m.menu_type || 'Regular'}
-                    </p>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => { 
-                          setSelectedMenu(m); 
-                          setMenuForm({ 
-                            name: m.name, 
-                            description: m.description || '', 
-                            mealType: m.meal_type, 
-                            menuType: m.menu_type || 'regular', 
-                            isActive: m.is_active 
-                          }); 
-                          setShowMenuModal(true); 
-                        }} 
-                        className="text-blue-600 text-sm hover:underline"
-                      >
-                        Edit
-                      </button>
-                      <span className={`text-sm ${colors.textMuted}`}>•</span>
-                      <button 
-                        onClick={() => handleManageMenuItems(m)} 
-                        className="text-orange-600 text-sm hover:underline font-medium"
-                      >
-                        📋 Manage Items
-                      </button>
-                      <span className={`text-sm ${colors.textMuted}`}>•</span>
-                      <button 
-                        onClick={() => handleDeleteMenu(m)} 
-                        className="text-red-600 text-sm hover:underline font-medium"
-                      >
-                        🗑️ Delete
-                      </button>
+                  )) : (
+                    <div className="col-span-3 text-center py-8">
+                      <p className={colors.textMuted}>No active menus. Click "+ Add Menu" to create one.</p>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  )}
+                </div>
+              )}
+
+              {/* Archived Menus */}
+              {menusSubTab === 'archived' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {archivedMenus.length > 0 ? archivedMenus.map(m => (
+                    <div key={m.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard} opacity-75`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className={`font-semibold ${colors.textPrimary}`}>{m.name}</h3>
+                        <span className="px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-600">
+                          Archived
+                        </span>
+                      </div>
+                      <p className={`text-sm ${colors.textMuted} mb-1`}>
+                        {m.itemCount || 0} items
+                      </p>
+                      <p className={`text-xs ${colors.textMuted} mb-3`}>
+                        Archived: {m.updatedAt ? new Date(m.updatedAt).toLocaleDateString() : 'N/A'}
+                      </p>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleRestoreMenu(m)} 
+                          className="text-green-600 text-sm hover:underline font-medium"
+                        >
+                          ↩️ Restore to Draft
+                        </button>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="col-span-3 text-center py-8">
+                      <p className={colors.textMuted}>No archived menus.</p>
+                      <p className={`text-sm ${colors.textMuted} mt-1`}>
+                        Published menus that are no longer needed can be archived here for historical reference.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
           
@@ -1290,6 +1461,38 @@ export default function KitchenDashboard() {
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
                 Delete Menu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Archive Confirmation Modal */}
+      {showArchiveConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-md`}>
+            <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>📦 Archive Menu</h2>
+            <p className={`mb-4 ${colors.textSecondary}`}>
+              Are you sure you want to archive <strong>{menuToArchive?.name}</strong>?
+            </p>
+            <p className={`mb-6 text-sm ${colors.textMuted}`}>
+              Archived menus are preserved for historical records and can be restored later if needed.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowArchiveConfirm(false);
+                  setMenuToArchive(null);
+                }}
+                className={`px-4 py-2 border ${colors.border} rounded-lg`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmArchiveMenu}
+                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+              >
+                Archive Menu
               </button>
             </div>
           </div>
