@@ -1279,46 +1279,6 @@ export default function KitchenDashboard() {
           </div>
         </div>
       )}
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className={`text-lg ${colors.textMuted} mb-2`}>
-                  No available items
-                </p>
-                <p className={`text-sm ${colors.textMuted}`}>
-                  All catalog items are already in this menu
-                </p>
-              </div>
-            )}
-            
-            {/* Buttons */}
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAddItemsModal(false);
-                  setSelectedCatalogItems([]);
-                  setAvailableCatalogItems([]);
-                }}
-                className={`px-4 py-2 border ${colors.border} rounded-lg`}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddItemsToMenu}
-                disabled={selectedCatalogItems.length === 0}
-                className={`px-4 py-2 rounded-lg ${selectedCatalogItems.length > 0 ? 'bg-orange-600 text-white hover:bg-orange-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
-              >
-                Add {selectedCatalogItems.length > 0 ? `${selectedCatalogItems.length} ` : ''}Item(s) to Menu
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showIssueModal && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-lg`}><h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>Respond to Issue</h2><div className={`${colors.bgSecondary} rounded-lg p-4 mb-4`}><h3 className={colors.textPrimary}>{selectedIssue?.subject}</h3><p className={`text-sm ${colors.textMuted}`}>{selectedIssue?.message}</p></div><textarea placeholder="Your response..." value={issueResponse} onChange={e => setIssueResponse(e.target.value)} className={`w-full px-4 py-2 border ${colors.border} rounded-lg mb-4`} rows="4" /><div className="flex justify-end gap-3"><button onClick={() => setShowIssueModal(false)} className={`px-4 py-2 border ${colors.border} rounded-lg`}>Cancel</button><button onClick={handleRespondIssue} className="px-4 py-2 bg-green-600 text-white rounded-lg">Resolve</button></div></div></div>}
     </div>
