@@ -1246,6 +1246,22 @@ export default function KitchenDashboard() {
                 <p className={`${colors.textMuted}`}>All catalog items are already in this menu</p>
               </div>
             )}
+            {/* Modal Buttons */}
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => { setShowAddItemsModal(false); setSelectedCatalogItems([]); setAvailableCatalogItems([]); }}
+                className={`px-4 py-2 border ${colors.border} rounded-lg`}
+              >
+                Close
+              </button>
+              <button
+                onClick={handleAddItemsToMenu}
+                disabled={selectedCatalogItems.length === 0}
+                className={`px-4 py-2 rounded-lg ${selectedCatalogItems.length > 0 ? "bg-orange-600 text-white hover:bg-orange-700" : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}
+              >
+                Add Selected Items
+              </button>
+            </div>
           </div>
         </div>
       )}
