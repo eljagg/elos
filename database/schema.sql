@@ -682,6 +682,153 @@ INSERT INTO allergens (name, code, description, icon, severity_level) VALUES
     ('Soy', 'SOY', 'Soybeans and soy products', '🫘', 2),
     ('Sesame', 'SESAME', 'Sesame seeds and oil', '⚪', 2);
 
+-- ============================================================================
+-- CATALOG SYSTEM TABLES
+-- ============================================================================
+-- The catalog system provides a central "dish library" that can be reused
+-- across multiple menus. This separates the concept of "what dishes exist"
+-- from "what dishes are on this week's menu".
+
+-- ----------------------------------------------------------------------------
+-- Table: menu_item_catalog
+-- Purpose: Central dish library - master list of all available menu items
+-- This is the single source of truth for dish information
+-- ----------------------------------------------------------------------------
+CREATE TABLE menu_item_catalog (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    
+    -- Which cafeteria this item belongs to (NULL = available to all)
+    cafeteria_id UUID REFERENCES cafeterias(id) ON DELETE SET NULL,
+    
+    -- Category (Protein, Carb, Vegetable, etc.)
+    category_id UUID REFERENCES menu_categories(id) ON DELETE SET NULL,
+    
+    -- Legacy category field for backward compatibility
+    category VARCHAR(50),
+    
+    -- Item details
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    ingredients TEXT,
+    
+    -- Pricing
+    price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    add_on_price DECIMAL(10,2) DEFAULT 0.00,
+    
+    -- Size-based pricing (optional)
+    has_sizes BOOLEAN DEFAULT FALSE,
+    size_small_price DECIMAL(10,2),
+    size_medium_price DECIMAL(10,2),
+    size_large_price DECIMAL(10,2),
+    
+    -- Image
+    image_url VARCHAR(500),
+    
+    -- Preparation info
+    prep_time_minutes INTEGER DEFAULT 15,
+    
+    -- Nutritional info
+    calories INTEGER,
+    protein_grams DECIMAL(10,2),
+    carbs_grams DECIMAL(10,2),
+    fat_grams DECIMAL(10,2),
+    
+    -- Dietary flags
+    is_vegetarian BOOLEAN DEFAULT FALSE,
+    is_vegan BOOLEAN DEFAULT FALSE,
+    is_gluten_free BOOLEAN DEFAULT FALSE,
+    is_dairy_free BOOLEAN DEFAULT FALSE,
+    is_nut_free BOOLEAN DEFAULT FALSE,
+    is_halal BOOLEAN DEFAULT FALSE,
+    is_kosher BOOLEAN DEFAULT FALSE,
+    
+    -- Spice info
+    is_spicy BOOLEAN DEFAULT FALSE,
+    spice_level INTEGER DEFAULT 0 CHECK (spice_level >= 0 AND spice_level <= 5),
+    
+    -- Display flags
+    is_featured BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    display_order INTEGER DEFAULT 0,
+    
+    -- Audit fields
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE menu_item_catalog IS 'Central dish library - master list of all available menu items';
+COMMENT ON COLUMN menu_item_catalog.cafeteria_id IS 'NULL means item is available to all cafeterias';
+COMMENT ON COLUMN menu_item_catalog.add_on_price IS 'Additional price when item is added as extra';
+COMMENT ON COLUMN menu_item_catalog.spice_level IS 'Spice level from 0 (none) to 5 (very hot)';
+
+CREATE INDEX idx_catalog_cafeteria ON menu_item_catalog(cafeteria_id);
+CREATE INDEX idx_catalog_category ON menu_item_catalog(category_id);
+CREATE INDEX idx_catalog_active ON menu_item_catalog(is_active);
+CREATE INDEX idx_catalog_name ON menu_item_catalog(name);
+CREATE INDEX idx_catalog_category_code ON menu_item_catalog(category);
+
+-- ----------------------------------------------------------------------------
+-- Table: catalog_item_dietary_tags
+-- Purpose: Links catalog items to dietary tags (many-to-many)
+-- ----------------------------------------------------------------------------
+CREATE TABLE catalog_item_dietary_tags (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    catalog_item_id UUID NOT NULL REFERENCES menu_item_catalog(id) ON DELETE CASCADE,
+    dietary_tag_id UUID NOT NULL REFERENCES dietary_tags(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    UNIQUE(catalog_item_id, dietary_tag_id)
+);
+
+COMMENT ON TABLE catalog_item_dietary_tags IS 'Links catalog items to dietary tags';
+
+CREATE INDEX idx_catalog_dietary_item ON catalog_item_dietary_tags(catalog_item_id);
+CREATE INDEX idx_catalog_dietary_tag ON catalog_item_dietary_tags(dietary_tag_id);
+
+-- ----------------------------------------------------------------------------
+-- Table: catalog_item_allergens
+-- Purpose: Links catalog items to allergens (many-to-many)
+-- ----------------------------------------------------------------------------
+CREATE TABLE catalog_item_allergens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    catalog_item_id UUID NOT NULL REFERENCES menu_item_catalog(id) ON DELETE CASCADE,
+    allergen_id UUID NOT NULL REFERENCES allergens(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    UNIQUE(catalog_item_id, allergen_id)
+);
+
+COMMENT ON TABLE catalog_item_allergens IS 'Links catalog items to allergens for allergy warnings';
+
+CREATE INDEX idx_catalog_allergen_item ON catalog_item_allergens(catalog_item_id);
+CREATE INDEX idx_catalog_allergen_tag ON catalog_item_allergens(allergen_id);
+
+-- ----------------------------------------------------------------------------
+-- Table: catalog_item_price_history
+-- Purpose: Audit trail of price changes for catalog items
+-- ----------------------------------------------------------------------------
+CREATE TABLE catalog_item_price_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    catalog_item_id UUID NOT NULL REFERENCES menu_item_catalog(id) ON DELETE CASCADE,
+    
+    -- Price tracking
+    old_price DECIMAL(10,2),
+    new_price DECIMAL(10,2) NOT NULL,
+    
+    -- Who changed it and why
+    changed_by UUID REFERENCES users(id),
+    reason VARCHAR(255),
+    
+    -- When it was changed
+    changed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE catalog_item_price_history IS 'Audit trail of price changes for catalog items';
+
+CREATE INDEX idx_price_history_item ON catalog_item_price_history(catalog_item_id);
+CREATE INDEX idx_price_history_date ON catalog_item_price_history(changed_at);
+
 -- ----------------------------------------------------------------------------
 -- Table: menus
 -- Purpose: Weekly menu containers
@@ -725,9 +872,48 @@ CREATE INDEX idx_menus_week_start_date ON menus(week_start_date);
 CREATE INDEX idx_menus_status ON menus(status);
 
 -- ----------------------------------------------------------------------------
+-- Table: menu_catalog_items
+-- Purpose: Links catalog items to weekly menus with optional price overrides
+-- ----------------------------------------------------------------------------
+CREATE TABLE menu_catalog_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    
+    -- Which menu this link belongs to
+    menu_id UUID NOT NULL REFERENCES menus(id) ON DELETE CASCADE,
+    
+    -- Which catalog item is linked
+    catalog_item_id UUID NOT NULL REFERENCES menu_item_catalog(id) ON DELETE CASCADE,
+    
+    -- Price overrides (NULL = use catalog price)
+    override_price DECIMAL(10,2),
+    override_add_on_price DECIMAL(10,2),
+    
+    -- Availability override for this specific menu
+    is_available BOOLEAN DEFAULT TRUE,
+    
+    -- Display order within this menu
+    display_order INTEGER DEFAULT 0,
+    
+    -- Audit fields
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Prevent duplicate items in same menu
+    UNIQUE(menu_id, catalog_item_id)
+);
+
+COMMENT ON TABLE menu_catalog_items IS 'Links catalog items to weekly menus with optional price overrides';
+COMMENT ON COLUMN menu_catalog_items.override_price IS 'NULL means use price from catalog';
+
+CREATE INDEX idx_menu_catalog_menu ON menu_catalog_items(menu_id);
+CREATE INDEX idx_menu_catalog_item ON menu_catalog_items(catalog_item_id);
+
+-- ----------------------------------------------------------------------------
 -- Table: menu_items
 -- Purpose: Individual food items that can be ordered
 -- Linked to menus, categories, and dietary information
+-- NOTE: This is the legacy table. New implementations should use
+-- menu_item_catalog + menu_catalog_items for better reusability.
 -- ----------------------------------------------------------------------------
 CREATE TABLE menu_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -828,6 +1014,127 @@ CREATE TABLE menu_item_allergens (
 
 CREATE INDEX idx_menu_item_allergens_item ON menu_item_allergens(menu_item_id);
 CREATE INDEX idx_menu_item_allergens_allergen ON menu_item_allergens(allergen_id);
+
+-- ============================================================================
+-- SECTION 3B: DAILY MENU SYSTEM
+-- Tables for managing daily menus with the catalog system
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Table: daily_menus
+-- Purpose: Daily menu for a specific date and cafeteria
+-- Links to catalog items for actual dish selection
+-- ----------------------------------------------------------------------------
+CREATE TABLE daily_menus (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    
+    -- Which cafeteria and date
+    cafeteria_id UUID NOT NULL REFERENCES cafeterias(id) ON DELETE CASCADE,
+    menu_date DATE NOT NULL,
+    
+    -- Meal type (breakfast/lunch/dinner)
+    meal_type VARCHAR(20) NOT NULL DEFAULT 'lunch' CHECK (meal_type IN ('breakfast', 'lunch', 'dinner')),
+    
+    -- Flat meal price for this day
+    meal_price DECIMAL(10,2) NOT NULL DEFAULT 900.00,
+    
+    -- Menu status
+    status VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'closed')),
+    
+    -- Order cutoff time
+    cutoff_time TIME,
+    
+    -- Kitchen notes
+    notes TEXT,
+    
+    -- Publishing info
+    published_at TIMESTAMP WITH TIME ZONE,
+    published_by UUID REFERENCES users(id),
+    
+    -- Audit
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    -- One menu per cafeteria per date per meal type
+    UNIQUE(cafeteria_id, menu_date, meal_type)
+);
+
+COMMENT ON TABLE daily_menus IS 'Daily menu for a specific date, cafeteria, and meal type';
+COMMENT ON COLUMN daily_menus.meal_price IS 'Flat price per meal for this day';
+COMMENT ON COLUMN daily_menus.cutoff_time IS 'Time after which orders cannot be placed';
+
+CREATE INDEX idx_daily_menus_cafeteria ON daily_menus(cafeteria_id);
+CREATE INDEX idx_daily_menus_date ON daily_menus(menu_date);
+CREATE INDEX idx_daily_menus_status ON daily_menus(status);
+CREATE INDEX idx_daily_menus_lookup ON daily_menus(cafeteria_id, menu_date, meal_type);
+
+-- ----------------------------------------------------------------------------
+-- Table: daily_menu_items
+-- Purpose: Items available on a specific daily menu
+-- Links to catalog items with portion tracking
+-- ----------------------------------------------------------------------------
+CREATE TABLE daily_menu_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    
+    -- Parent daily menu
+    daily_menu_id UUID NOT NULL REFERENCES daily_menus(id) ON DELETE CASCADE,
+    
+    -- Catalog item (the actual dish)
+    catalog_item_id UUID NOT NULL REFERENCES menu_item_catalog(id) ON DELETE CASCADE,
+    
+    -- Portion tracking
+    portions_available INTEGER,
+    portions_ordered INTEGER DEFAULT 0,
+    is_sold_out BOOLEAN DEFAULT FALSE,
+    
+    -- Price override for this specific day (NULL = use catalog price)
+    override_price DECIMAL(10,2),
+    
+    -- Audit
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Prevent duplicate items on same menu
+    UNIQUE(daily_menu_id, catalog_item_id)
+);
+
+COMMENT ON TABLE daily_menu_items IS 'Items available on a specific daily menu with portion tracking';
+COMMENT ON COLUMN daily_menu_items.portions_available IS 'NULL means unlimited';
+COMMENT ON COLUMN daily_menu_items.portions_ordered IS 'Running count of portions ordered';
+
+CREATE INDEX idx_daily_menu_items_menu ON daily_menu_items(daily_menu_id);
+CREATE INDEX idx_daily_menu_items_catalog ON daily_menu_items(catalog_item_id);
+CREATE INDEX idx_daily_menu_items_soldout ON daily_menu_items(daily_menu_id) WHERE is_sold_out = FALSE;
+
+-- ----------------------------------------------------------------------------
+-- Table: daily_menu_notifications
+-- Purpose: Notifications for daily menu events
+-- (menu published, item sold out, order ready, etc.)
+-- ----------------------------------------------------------------------------
+CREATE TABLE daily_menu_notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    
+    -- Related entities
+    daily_menu_id UUID REFERENCES daily_menus(id) ON DELETE CASCADE,
+    daily_menu_item_id UUID REFERENCES daily_menu_items(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    
+    -- Notification content
+    notification_type VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT,
+    
+    -- Read tracking
+    is_read BOOLEAN DEFAULT FALSE,
+    read_at TIMESTAMP WITH TIME ZONE,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE daily_menu_notifications IS 'Notifications for daily menu events';
+
+CREATE INDEX idx_daily_notif_user ON daily_menu_notifications(user_id);
+CREATE INDEX idx_daily_notif_unread ON daily_menu_notifications(user_id, is_read) WHERE is_read = FALSE;
 
 -- ============================================================================
 -- SECTION 4: ORDER MANAGEMENT
