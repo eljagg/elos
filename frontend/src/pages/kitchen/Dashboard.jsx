@@ -352,7 +352,7 @@ export default function KitchenDashboard() {
     try {
       const response = await fetch(`/api/menu-catalog/${menuId}/catalog-items`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
       });
       const data = await response.json();
@@ -369,7 +369,7 @@ export default function KitchenDashboard() {
     try {
       const response = await fetch(`/api/menu-catalog/${menuId}/available-catalog-items`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
       });
       const data = await response.json();
@@ -398,7 +398,7 @@ export default function KitchenDashboard() {
       const response = await fetch(`/api/menu-catalog/${selectedMenuForItems.id}/catalog-items`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -428,7 +428,7 @@ export default function KitchenDashboard() {
       const response = await fetch(`/api/menu-catalog/${selectedMenuForItems.id}/catalog-items/${catalogItemId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
       });
       
