@@ -1236,7 +1236,20 @@ export default function KitchenDashboard() {
                         <p className={`text-xs ${colors.textMuted} mt-2`}>
                           📦 {item.category}
                         </p>
-      
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className={`${colors.textMuted}`}>All catalog items are already in this menu</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
