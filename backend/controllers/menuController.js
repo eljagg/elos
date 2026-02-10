@@ -180,10 +180,13 @@ const getMenus = async (req, res, next) => {
             params.push(cafeteriaId);
         }
         
-        // Filter by status
+        // Filter by status (exclude archived by default)
         if (status) {
             query += ` AND m.status = $${paramIndex++}`;
             params.push(status);
+        } else {
+            // By default, exclude archived menus from the list
+            query += ` AND m.status != 'archived'`;
         }
         
         // Filter by week

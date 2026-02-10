@@ -921,7 +921,7 @@ export default function KitchenDashboard() {
                         : `${colors.bgSecondary} ${colors.textSecondary} hover:bg-orange-100`
                     }`}
                   >
-                    Active Menus ({menus.length})
+                    Active Menus ({menus.filter(m => m.status !== 'archived').length})
                   </button>
                   <button
                     onClick={() => {
@@ -954,7 +954,7 @@ export default function KitchenDashboard() {
               {/* Active Menus */}
               {menusSubTab === 'active' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {menus.length > 0 ? menus.map(m => (
+                  {menus.filter(m => m.status !== 'archived').length > 0 ? menus.filter(m => m.status !== 'archived').map(m => (
                     <div key={m.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}>
                       <div className="flex justify-between items-start mb-2">
                         <h3 className={`font-semibold ${colors.textPrimary}`}>{m.name}</h3>
