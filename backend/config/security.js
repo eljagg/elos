@@ -161,10 +161,10 @@ const rateLimitConfig = {
         }
     },
     
-    // Login endpoint - very restrictive
+    // Login endpoint - restrictive but not too strict
     login: {
         windowMs: 15 * 60 * 1000, // 15 minutes
-        max: 5, // Only 5 login attempts per 15 minutes
+        max: 10, // 10 login attempts per 15 minutes (increased from 5)
         message: {
             error: 'Too many login attempts. Please try again in 15 minutes.',
             code: 'LOGIN_RATE_LIMIT_EXCEEDED'

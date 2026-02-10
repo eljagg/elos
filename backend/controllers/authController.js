@@ -93,14 +93,37 @@ const hashPassword = async (password) => {
 };
 
 /**
- * Verify password against hash
+ * Verify password against hash with retry logic
  * 
  * @param {string} password - Plain text password
  * @param {string} hash - Stored hash
+ * @param {number} retries - Number of retry attempts
  * @returns {Promise<boolean>} True if match
  */
-const verifyPassword = async (password, hash) => {
-    return bcrypt.compare(password, hash);
+const verifyPassword = async (password, hash, retries = 2) => {
+    try {
+        // Validate inputs
+        if (!password || !hash) {
+            logger.error('verifyPassword called with invalid inputs', { 
+                hasPassword: !!password, 
+                hasHash: !!hash 
+            });
+            return false;
+        }
+        
+        return await bcrypt.compare(password, hash);
+    } catch (error) {
+        logger.error('bcrypt.compare error:', error.message);
+        
+        // Retry on transient errors
+        if (retries > 0) {
+            logger.warn(`Retrying password verification, ${retries} attempts remaining`);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            return verifyPassword(password, hash, retries - 1);
+        }
+        
+        return false;
+    }
 };
 
 /**
@@ -190,23 +213,30 @@ const generateRandomToken = (bytes = 32) => {
  * @returns {Promise<Object>} Created session
  */
 const saveSession = async (userId, refreshToken, metadata = {}) => {
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
-    
-    const deviceInfo = JSON.stringify({
-        userAgent: metadata.userAgent,
-        deviceType: metadata.deviceType
-    });
-    
-    const result = await db.query(
-        `INSERT INTO user_sessions (
-            user_id, refresh_token, device_info, ip_address, expires_at
-        ) VALUES ($1, $2, $3, $4, $5)
-        RETURNING id`,
-        [userId, refreshToken, deviceInfo, metadata.ip, expiresAt]
-    );
-    
-    return result.rows[0];
+    try {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7);
+        
+        const deviceInfo = JSON.stringify({
+            userAgent: metadata.userAgent,
+            deviceType: metadata.deviceType
+        });
+        
+        const result = await db.query(
+            `INSERT INTO user_sessions (
+                user_id, refresh_token, device_info, ip_address, expires_at
+            ) VALUES ($1, $2, $3, $4, $5)
+            RETURNING id`,
+            [userId, refreshToken, deviceInfo, metadata.ip, expiresAt]
+        );
+        
+        return result.rows[0];
+    } catch (error) {
+        // Log but don't fail login if session save fails
+        logger.error('Failed to save session (non-critical):', error.message);
+        // Return a fake session ID - login can still proceed
+        return { id: 'session-save-failed' };
+    }
 };
 
 /**
@@ -385,25 +415,51 @@ const login = async (req, res, next) => {
         const normalizedEmail = email.toLowerCase().trim();
         const clientIp = req.ip;
         
-        // Find user with all related data
-        const result = await db.query(
-            `SELECT 
-                u.id, u.email, u.password_hash, u.first_name, u.last_name,
-                u.company_id, u.department_id, u.role_id,
-                u.is_active, u.failed_login_attempts, u.locked_until,
-                u.must_change_password, u.two_factor_enabled, u.two_factor_secret,
-                u.email_verified, u.preferred_language, u.profile_image_url,
-                u.dietary_preferences, u.disabled_reason,
-                r.code as role_code, r.name as role_name,
-                c.name as company_name, c.logo_url as company_logo,
-                d.name as department_name
-             FROM users u
-             JOIN roles r ON u.role_id = r.id
-             LEFT JOIN companies c ON u.company_id = c.id
-             LEFT JOIN departments d ON u.department_id = d.id
-             WHERE u.email = $1`,
-            [normalizedEmail]
-        );
+        // Enhanced logging for debugging intermittent issues
+        logger.info('Login attempt', { 
+            email: normalizedEmail, 
+            ip: clientIp,
+            timestamp: new Date().toISOString()
+        });
+        
+        // Find user with all related data - using LOWER() for case-insensitive match
+        let result;
+        try {
+            result = await db.query(
+                `SELECT 
+                    u.id, u.email, u.password_hash, u.first_name, u.last_name,
+                    u.company_id, u.department_id, u.role_id,
+                    u.is_active, u.failed_login_attempts, u.locked_until,
+                    u.must_change_password, u.two_factor_enabled, u.two_factor_secret,
+                    u.email_verified, u.preferred_language, u.profile_image_url,
+                    u.dietary_preferences, u.disabled_reason,
+                    r.code as role_code, r.name as role_name,
+                    c.name as company_name, c.logo_url as company_logo,
+                    d.name as department_name
+                 FROM users u
+                 JOIN roles r ON u.role_id = r.id
+                 LEFT JOIN companies c ON u.company_id = c.id
+                 LEFT JOIN departments d ON u.department_id = d.id
+                 WHERE LOWER(u.email) = $1`,
+                [normalizedEmail]
+            );
+        } catch (dbError) {
+            // Log database errors specifically - this helps diagnose intermittent issues
+            logger.error('Database error during login query:', {
+                error: dbError.message,
+                code: dbError.code,
+                email: normalizedEmail
+            });
+            
+            // Return a retryable error to the user
+            return res.status(503).json({
+                success: false,
+                error: {
+                    code: 'SERVICE_UNAVAILABLE',
+                    message: 'A temporary error occurred. Please try again.'
+                }
+            });
+        }
         
         // User not found
         if (result.rows.length === 0) {
