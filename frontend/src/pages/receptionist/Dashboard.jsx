@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { orderAPI, menuAPI, messageAPI, companyAPI } from '../../services/api';
+import { orderAPI, menuAPI, messageAPI, companyAPI, deliveryAPI } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import toast from 'react-hot-toast';
 
@@ -33,13 +33,14 @@ export default function ReceptionistDashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [codesRes, menusRes, ordersRes, issuesRes, cafeteriasRes, companiesRes] = await Promise.all([
+      const [codesRes, menusRes, ordersRes, issuesRes, cafeteriasRes, companiesRes, pendingRes] = await Promise.all([
         orderAPI.getGuestCodes().catch(() => ({ data: { data: { codes: [] } } })),
         menuAPI.getMenus().catch(() => ({ data: { data: { menus: [] } } })),
         orderAPI.getOrders({ limit: 200 }).catch(() => ({ data: { data: { orders: [] } } })),
         messageAPI.getFeedback().catch(() => ({ data: { data: { feedback: [] } } })),
         companyAPI.getCafeterias().catch(() => ({ data: { data: { cafeterias: [] } } })),
-        companyAPI.getCompanies().catch(() => ({ data: { data: { companies: [] } } }))
+        companyAPI.getCompanies().catch(() => ({ data: { data: { companies: [] } } })),
+        deliveryAPI.getPendingConfirmations().catch(() => ({ data: { data: { pendingConfirmations: [] } } }))
       ]);
       const codes = codesRes.data?.data?.codes || JSON.parse(localStorage.getItem('guestCodes') || '[]');
       setGuestCodes(codes);
@@ -48,16 +49,65 @@ export default function ReceptionistDashboard() {
       setIssues((issuesRes.data?.data?.feedback || []).filter(f => f.type === 'issue'));
       setCafeterias(cafeteriasRes.data?.data?.cafeterias || []);
       setCompanies(companiesRes.data?.data?.companies || []);
-      const pending = JSON.parse(localStorage.getItem('pendingDeliveryConfirmations') || '[]');
+      
+      // Get pending deliveries from API, fallback to localStorage
+      const apiPending = pendingRes.data?.data?.pendingConfirmations || [];
+      const localPending = JSON.parse(localStorage.getItem('pendingDeliveryConfirmations') || '[]');
+      const pending = apiPending.length > 0 ? apiPending : localPending;
       setPendingDeliveries(pending);
+      
       const today = new Date().toDateString();
       setStats({ activeCodes: codes.filter(c => !c.is_used).length, usedToday: codes.filter(c => c.is_used && c.used_at && new Date(c.used_at).toDateString() === today).length, totalOrders: (ordersRes.data?.data?.orders || []).length, openIssues: (issuesRes.data?.data?.feedback || []).filter(f => f.status !== 'resolved').length, pendingDeliveries: pending.length });
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
-  const handleGenerateCode = (e) => { e.preventDefault(); const code = Math.random().toString(36).substring(2, 8).toUpperCase(); const newCode = { id: Date.now().toString(), code, ...codeForm, is_used: false, created_at: new Date().toISOString() }; const codes = [...guestCodes, newCode]; setGuestCodes(codes); localStorage.setItem('guestCodes', JSON.stringify(codes)); toast.success(`Code: ${code}`); setShowGenerateModal(false); setCodeForm({ cafeteriaId: '', validDate: '', guestName: '', guestEmail: '' }); };
+  const handleGenerateCode = async (e) => { 
+    e.preventDefault(); 
+    try {
+      const response = await orderAPI.createGuestCode({
+        cafeteriaId: codeForm.cafeteriaId,
+        validDate: codeForm.validDate,
+        guestName: codeForm.guestName,
+        guestEmail: codeForm.guestEmail
+      });
+      const newCode = response.data?.data?.code || response.data?.code;
+      toast.success(`Code: ${newCode}`); 
+      setShowGenerateModal(false); 
+      setCodeForm({ cafeteriaId: '', validDate: '', guestName: '', guestEmail: '' }); 
+      loadData();
+    } catch (error) {
+      // Fallback to localStorage if API fails
+      console.error('API failed, using localStorage fallback:', error);
+      const code = Math.random().toString(36).substring(2, 8).toUpperCase(); 
+      const newCode = { id: Date.now().toString(), code, ...codeForm, is_used: false, created_at: new Date().toISOString() }; 
+      const codes = [...guestCodes, newCode]; 
+      setGuestCodes(codes); 
+      localStorage.setItem('guestCodes', JSON.stringify(codes)); 
+      toast.success(`Code: ${code}`); 
+      setShowGenerateModal(false); 
+      setCodeForm({ cafeteriaId: '', validDate: '', guestName: '', guestEmail: '' }); 
+    }
+  };
   const handleEmailCode = () => { const subject = encodeURIComponent(`Your Guest Code: ${selectedCode.code}`); const body = encodeURIComponent(`Hello,\n\nYour guest code: ${selectedCode.code}\nValid: ${selectedCode.validDate || 'Today'}`); window.location.href = `mailto:${selectedCode.guestEmail}?subject=${subject}&body=${body}`; setShowEmailModal(false); };
-  const handleConfirmDelivery = (delivery) => { const tracking = JSON.parse(localStorage.getItem('deliveryTracking') || '{}'); if (tracking[delivery.orderId]) { tracking[delivery.orderId].confirmed = true; tracking[delivery.orderId].confirmedAt = new Date().toISOString(); localStorage.setItem('deliveryTracking', JSON.stringify(tracking)); } const pending = JSON.parse(localStorage.getItem('pendingDeliveryConfirmations') || '[]').filter(p => p.orderId !== delivery.orderId); localStorage.setItem('pendingDeliveryConfirmations', JSON.stringify(pending)); toast.success('Confirmed'); loadData(); };
+  const handleConfirmDelivery = async (delivery) => { 
+    try {
+      // Try API first
+      await deliveryAPI.confirmDelivery(delivery.orderId);
+    } catch (error) {
+      console.error('API confirm failed, using localStorage:', error);
+    }
+    // Also update localStorage as backup
+    const tracking = JSON.parse(localStorage.getItem('deliveryTracking') || '{}'); 
+    if (tracking[delivery.orderId]) { 
+      tracking[delivery.orderId].confirmed = true; 
+      tracking[delivery.orderId].confirmedAt = new Date().toISOString(); 
+      localStorage.setItem('deliveryTracking', JSON.stringify(tracking)); 
+    } 
+    const pending = JSON.parse(localStorage.getItem('pendingDeliveryConfirmations') || '[]').filter(p => p.orderId !== delivery.orderId); 
+    localStorage.setItem('pendingDeliveryConfirmations', JSON.stringify(pending)); 
+    toast.success('Confirmed'); 
+    loadData(); 
+  };
   const handleResolve = async (issue) => { try { await messageAPI.updateFeedbackStatus(issue.id, 'resolved'); toast.success('Resolved'); loadData(); } catch { toast.error('Failed'); } };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;

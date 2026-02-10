@@ -57,6 +57,24 @@ export default function HRDashboard() {
   const handleSaveEmployee = async (e) => { e.preventDefault(); try { if (selectedEmployee) { await userAPI.updateUser(selectedEmployee.id, employeeForm); toast.success('Updated'); } else { await userAPI.createUser({ ...employeeForm, password: 'TempPass123!' }); toast.success('Created'); } setShowEmployeeModal(false); setEmployeeForm({ firstName: '', lastName: '', email: '', phone: '', companyId: '', departmentId: '', roleCode: 'EMPLOYEE' }); setSelectedEmployee(null); loadData(); } catch (err) { toast.error(err.response?.data?.error?.message || 'Failed'); } };
   const handleDisableEmployee = async () => { try { await userAPI.disableUser(selectedEmployee.id, disableForm.reason); toast.success('Disabled'); setShowDisableModal(false); loadData(); } catch { toast.error('Failed'); } };
   const handleEnableEmployee = async (emp) => { try { await userAPI.enableUser(emp.id); toast.success('Enabled'); loadData(); } catch { toast.error('Failed'); } };
+  const handleSaveEmployee = async (e) => { 
+    e.preventDefault(); 
+    try { 
+      if (selectedEmployee) {
+        await userAPI.updateUser(selectedEmployee.id, employeeForm); 
+        toast.success('Employee updated'); 
+      } else {
+        await userAPI.createUser({ ...employeeForm, password: 'TempPass123!' }); 
+        toast.success('Employee created'); 
+      }
+      setShowEmployeeModal(false); 
+      setEmployeeForm({ firstName: '', lastName: '', email: '', phone: '', companyId: '', departmentId: '', roleCode: 'EMPLOYEE' });
+      setSelectedEmployee(null);
+      loadData(); 
+    } catch (error) { 
+      toast.error(error.response?.data?.error?.message || 'Failed to save employee'); 
+    } 
+  };
   const handleRespondFeedback = async () => { try { await messageAPI.respondToFeedback(selectedFeedback.id, feedbackResponse); toast.success('Sent'); setShowFeedbackModal(false); loadData(); } catch { toast.error('Failed'); } };
   const handleEscalate = async (fb) => { try { await messageAPI.updateFeedbackStatus(fb.id, 'escalated'); toast.success('Escalated'); loadData(); } catch { toast.error('Failed'); } };
   const handleResolve = async (fb) => { try { await messageAPI.updateFeedbackStatus(fb.id, 'resolved'); toast.success('Resolved'); loadData(); } catch { toast.error('Failed'); } };

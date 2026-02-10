@@ -120,12 +120,11 @@ export const menuAPI = {
   updateMenu: (id, data) => api.put(`/menus/${id}`, data),
   deleteMenu: (id) => api.delete(`/menus/${id}`),
   
-  // Menu Items
-  getMenuItems: (params) => api.get('/menu-items', { params }),
-  getMenuItem: (id) => api.get(`/menu-items/${id}`),
-  createMenuItem: (data) => api.post('/menu-items', data),
-  updateMenuItem: (id, data) => api.put(`/menu-items/${id}`, data),
-  deleteMenuItem: (id) => api.delete(`/menu-items/${id}`)
+  // Menu Items (accessed via menu routes)
+  getMenuItems: (menuId) => api.get(`/menus/${menuId}`),
+  addMenuItem: (menuId, data) => api.post(`/menus/${menuId}/items`, data),
+  updateMenuItem: (menuId, itemId, data) => api.put(`/menus/${menuId}/items/${itemId}`, data),
+  deleteMenuItem: (menuId, itemId) => api.delete(`/menus/${menuId}/items/${itemId}`)
 };
 
 // ============================================================================
@@ -174,16 +173,42 @@ export const messageAPI = {
 };
 
 // ============================================================================
-// License API
+// Delivery API
 // ============================================================================
-export const licenseAPI = {
-  getStatus: () => api.get('/license/status'),
-  checkValid: () => api.get('/license/check'),
-  getDetails: () => api.get('/license/details'),
-  extend: (days) => api.post('/license/extend', { days }),
-  update: (data) => api.put('/license', data),
-  activate: (licenseKey) => api.post('/license/activate', { licenseKey })
+export const deliveryAPI = {
+  // Profile
+  getProfile: () => api.get('/delivery/profile'),
+  updateProfile: (data) => api.put('/delivery/profile', data),
+  
+  // Tracking
+  getTracking: () => api.get('/delivery/tracking'),
+  updateTracking: (orderId, data) => api.post(`/delivery/tracking/${orderId}`, data),
+  
+  // Confirmations (for receptionist)
+  getPendingConfirmations: () => api.get('/delivery/pending-confirmations'),
+  confirmDelivery: (orderId) => api.post(`/delivery/confirm/${orderId}`),
+  
+  // Drivers & Routes
+  getDrivers: () => api.get('/delivery/drivers'),
+  addDriver: (data) => api.post('/delivery/drivers', data),
+  getTodayRoutes: () => api.get('/delivery/routes/today'),
+  createRoute: (data) => api.post('/delivery/routes', data),
+  startDelivery: (routeId) => api.post(`/delivery/routes/${routeId}/start`),
+  completeStop: (stopId, notes) => api.post(`/delivery/stops/${stopId}/complete`, { notes }),
+  getMyDeliveries: () => api.get('/delivery/my-deliveries')
 };
+
+// ============================================================================
+// License API (Temporarily disabled - see licenseApi.js for dedicated service)
+// ============================================================================
+// export const licenseAPI = {
+//   getStatus: () => api.get('/license/status'),
+//   checkValid: () => api.get('/license/check'),
+//   getDetails: () => api.get('/license/details'),
+//   extend: (days) => api.post('/license/extend', { days }),
+//   update: (data) => api.put('/license', data),
+//   activate: (licenseKey) => api.post('/license/activate', { licenseKey })
+// };
 
 // ============================================================================
 // Report API

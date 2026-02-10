@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { orderAPI, messageAPI } from '../../services/api';
+import { orderAPI, messageAPI, deliveryAPI } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import toast from 'react-hot-toast';
 
@@ -11,6 +11,7 @@ export default function DeliveryDashboard() {
   const [deliveryHistory, setDeliveryHistory] = useState([]);
   const [profile, setProfile] = useState({ vehiclePlate: '', cellPhone: '', vehicleType: 'car', status: 'available' });
   const [stats, setStats] = useState({ pending: 0, inTransit: 0, delivered: 0, completedToday: 0 });
+  const [tracking, setTracking] = useState({});
 
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
@@ -19,20 +20,58 @@ export default function DeliveryDashboard() {
 
   useEffect(() => { loadData(); loadProfile(); const interval = setInterval(loadData, 30000); return () => clearInterval(interval); }, []);
 
-  const loadProfile = () => { const saved = JSON.parse(localStorage.getItem('deliveryProfile') || '{}'); if (saved.vehiclePlate) setProfile(saved); };
-  const saveProfile = () => { localStorage.setItem('deliveryProfile', JSON.stringify(profile)); toast.success('Profile saved'); setShowProfileModal(false); };
+  const loadProfile = async () => { 
+    try {
+      const res = await deliveryAPI.getProfile();
+      const p = res.data?.data?.profile;
+      if (p) {
+        setProfile({
+          vehiclePlate: p.vehiclePlate || '',
+          cellPhone: p.cellPhone || '',
+          vehicleType: p.vehicleType || 'car',
+          status: p.status || 'available'
+        });
+      }
+    } catch (error) {
+      // Fallback to localStorage if API fails
+      const saved = JSON.parse(localStorage.getItem('deliveryProfile') || '{}'); 
+      if (saved.vehiclePlate) setProfile(saved); 
+    }
+  };
+
+  const saveProfile = async () => { 
+    try {
+      await deliveryAPI.updateProfile(profile);
+      toast.success('Profile saved'); 
+      setShowProfileModal(false); 
+    } catch (error) {
+      // Fallback to localStorage if API fails
+      localStorage.setItem('deliveryProfile', JSON.stringify(profile)); 
+      toast.success('Profile saved locally'); 
+      setShowProfileModal(false); 
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const ordersRes = await orderAPI.getOrders({ status: 'ready', limit: 100 }).catch(() => ({ data: { data: { orders: [] } } }));
-      const allOrders = ordersRes.data?.data?.orders || [];
-      const tracking = JSON.parse(localStorage.getItem('deliveryTracking') || '{}');
+      const [ordersRes, trackingRes] = await Promise.all([
+        orderAPI.getOrders({ status: 'ready', limit: 100 }).catch(() => ({ data: { data: { orders: [] } } })),
+        deliveryAPI.getTracking().catch(() => ({ data: { data: { tracking: {} } } }))
+      ]);
       
-      const pending = allOrders.filter(o => !tracking[o.id] || tracking[o.id].status === 'pending').map(o => ({ ...o, deliveryStatus: 'pending' }));
-      const inTransit = allOrders.filter(o => tracking[o.id]?.status === 'in_transit').map(o => ({ ...o, deliveryStatus: 'in_transit', pickupTime: tracking[o.id]?.pickupTime }));
+      const allOrders = ordersRes.data?.data?.orders || [];
+      const serverTracking = trackingRes.data?.data?.tracking || {};
+      
+      // Merge with localStorage as fallback
+      const localTracking = JSON.parse(localStorage.getItem('deliveryTracking') || '{}');
+      const mergedTracking = { ...localTracking, ...serverTracking };
+      setTracking(mergedTracking);
+      
+      const pending = allOrders.filter(o => !mergedTracking[o.id] || mergedTracking[o.id].status === 'pending').map(o => ({ ...o, deliveryStatus: 'pending' }));
+      const inTransit = allOrders.filter(o => mergedTracking[o.id]?.status === 'in_transit').map(o => ({ ...o, deliveryStatus: 'in_transit', pickupTime: mergedTracking[o.id]?.pickupTime }));
       const today = new Date().toDateString();
-      const deliveredToday = Object.entries(tracking).filter(([_, t]) => t.status === 'delivered' && t.deliveryTime && new Date(t.deliveryTime).toDateString() === today).map(([id, t]) => ({ orderId: id, ...t }));
+      const deliveredToday = Object.entries(mergedTracking).filter(([_, t]) => t.status === 'delivered' && t.deliveryTime && new Date(t.deliveryTime).toDateString() === today).map(([id, t]) => ({ orderId: id, ...t }));
 
       setDeliveries([...pending, ...inTransit]);
       setDeliveryHistory(deliveredToday);
@@ -40,10 +79,23 @@ export default function DeliveryDashboard() {
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
-  const updateTracking = (orderId, status, data = {}) => { const tracking = JSON.parse(localStorage.getItem('deliveryTracking') || '{}'); tracking[orderId] = { ...tracking[orderId], status, ...data, updatedAt: new Date().toISOString() }; localStorage.setItem('deliveryTracking', JSON.stringify(tracking)); };
+  const updateTrackingData = async (orderId, status, data = {}) => { 
+    try {
+      // Update server
+      await deliveryAPI.updateTracking(orderId, { status, ...data });
+    } catch (error) {
+      console.error('Server tracking update failed, using localStorage:', error);
+    }
+    // Always update localStorage as backup
+    const localTracking = JSON.parse(localStorage.getItem('deliveryTracking') || '{}'); 
+    localTracking[orderId] = { ...localTracking[orderId], status, ...data, updatedAt: new Date().toISOString() }; 
+    localStorage.setItem('deliveryTracking', JSON.stringify(localTracking)); 
+    setTracking(prev => ({ ...prev, [orderId]: localTracking[orderId] }));
+  };
 
   const handlePickup = async (order) => {
-    updateTracking(order.id, 'in_transit', { pickupTime: new Date().toISOString(), vehiclePlate: profile.vehiclePlate });
+    const pickupTime = new Date().toISOString();
+    await updateTrackingData(order.id, 'in_transit', { pickupTime, vehiclePlate: profile.vehiclePlate });
     await messageAPI.sendMessage({ recipientRole: 'KITCHEN_HEAD', subject: `Order #${order.order_number || order.id?.slice(0, 8)} Picked Up`, message: `Picked up for delivery. Vehicle: ${profile.vehiclePlate}` }).catch(() => {});
     toast.success('Picked up!');
     loadData();
@@ -53,19 +105,31 @@ export default function DeliveryDashboard() {
 
   const handleConfirmDelivery = async () => {
     const time = new Date().toISOString();
-    updateTracking(selectedDelivery.id, 'delivered', { deliveryTime: time, notes: deliveryNotes, confirmed: false });
+    await updateTrackingData(selectedDelivery.id, 'delivered', { deliveryTime: time, notes: deliveryNotes, confirmed: false });
     await orderAPI.updateOrderStatus(selectedDelivery.id, 'delivered').catch(() => {});
     await messageAPI.sendMessage({ recipientRole: 'KITCHEN_HEAD', subject: `✅ Order #${selectedDelivery.order_number || selectedDelivery.id?.slice(0, 8)} Delivered`, message: `Delivered at ${new Date(time).toLocaleTimeString()}` }).catch(() => {});
     await messageAPI.sendMessage({ recipientRole: 'RECEPTIONIST', subject: `📦 Delivery - Order #${selectedDelivery.order_number || selectedDelivery.id?.slice(0, 8)}`, message: `Please confirm receipt.` }).catch(() => {});
+    
+    // Also update localStorage pending confirmations as backup
     const pending = JSON.parse(localStorage.getItem('pendingDeliveryConfirmations') || '[]');
     pending.push({ orderId: selectedDelivery.id, orderNumber: selectedDelivery.order_number || selectedDelivery.id?.slice(0, 8), companyName: selectedDelivery.company_name, deliveryTime: time, deliveryPersonPlate: profile.vehiclePlate, notes: deliveryNotes });
     localStorage.setItem('pendingDeliveryConfirmations', JSON.stringify(pending));
+    
     toast.success('Delivered!');
     setShowDeliveryModal(false);
     loadData();
   };
 
-  const handleUpdateStatus = (newStatus) => { setProfile({ ...profile, status: newStatus }); localStorage.setItem('deliveryProfile', JSON.stringify({ ...profile, status: newStatus })); toast.success('Status updated'); };
+  const handleUpdateStatus = async (newStatus) => { 
+    const newProfile = { ...profile, status: newStatus };
+    setProfile(newProfile); 
+    try {
+      await deliveryAPI.updateProfile(newProfile);
+    } catch (error) {
+      localStorage.setItem('deliveryProfile', JSON.stringify(newProfile)); 
+    }
+    toast.success('Status updated'); 
+  };
 
   const pendingDeliveries = deliveries.filter(d => d.deliveryStatus === 'pending');
   const inTransitDeliveries = deliveries.filter(d => d.deliveryStatus === 'in_transit');

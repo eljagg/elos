@@ -531,10 +531,11 @@ export default function EmployeeDashboard() {
       {/* Preferences Modal */}
       {showPreferencesModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-md`}>
+          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto`}>
             <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>⚙️ Dietary Preferences</h2>
+            <p className={`text-sm ${colors.textMuted} mb-4`}>Select your dietary requirements to filter menu items</p>
             <div className="space-y-3 mb-4">
-              <label className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
+              <label className="flex items-center gap-3 p-3 bg-green-50 rounded-lg cursor-pointer hover:bg-green-100">
                 <input 
                   type="checkbox" 
                   checked={preferences.vegan} 
@@ -543,7 +544,7 @@ export default function EmployeeDashboard() {
                 />
                 <span>🌱 Vegan</span>
               </label>
-              <label className="flex items-center gap-3 p-3 bg-lime-50 rounded-lg">
+              <label className="flex items-center gap-3 p-3 bg-lime-50 rounded-lg cursor-pointer hover:bg-lime-100">
                 <input 
                   type="checkbox" 
                   checked={preferences.vegetarian} 
@@ -552,7 +553,7 @@ export default function EmployeeDashboard() {
                 />
                 <span>🥬 Vegetarian</span>
               </label>
-              <label className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg">
+              <label className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg cursor-pointer hover:bg-amber-100">
                 <input 
                   type="checkbox" 
                   checked={preferences.glutenFree} 
@@ -560,6 +561,42 @@ export default function EmployeeDashboard() {
                   className="w-5 h-5" 
                 />
                 <span>🌾 Gluten-Free</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100">
+                <input 
+                  type="checkbox" 
+                  checked={preferences.dairyFree} 
+                  onChange={e => setPreferences({ ...preferences, dairyFree: e.target.checked })} 
+                  className="w-5 h-5" 
+                />
+                <span>🥛 Dairy-Free</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100">
+                <input 
+                  type="checkbox" 
+                  checked={preferences.nutFree} 
+                  onChange={e => setPreferences({ ...preferences, nutFree: e.target.checked })} 
+                  className="w-5 h-5" 
+                />
+                <span>🥜 Nut-Free</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg cursor-pointer hover:bg-emerald-100">
+                <input 
+                  type="checkbox" 
+                  checked={preferences.halal} 
+                  onChange={e => setPreferences({ ...preferences, halal: e.target.checked })} 
+                  className="w-5 h-5" 
+                />
+                <span>🍖 Halal</span>
+              </label>
+              <label className="flex items-center gap-3 p-3 bg-indigo-50 rounded-lg cursor-pointer hover:bg-indigo-100">
+                <input 
+                  type="checkbox" 
+                  checked={preferences.kosher} 
+                  onChange={e => setPreferences({ ...preferences, kosher: e.target.checked })} 
+                  className="w-5 h-5" 
+                />
+                <span>✡️ Kosher</span>
               </label>
             </div>
             <div className="flex justify-end gap-3">
