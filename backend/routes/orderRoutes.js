@@ -10,6 +10,7 @@ const { authenticate, requireKitchenStaff } = require('../middleware/auth');
 router.post('/', authenticate, orderController.createOrder);
 router.post('/daily', authenticate, orderController.createDailyMenuOrder);
 router.post('/week', authenticate, orderController.createWeekOrders);
+router.get('/my', authenticate, orderController.getMyOrders); // FIX: Added /my route for current orders
 router.get('/my-history', authenticate, orderController.getMyOrderHistory);
 
 // Favorites

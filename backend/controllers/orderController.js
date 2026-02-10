@@ -786,6 +786,57 @@ const getOrderById = async (req, res, next) => {
 };
 
 /**
+ * GET /api/orders/my
+ * Get current user's active orders (pending, confirmed, preparing, ready)
+ */
+const getMyOrders = async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        
+        const query = `
+            SELECT o.*, 
+                   cf.name as cafeteria_name,
+                   (SELECT json_agg(json_build_object(
+                       'id', oi.id,
+                       'menu_item_id', oi.menu_item_id,
+                       'name', oi.item_name,
+                       'quantity', oi.quantity,
+                       'price', oi.unit_price,
+                       'special_instructions', oi.special_instructions
+                   )) FROM order_items oi WHERE oi.order_id = o.id) as items
+            FROM orders o
+            JOIN cafeterias cf ON o.cafeteria_id = cf.id
+            WHERE o.user_id = $1
+              AND o.status IN ('pending', 'confirmed', 'preparing', 'ready')
+            ORDER BY o.order_date DESC, o.created_at DESC
+        `;
+        
+        const result = await db.query(query, [userId]);
+        
+        res.status(200).json({
+            success: true,
+            data: {
+                orders: result.rows.map(order => ({
+                    id: order.id,
+                    orderNumber: order.order_number,
+                    mealType: order.meal_type,
+                    orderDate: order.order_date,
+                    dayOfWeek: order.day_of_week,
+                    status: order.status,
+                    total: parseFloat(order.total),
+                    cafeteriaName: order.cafeteria_name,
+                    createdAt: order.created_at,
+                    items: order.items || []
+                }))
+            }
+        });
+        
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * GET /api/orders/my-history
  * Get current user's order history
  */
@@ -1578,6 +1629,7 @@ module.exports = {
     // Order retrieval
     getOrders,
     getOrderById,
+    getMyOrders,
     getMyOrderHistory,
     
     // Order modification

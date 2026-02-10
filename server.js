@@ -31,6 +31,7 @@ const adminRoutes = require('./backend/routes/adminRoutes');
 const catalogRoutes = require('./backend/routes/catalogRoutes');
 const dailyMenuRoutes = require('./backend/routes/dailyMenuRoutes');
 const menuCatalogRoutes = require('./backend/routes/menuCatalogRoutes');
+const licenseRoutes = require('./backend/routes/licenseRoutes');
 
 const logger = require('./backend/utils/logger');
 
@@ -124,6 +125,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/catalog', catalogRoutes);
 app.use('/api/menu-catalog', menuCatalogRoutes);
 app.use('/api/daily-menu', dailyMenuRoutes);
+app.use('/api/license', licenseRoutes);
 
 // API 404 handler
 app.use('/api/*', (req, res) => {

@@ -55,7 +55,9 @@ export const authAPI = {
   resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
   verifyEmail: (token) => api.post('/auth/verify-email', { token }),
   logout: () => api.post('/auth/logout'),
-  getMe: () => api.get('/auth/me')
+  getMe: () => api.get('/auth/me'),
+  // Guest login with single-use code
+  guestLogin: (code) => api.post('/auth/guest/login', { code })
 };
 
 // ============================================================================
@@ -146,9 +148,9 @@ export const orderAPI = {
   updateOrderStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
   cancelOrder: (id) => api.post(`/orders/${id}/cancel`),
   
-  // Guest codes
-  getGuestCodes: () => api.get('/guest-codes'),
-  createGuestCode: (data) => api.post('/guest-codes', data)
+  // Guest codes - uses /guests/codes route
+  getGuestCodes: () => api.get('/guests/codes'),
+  createGuestCode: (data) => api.post('/guests/codes', data)
 };
 
 // ============================================================================
