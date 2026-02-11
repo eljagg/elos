@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { orderAPI, menuAPI, messageAPI, companyAPI, catalogAPI } from '../../services/api';
+import { orderAPI, menuAPI, messageAPI, companyAPI, catalogAPI, dailyMenuAPI } from '../../services/api';
 import { useTheme } from '../../context/ThemeContext';
 import DishLibrary from '../../components/kitchen/DishLibrary';
 import EnhancedPrepList from '../../components/kitchen/EnhancedPrepList';
@@ -64,6 +64,8 @@ export default function KitchenDashboard() {
     menuType: 'regular', 
     isActive: true,
     cafeteriaId: '',
+    menuScope: 'daily', // 'daily' or 'weekly'
+    menuDate: '', // for daily menu
     weekStartDate: '',
     weekEndDate: ''
   });
@@ -377,38 +379,63 @@ export default function KitchenDashboard() {
         return;
       }
       
-      // Calculate week dates if not provided
-      let weekStartDate = menuForm.weekStartDate;
-      let weekEndDate = menuForm.weekEndDate;
-      
-      if (!weekStartDate) {
-        // Default to current week (Monday to Sunday)
-        const today = new Date();
-        const dayOfWeek = today.getDay();
-        const monday = new Date(today);
-        monday.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
-        weekStartDate = monday.toISOString().split('T')[0];
+      if (menuForm.menuScope === 'daily') {
+        // ===== DAILY MENU =====
+        if (!menuForm.menuDate) {
+          toast.error('Please select a date');
+          return;
+        }
         
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        weekEndDate = sunday.toISOString().split('T')[0];
-      }
-      
-      const menuData = {
-        name: menuForm.name,
-        cafeteriaId: menuForm.cafeteriaId,
-        weekStartDate,
-        weekEndDate,
-        internalNotes: menuForm.description
-      };
-      
-      if (selectedMenu) {
-        await menuAPI.updateMenu(selectedMenu.id, menuData);
-        toast.success('Menu updated');
+        const dailyMenuData = {
+          cafeteriaId: menuForm.cafeteriaId,
+          date: menuForm.menuDate,
+          mealType: menuForm.mealType,
+          cutoffTime: menuForm.mealType === 'breakfast' ? '08:00' : '10:00'
+        };
+        
+        if (selectedMenu && selectedMenu.isDailyMenu) {
+          // Update existing daily menu
+          await dailyMenuAPI.updateDailyMenu?.(selectedMenu.id, dailyMenuData) || 
+            toast.error('Update not supported for daily menus yet');
+        } else {
+          await dailyMenuAPI.createDailyMenu(dailyMenuData);
+          toast.success(`Daily menu created for ${menuForm.menuDate}`);
+        }
       } else {
-        await menuAPI.createMenu(menuData);
-        toast.success('Menu created');
+        // ===== WEEKLY MENU =====
+        let weekStartDate = menuForm.weekStartDate;
+        let weekEndDate = menuForm.weekEndDate;
+        
+        if (!weekStartDate) {
+          // Default to current week (Monday to Sunday)
+          const today = new Date();
+          const dayOfWeek = today.getDay();
+          const monday = new Date(today);
+          monday.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
+          weekStartDate = monday.toISOString().split('T')[0];
+          
+          const sunday = new Date(monday);
+          sunday.setDate(monday.getDate() + 6);
+          weekEndDate = sunday.toISOString().split('T')[0];
+        }
+        
+        const menuData = {
+          name: menuForm.name,
+          cafeteriaId: menuForm.cafeteriaId,
+          weekStartDate,
+          weekEndDate,
+          internalNotes: menuForm.description
+        };
+        
+        if (selectedMenu && !selectedMenu.isDailyMenu) {
+          await menuAPI.updateMenu(selectedMenu.id, menuData);
+          toast.success('Weekly menu updated');
+        } else {
+          await menuAPI.createMenu(menuData);
+          toast.success('Weekly menu created');
+        }
       }
+      
       setShowMenuModal(false);
       loadData();
     } catch (error) {
@@ -990,8 +1017,9 @@ export default function KitchenDashboard() {
                   <button 
                     onClick={() => { 
                       setSelectedMenu(null);
-                      // Calculate default week dates (Monday to Sunday)
+                      // Calculate default dates
                       const today = new Date();
+                      const todayStr = today.toISOString().split('T')[0];
                       const dayOfWeek = today.getDay();
                       const monday = new Date(today);
                       monday.setDate(today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
@@ -1005,6 +1033,8 @@ export default function KitchenDashboard() {
                         menuType: 'regular', 
                         isActive: true,
                         cafeteriaId: cafeterias.length > 0 ? cafeterias[0].id : '',
+                        menuScope: 'daily', // Default to daily menu
+                        menuDate: todayStr,
                         weekStartDate: monday.toISOString().split('T')[0],
                         weekEndDate: sunday.toISOString().split('T')[0]
                       }); 
@@ -1280,25 +1310,56 @@ export default function KitchenDashboard() {
       {/* Menu Modal */}
       {showMenuModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-lg`}>
+          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto`}>
             <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>
               {selectedMenu ? 'Edit' : 'Add'} Menu
             </h2>
             <form onSubmit={handleSaveMenu} className="space-y-4">
-              <input 
-                placeholder="Menu Name" 
-                value={menuForm.name} 
-                onChange={e => setMenuForm({ ...menuForm, name: e.target.value })} 
-                className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`} 
-                required 
-              />
-              <textarea 
-                placeholder="Description / Notes" 
-                value={menuForm.description} 
-                onChange={e => setMenuForm({ ...menuForm, description: e.target.value })} 
-                className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`} 
-                rows="2" 
-              />
+              
+              {/* Daily vs Weekly Toggle */}
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${colors.textMuted}`}>Menu Type</label>
+                <div className="flex rounded-lg overflow-hidden border ${colors.border}">
+                  <button
+                    type="button"
+                    onClick={() => setMenuForm({ ...menuForm, menuScope: 'daily' })}
+                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                      menuForm.menuScope === 'daily' 
+                        ? 'bg-orange-600 text-white' 
+                        : `${colors.bgSecondary} ${colors.textPrimary} hover:bg-gray-100`
+                    }`}
+                  >
+                    📅 Daily Menu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMenuForm({ ...menuForm, menuScope: 'weekly' })}
+                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                      menuForm.menuScope === 'weekly' 
+                        ? 'bg-orange-600 text-white' 
+                        : `${colors.bgSecondary} ${colors.textPrimary} hover:bg-gray-100`
+                    }`}
+                  >
+                    📆 Weekly Menu
+                  </button>
+                </div>
+                <p className={`text-xs mt-1 ${colors.textMuted}`}>
+                  {menuForm.menuScope === 'daily' 
+                    ? 'Create a menu for a specific day with unique items' 
+                    : 'Create a template menu that spans multiple days'}
+                </p>
+              </div>
+              
+              {/* Menu Name - only required for weekly */}
+              {menuForm.menuScope === 'weekly' && (
+                <input 
+                  placeholder="Menu Name (e.g., Week of Feb 10-16)" 
+                  value={menuForm.name} 
+                  onChange={e => setMenuForm({ ...menuForm, name: e.target.value })} 
+                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`} 
+                  required 
+                />
+              )}
               
               {/* Cafeteria Selector */}
               <div>
@@ -1316,68 +1377,73 @@ export default function KitchenDashboard() {
                 </select>
               </div>
               
-              {/* Date Range */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Date Selection - Different for Daily vs Weekly */}
+              {menuForm.menuScope === 'daily' ? (
                 <div>
-                  <label className={`block text-sm font-medium mb-1 ${colors.textMuted}`}>Week Start</label>
+                  <label className={`block text-sm font-medium mb-1 ${colors.textMuted}`}>Menu Date *</label>
                   <input 
                     type="date" 
-                    value={menuForm.weekStartDate} 
-                    onChange={e => {
-                      const start = new Date(e.target.value);
-                      const end = new Date(start);
-                      end.setDate(start.getDate() + 6);
-                      setMenuForm({ 
-                        ...menuForm, 
-                        weekStartDate: e.target.value,
-                        weekEndDate: end.toISOString().split('T')[0]
-                      });
-                    }} 
+                    value={menuForm.menuDate} 
+                    onChange={e => setMenuForm({ ...menuForm, menuDate: e.target.value })} 
                     className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`}
+                    required
                   />
                 </div>
-                <div>
-                  <label className={`block text-sm font-medium mb-1 ${colors.textMuted}`}>Week End</label>
-                  <input 
-                    type="date" 
-                    value={menuForm.weekEndDate} 
-                    onChange={e => setMenuForm({ ...menuForm, weekEndDate: e.target.value })} 
-                    className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`}
-                  />
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-1 ${colors.textMuted}`}>Week Start</label>
+                    <input 
+                      type="date" 
+                      value={menuForm.weekStartDate} 
+                      onChange={e => {
+                        const start = new Date(e.target.value);
+                        const end = new Date(start);
+                        end.setDate(start.getDate() + 6);
+                        setMenuForm({ 
+                          ...menuForm, 
+                          weekStartDate: e.target.value,
+                          weekEndDate: end.toISOString().split('T')[0]
+                        });
+                      }} 
+                      className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-1 ${colors.textMuted}`}>Week End</label>
+                    <input 
+                      type="date" 
+                      value={menuForm.weekEndDate} 
+                      onChange={e => setMenuForm({ ...menuForm, weekEndDate: e.target.value })} 
+                      className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
               
-              <div className="grid grid-cols-2 gap-4">
+              {/* Meal Type */}
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${colors.textMuted}`}>Meal Type</label>
                 <select 
                   value={menuForm.mealType} 
                   onChange={e => setMenuForm({ ...menuForm, mealType: e.target.value })} 
-                  className={`px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`}
+                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`}
                 >
-                  <option value="breakfast">Breakfast</option>
-                  <option value="lunch">Lunch</option>
-                </select>
-                <select 
-                  value={menuForm.menuType} 
-                  onChange={e => setMenuForm({ ...menuForm, menuType: e.target.value })} 
-                  className={`px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`}
-                >
-                  <option value="regular">Regular</option>
-                  <option value="soup">Soup</option>
-                  <option value="vegan">Vegan</option>
-                  <option value="special">Special</option>
+                  <option value="breakfast">🌅 Breakfast</option>
+                  <option value="lunch">🍽️ Lunch</option>
                 </select>
               </div>
               
-              <label className="flex items-center gap-2">
-                <input 
-                  type="checkbox" 
-                  checked={menuForm.isActive} 
-                  onChange={e => setMenuForm({ ...menuForm, isActive: e.target.checked })} 
-                /> 
-                <span className={colors.textPrimary}>Active</span>
-              </label>
+              {/* Description/Notes */}
+              <textarea 
+                placeholder="Notes (optional)" 
+                value={menuForm.description} 
+                onChange={e => setMenuForm({ ...menuForm, description: e.target.value })} 
+                className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`} 
+                rows="2" 
+              />
               
-              <div className="flex justify-end gap-3">
+              <div className="flex justify-end gap-3 pt-2">
                 <button 
                   type="button" 
                   onClick={() => setShowMenuModal(false)} 
@@ -1389,7 +1455,7 @@ export default function KitchenDashboard() {
                   type="submit" 
                   className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
                 >
-                  Save
+                  {menuForm.menuScope === 'daily' ? 'Create Daily Menu' : 'Create Weekly Menu'}
                 </button>
               </div>
             </form>
