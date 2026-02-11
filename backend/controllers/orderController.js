@@ -843,11 +843,19 @@ const getMyOrders = async (req, res, next) => {
 const getMyOrderHistory = async (req, res, next) => {
     try {
         const userId = req.user.userId;
-        const { page = 1, limit = 20, mealType, dateFrom, dateTo } = req.query;
+        const { page = 1, limit = 20, mealType, dateFrom, dateTo, includeArchived } = req.query;
         
         let query = `
             SELECT o.*, cf.name as cafeteria_name,
-                   (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) as item_count
+                   (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) as item_count,
+                   (SELECT json_agg(json_build_object(
+                       'id', oi.id,
+                       'menu_item_id', oi.menu_item_id,
+                       'name', oi.item_name,
+                       'quantity', oi.quantity,
+                       'price', oi.unit_price,
+                       'special_instructions', oi.special_instructions
+                   )) FROM order_items oi WHERE oi.order_id = o.id) as items
             FROM orders o
             JOIN cafeterias cf ON o.cafeteria_id = cf.id
             WHERE o.user_id = $1
@@ -855,6 +863,11 @@ const getMyOrderHistory = async (req, res, next) => {
         
         const params = [userId];
         let paramIndex = 2;
+        
+        // Exclude archived orders by default
+        if (includeArchived !== 'true') {
+            query += ` AND (o.is_archived = FALSE OR o.is_archived IS NULL)`;
+        }
         
         if (mealType) {
             query += ` AND o.meal_type = $${paramIndex++}`;
@@ -880,6 +893,16 @@ const getMyOrderHistory = async (req, res, next) => {
         
         const result = await db.query(query, params);
         
+        // Get total count for pagination
+        let countQuery = `
+            SELECT COUNT(*) FROM orders o WHERE o.user_id = $1
+        `;
+        if (includeArchived !== 'true') {
+            countQuery += ` AND (o.is_archived = FALSE OR o.is_archived IS NULL)`;
+        }
+        const countResult = await db.query(countQuery, [userId]);
+        const totalCount = parseInt(countResult.rows[0].count);
+        
         res.status(200).json({
             success: true,
             data: {
@@ -893,8 +916,16 @@ const getMyOrderHistory = async (req, res, next) => {
                     total: parseFloat(order.total),
                     itemCount: parseInt(order.item_count),
                     cafeteriaName: order.cafeteria_name,
-                    createdAt: order.created_at
-                }))
+                    createdAt: order.created_at,
+                    isArchived: order.is_archived || false,
+                    items: order.items || []
+                })),
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total: totalCount,
+                    totalPages: Math.ceil(totalCount / limit)
+                }
             }
         });
         
@@ -1153,6 +1184,145 @@ const cancelOrder = async (req, res, next) => {
         res.status(200).json({
             success: true,
             message: 'Order cancelled successfully'
+        });
+        
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * PUT /api/orders/:id/archive
+ * Archive an order (hide from history but preserve data)
+ */
+const archiveOrder = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.userId;
+        
+        // Get order and verify ownership
+        const orderResult = await db.query(
+            'SELECT * FROM orders WHERE id = $1',
+            [id]
+        );
+        
+        if (orderResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: {
+                    code: 'ORDER_NOT_FOUND',
+                    message: 'Order not found'
+                }
+            });
+        }
+        
+        const order = orderResult.rows[0];
+        
+        // Check ownership
+        if (order.user_id !== userId && !['SUPER_ADMIN', 'HR_ADMIN'].includes(req.user.role)) {
+            return res.status(403).json({
+                success: false,
+                error: {
+                    code: 'FORBIDDEN',
+                    message: 'You can only archive your own orders'
+                }
+            });
+        }
+        
+        // Only allow archiving completed or cancelled orders
+        if (!['completed', 'cancelled', 'delivered'].includes(order.status)) {
+            return res.status(400).json({
+                success: false,
+                error: {
+                    code: 'CANNOT_ARCHIVE',
+                    message: 'Only completed or cancelled orders can be archived'
+                }
+            });
+        }
+        
+        // Archive the order
+        await db.query(
+            `UPDATE orders 
+             SET is_archived = TRUE, 
+                 archived_at = CURRENT_TIMESTAMP,
+                 archived_by = $1
+             WHERE id = $2`,
+            [userId, id]
+        );
+        
+        logger.info('Order archived:', { orderId: id, userId });
+        
+        res.status(200).json({
+            success: true,
+            message: 'Order archived successfully'
+        });
+        
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * DELETE /api/orders/:id
+ * Permanently delete an order (only archived orders, only by owner)
+ */
+const deleteOrder = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.userId;
+        
+        // Get order
+        const orderResult = await db.query(
+            'SELECT * FROM orders WHERE id = $1',
+            [id]
+        );
+        
+        if (orderResult.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: {
+                    code: 'ORDER_NOT_FOUND',
+                    message: 'Order not found'
+                }
+            });
+        }
+        
+        const order = orderResult.rows[0];
+        
+        // Check ownership
+        if (order.user_id !== userId && req.user.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({
+                success: false,
+                error: {
+                    code: 'FORBIDDEN',
+                    message: 'You can only delete your own orders'
+                }
+            });
+        }
+        
+        // Only allow deleting archived or cancelled orders
+        if (!order.is_archived && order.status !== 'cancelled') {
+            return res.status(400).json({
+                success: false,
+                error: {
+                    code: 'CANNOT_DELETE',
+                    message: 'Only archived or cancelled orders can be deleted. Archive the order first.'
+                }
+            });
+        }
+        
+        // Delete order items first, then order
+        await db.transaction(async (client) => {
+            await client.query('DELETE FROM order_items WHERE order_id = $1', [id]);
+            await client.query('DELETE FROM order_status_history WHERE order_id = $1', [id]);
+            await client.query('DELETE FROM orders WHERE id = $1', [id]);
+        });
+        
+        logger.info('Order deleted:', { orderId: id, userId });
+        
+        res.status(200).json({
+            success: true,
+            message: 'Order deleted permanently'
         });
         
     } catch (error) {
@@ -1635,6 +1805,8 @@ module.exports = {
     // Order modification
     updateOrder,
     cancelOrder,
+    archiveOrder,
+    deleteOrder,
     
     // Kitchen workflow
     updateOrderStatus,
