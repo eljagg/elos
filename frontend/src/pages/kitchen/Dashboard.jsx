@@ -616,6 +616,7 @@ export default function KitchenDashboard() {
           name: item.item_name || item.name,
           description: item.description,
           price: item.price,
+          add_on_price: item.add_on_price || 0,
           category: item.category_name || item.category,
           portions_available: item.portions_available,
           portions_ordered: item.portions_ordered
@@ -630,8 +631,25 @@ export default function KitchenDashboard() {
         }
       });
       const data = await response.json();
-      if (data.success) {
-        setMenuCatalogItems(data.data || []);
+      console.log('Menu catalog items response:', data);
+      
+      if (data.success && data.data) {
+        // Map API response fields to expected format
+        const mappedItems = data.data.map(item => ({
+          id: item.link_id || item.id,
+          catalog_item_id: item.catalog_item_id || item.catalog_id,
+          name: item.name,
+          description: item.description,
+          price: item.effective_price || item.price || item.catalog_price || 0,
+          add_on_price: item.effective_add_on_price || item.add_on_price || item.catalog_add_on_price || 0,
+          category: item.category,
+          is_vegan: item.is_vegan,
+          is_vegetarian: item.is_vegetarian
+        }));
+        setMenuCatalogItems(mappedItems);
+      } else {
+        console.warn('Failed to load menu items:', data);
+        setMenuCatalogItems([]);
       }
     } catch (error) {
       console.error('Error loading menu catalog items:', error);
