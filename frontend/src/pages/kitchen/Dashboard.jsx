@@ -225,6 +225,7 @@ export default function KitchenDashboard() {
   const [availableCatalogItems, setAvailableCatalogItems] = useState([]);
   const [selectedCatalogItems, setSelectedCatalogItems] = useState([]);
   const [showMenuItemsView, setShowMenuItemsView] = useState(false);
+  const [loadingCatalogItems, setLoadingCatalogItems] = useState(false);
 
   // Load data on mount and when date changes
   useEffect(() => {
@@ -650,7 +651,7 @@ export default function KitchenDashboard() {
       
       let response;
       if (isDailyMenu) {
-        // Use daily menu API
+        // Use daily menu API - expects catalogItemIds array
         response = await fetch(`/api/daily-menu/${selectedMenuForItems.id}/items`, {
           method: 'POST',
           headers: {
@@ -658,7 +659,8 @@ export default function KitchenDashboard() {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            items: selectedCatalogItems.map(id => ({ catalogItemId: id, portionsAvailable: 50 }))
+            catalogItemIds: selectedCatalogItems,
+            portionsAvailable: 50
           })
         });
       } else {
@@ -729,8 +731,14 @@ export default function KitchenDashboard() {
   };
   
   const handleOpenAddItemsModal = async () => {
+    // Show modal with loading state
+    setLoadingCatalogItems(true);
+    setAvailableCatalogItems([]); // Clear previous items
     setShowAddItemsModal(true);
+    
+    // Load items
     await loadAvailableCatalogItems(selectedMenuForItems.id);
+    setLoadingCatalogItems(false);
   };
   
   const toggleCatalogItemSelection = (itemId) => {
@@ -1743,8 +1751,13 @@ export default function KitchenDashboard() {
               </div>
             )}
             
-            {/* Available Items Grid */}
-            {availableCatalogItems.length > 0 ? (
+            {/* Loading State */}
+            {loadingCatalogItems ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-orange-500 border-t-transparent"></div>
+                <p className={`mt-4 ${colors.textMuted}`}>Loading catalog items...</p>
+              </div>
+            ) : availableCatalogItems.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 {availableCatalogItems.map(item => {
                   const isSelected = selectedCatalogItems.includes(item.id);
@@ -1790,7 +1803,9 @@ export default function KitchenDashboard() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <p className={`${colors.textMuted}`}>All catalog items are already in this menu</p>
+                <p className="text-4xl mb-2">📦</p>
+                <p className={`${colors.textMuted}`}>No catalog items available</p>
+                <p className={`text-sm ${colors.textMuted}`}>Add items to your Dish Library first</p>
               </div>
             )}
             {/* Modal Buttons */}
