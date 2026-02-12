@@ -279,6 +279,7 @@ export const catalogAPI = {
 // ============================================================================
 export const dailyMenuAPI = {
   getDailyMenu: (params) => api.get('/daily-menu', { params }),
+  getAllDailyMenus: (params) => api.get('/daily-menu/all', { params }),
   createDailyMenu: (data) => api.post('/daily-menu', data),
   publishDailyMenu: (id, data) => api.post(`/daily-menu/${id}/publish`, data),
   markItemSoldOut: (dailyMenuItemId, data) => api.post(`/daily-menu/items/${dailyMenuItemId}/sold-out`, data),

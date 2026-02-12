@@ -240,9 +240,10 @@ export default function KitchenDashboard() {
     try {
       console.log('[Dashboard] Loading orders for date:', filters.date);
       
-      const [ordersRes, menusRes, itemsRes, issuesRes, messagesRes, companiesRes, cafeteriasRes] = await Promise.all([
+      const [ordersRes, weeklyMenusRes, dailyMenusRes, itemsRes, issuesRes, messagesRes, companiesRes, cafeteriasRes] = await Promise.all([
         orderAPI.getKitchenOrders({ date: filters.date }).catch(() => ({ data: { data: { ordersByStatus: { pending: [], preparing: [], ready: [], completed: [], confirmed: [], delivered: [] }, summary: {} } } })),
         menuAPI.getMenus().catch(() => ({ data: { data: { menus: [] } } })),
+        dailyMenuAPI.getAllDailyMenus().catch(() => ({ data: { data: { menus: [] } } })),
         catalogAPI.getItems().catch(() => ({ data: { data: { items: [] } } })),
         messageAPI.getFeedback().catch(() => ({ data: { data: { feedback: [] } } })),
         messageAPI.getInbox().catch(() => ({ data: { data: { messages: [], unreadCount: 0 } } })),
@@ -265,8 +266,15 @@ export default function KitchenDashboard() {
       
       console.log('[Dashboard] Orders loaded:', ordersList.length);
       
+      // Combine weekly and daily menus
+      const weeklyMenus = (weeklyMenusRes.data?.data?.menus || []).map(m => ({ ...m, isDailyMenu: false }));
+      const dailyMenus = dailyMenusRes.data?.data?.menus || [];
+      const allMenus = [...dailyMenus, ...weeklyMenus];
+      
+      console.log('[Dashboard] Menus loaded - Weekly:', weeklyMenus.length, 'Daily:', dailyMenus.length);
+      
       setOrders(ordersList);
-      setMenus(menusRes.data?.data?.menus || []);
+      setMenus(allMenus);
       setMenuItems(itemsRes.data?.data?.items || []);
       setIssues((issuesRes.data?.data?.feedback || []).filter(f => f.type === 'issue' || f.status === 'escalated'));
       setMessages(messagesRes.data?.data?.messages || []);
@@ -600,8 +608,8 @@ export default function KitchenDashboard() {
   // Helper function that takes menu object directly (avoids state timing issues)
   const loadMenuCatalogItemsForMenu = async (menu) => {
     try {
-      // Check if this is a daily menu
-      const isDailyMenu = menu?.menu_date || menu?.menuDate;
+      // Check if this is a daily menu (has isDailyMenu flag or menu_date)
+      const isDailyMenu = menu?.isDailyMenu || menu?.menu_date || menu?.menuDate;
       
       if (isDailyMenu) {
         // For daily menus, get items from daily menu API
@@ -610,12 +618,13 @@ export default function KitchenDashboard() {
           date: menu.menu_date || menu.menuDate 
         });
         const items = response.data?.data?.items || [];
+        console.log('[Dashboard] Daily menu items loaded:', items.length);
         setMenuCatalogItems(items.map(item => ({
           id: item.id,
           catalog_item_id: item.catalog_item_id,
           name: item.item_name || item.name,
           description: item.description,
-          price: item.price,
+          price: item.price || 0,
           add_on_price: item.add_on_price || 0,
           category: item.category_name || item.category,
           portions_available: item.portions_available,
@@ -631,7 +640,7 @@ export default function KitchenDashboard() {
         }
       });
       const data = await response.json();
-      console.log('Menu catalog items response:', data);
+      console.log('[Dashboard] Weekly menu catalog items response:', data);
       
       if (data.success && data.data) {
         // Map API response fields to expected format
@@ -664,8 +673,8 @@ export default function KitchenDashboard() {
     }
     
     try {
-      // Check if this is a daily menu (has menu_date) or weekly menu (has week_start_date)
-      const isDailyMenu = selectedMenuForItems.menu_date || selectedMenuForItems.menuDate;
+      // Check if this is a daily menu (has isDailyMenu flag or menu_date)
+      const isDailyMenu = selectedMenuForItems.isDailyMenu || selectedMenuForItems.menu_date || selectedMenuForItems.menuDate;
       
       let response;
       if (isDailyMenu) {
@@ -714,7 +723,7 @@ export default function KitchenDashboard() {
     if (!window.confirm('Remove this item from the menu?')) return;
     
     try {
-      const isDailyMenu = selectedMenuForItems?.menu_date || selectedMenuForItems?.menuDate;
+      const isDailyMenu = selectedMenuForItems?.isDailyMenu || selectedMenuForItems?.menu_date || selectedMenuForItems?.menuDate;
       
       let response;
       if (isDailyMenu) {
@@ -1202,7 +1211,12 @@ export default function KitchenDashboard() {
                   {menus.filter(m => m.status !== 'archived').length > 0 ? menus.filter(m => m.status !== 'archived').map(m => (
                     <div key={m.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}>
                       <div className="flex justify-between items-start mb-2">
-                        <h3 className={`font-semibold ${colors.textPrimary}`}>{m.name}</h3>
+                        <div className="flex-1">
+                          <h3 className={`font-semibold ${colors.textPrimary}`}>{m.name}</h3>
+                          {m.isDailyMenu && (
+                            <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">📅 Daily Menu</span>
+                          )}
+                        </div>
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           m.status === 'published' ? 'bg-green-100 text-green-700' : 
                           m.status === 'draft' ? 'bg-yellow-100 text-yellow-700' : 
@@ -1211,8 +1225,14 @@ export default function KitchenDashboard() {
                           {m.status || (m.is_active ? 'Active' : 'Draft')}
                         </span>
                       </div>
-                      <p className={`text-sm ${colors.textMuted} mb-3`}>
+                      <p className={`text-sm ${colors.textMuted} mb-1`}>
                         {m.meal_type} • {m.menu_type || 'Regular'}
+                      </p>
+                      {m.item_count !== undefined && (
+                        <p className={`text-xs ${colors.textMuted} mb-3`}>
+                          🍽️ {m.item_count} item{m.item_count !== 1 ? 's' : ''}
+                        </p>
+                      )}
                       </p>
                       <div className="flex flex-wrap gap-2">
                         <button 
