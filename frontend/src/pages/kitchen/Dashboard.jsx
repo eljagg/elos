@@ -510,7 +510,32 @@ export default function KitchenDashboard() {
   
   const loadMenuCatalogItems = async (menuId) => {
     try {
-      const response = await fetch(`/api/menu-catalog/${menuId}/catalog-items`, {
+      // Check if this is a daily menu
+      const isDailyMenu = selectedMenuForItems?.menu_date || selectedMenuForItems?.menuDate;
+      
+      let response;
+      if (isDailyMenu) {
+        // For daily menus, get items from daily menu API
+        response = await dailyMenuAPI.getDailyMenu({ 
+          cafeteriaId: selectedMenuForItems.cafeteria_id || selectedMenuForItems.cafeteriaId,
+          date: selectedMenuForItems.menu_date || selectedMenuForItems.menuDate 
+        });
+        const items = response.data?.data?.items || [];
+        setMenuCatalogItems(items.map(item => ({
+          id: item.id,
+          catalog_item_id: item.catalog_item_id,
+          name: item.item_name || item.name,
+          description: item.description,
+          price: item.price,
+          category: item.category_name || item.category,
+          portions_available: item.portions_available,
+          portions_ordered: item.portions_ordered
+        })));
+        return;
+      }
+      
+      // For weekly menus, use the menu-catalog API
+      response = await fetch(`/api/menu-catalog/${menuId}/catalog-items`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -521,31 +546,96 @@ export default function KitchenDashboard() {
       }
     } catch (error) {
       console.error('Error loading menu catalog items:', error);
-      toast.error('Failed to load menu items');
+      // Don't show error toast, just set empty array
+      setMenuCatalogItems([]);
     }
   };
   
   const loadAvailableCatalogItems = async (menuId) => {
     try {
+      // First try to get available items for this specific menu
       const response = await fetch(`/api/menu-catalog/${menuId}/available-catalog-items`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
       });
       const data = await response.json();
-      if (data.success) {
-        setAvailableCatalogItems(data.data || []);
+      
+      if (data.success && data.data && data.data.length > 0) {
+        setAvailableCatalogItems(data.data);
+      } else {
+        // Fallback: Load ALL catalog items from the Dish Library
+        console.log('Loading all catalog items as fallback...');
+        const catalogRes = await catalogAPI.getItems();
+        const allItems = catalogRes.data?.data?.items || [];
+        
+        // Filter out items that are already in the current menu
+        const existingItemIds = menuCatalogItems.map(item => item.catalog_item_id || item.id);
+        const available = allItems.filter(item => !existingItemIds.includes(item.id));
+        
+        setAvailableCatalogItems(available.length > 0 ? available : allItems);
       }
     } catch (error) {
       console.error('Error loading available items:', error);
-      toast.error('Failed to load available items');
+      // Ultimate fallback: Load ALL catalog items
+      try {
+        const catalogRes = await catalogAPI.getItems();
+        const allItems = catalogRes.data?.data?.items || [];
+        setAvailableCatalogItems(allItems);
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+        toast.error('Failed to load catalog items');
+      }
     }
   };
   
   const handleManageMenuItems = async (menu) => {
     setSelectedMenuForItems(menu);
     setShowMenuItemsView(true);
-    await loadMenuCatalogItems(menu.id);
+    setMenuCatalogItems([]); // Clear previous items
+    await loadMenuCatalogItemsForMenu(menu);
+  };
+  
+  // Helper function that takes menu object directly (avoids state timing issues)
+  const loadMenuCatalogItemsForMenu = async (menu) => {
+    try {
+      // Check if this is a daily menu
+      const isDailyMenu = menu?.menu_date || menu?.menuDate;
+      
+      if (isDailyMenu) {
+        // For daily menus, get items from daily menu API
+        const response = await dailyMenuAPI.getDailyMenu({ 
+          cafeteriaId: menu.cafeteria_id || menu.cafeteriaId,
+          date: menu.menu_date || menu.menuDate 
+        });
+        const items = response.data?.data?.items || [];
+        setMenuCatalogItems(items.map(item => ({
+          id: item.id,
+          catalog_item_id: item.catalog_item_id,
+          name: item.item_name || item.name,
+          description: item.description,
+          price: item.price,
+          category: item.category_name || item.category,
+          portions_available: item.portions_available,
+          portions_ordered: item.portions_ordered
+        })));
+        return;
+      }
+      
+      // For weekly menus, use the menu-catalog API
+      const response = await fetch(`/api/menu-catalog/${menu.id}/catalog-items`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setMenuCatalogItems(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading menu catalog items:', error);
+      setMenuCatalogItems([]);
+    }
   };
   
   const handleAddItemsToMenu = async () => {
@@ -555,23 +645,42 @@ export default function KitchenDashboard() {
     }
     
     try {
-      const response = await fetch(`/api/menu-catalog/${selectedMenuForItems.id}/catalog-items`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          catalogItemIds: selectedCatalogItems
-        })
-      });
+      // Check if this is a daily menu (has menu_date) or weekly menu (has week_start_date)
+      const isDailyMenu = selectedMenuForItems.menu_date || selectedMenuForItems.menuDate;
+      
+      let response;
+      if (isDailyMenu) {
+        // Use daily menu API
+        response = await fetch(`/api/daily-menu/${selectedMenuForItems.id}/items`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            items: selectedCatalogItems.map(id => ({ catalogItemId: id, portionsAvailable: 50 }))
+          })
+        });
+      } else {
+        // Use weekly menu catalog API
+        response = await fetch(`/api/menu-catalog/${selectedMenuForItems.id}/catalog-items`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            catalogItemIds: selectedCatalogItems
+          })
+        });
+      }
       
       const data = await response.json();
       if (data.success) {
         toast.success(`Added ${selectedCatalogItems.length} item(s) to menu`);
         setShowAddItemsModal(false);
         setSelectedCatalogItems([]);
-        await loadMenuCatalogItems(selectedMenuForItems.id);
+        await loadMenuCatalogItemsForMenu(selectedMenuForItems);
       } else {
         toast.error(data.error?.message || 'Failed to add items');
       }
@@ -581,21 +690,35 @@ export default function KitchenDashboard() {
     }
   };
   
-  const handleRemoveItemFromMenu = async (catalogItemId) => {
+  const handleRemoveItemFromMenu = async (itemId) => {
     if (!window.confirm('Remove this item from the menu?')) return;
     
     try {
-      const response = await fetch(`/api/menu-catalog/${selectedMenuForItems.id}/catalog-items/${catalogItemId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        }
-      });
+      const isDailyMenu = selectedMenuForItems?.menu_date || selectedMenuForItems?.menuDate;
+      
+      let response;
+      if (isDailyMenu) {
+        // For daily menus, use the daily menu API
+        response = await fetch(`/api/daily-menu/${selectedMenuForItems.id}/items/${itemId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          }
+        });
+      } else {
+        // For weekly menus, use the menu-catalog API
+        response = await fetch(`/api/menu-catalog/${selectedMenuForItems.id}/catalog-items/${itemId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          }
+        });
+      }
       
       const data = await response.json();
       if (data.success) {
         toast.success('Item removed from menu');
-        await loadMenuCatalogItems(selectedMenuForItems.id);
+        await loadMenuCatalogItemsForMenu(selectedMenuForItems);
       } else {
         toast.error(data.error?.message || 'Failed to remove item');
       }
