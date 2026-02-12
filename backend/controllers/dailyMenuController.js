@@ -774,12 +774,82 @@ const markAllNotificationsRead = async (req, res, next) => {
 };
 
 // ============================================================================
+// GET ALL DAILY MENUS (for Kitchen Dashboard list)
+// ============================================================================
+
+/**
+ * Get all daily menus for kitchen dashboard
+ * GET /api/daily-menu/all
+ */
+const getAllDailyMenus = async (req, res, next) => {
+    try {
+        const { status, limit = 50 } = req.query;
+        
+        let query = `
+            SELECT 
+                dm.id,
+                dm.cafeteria_id,
+                dm.menu_date,
+                dm.meal_type,
+                dm.status,
+                dm.cutoff_time,
+                dm.created_at,
+                dm.published_at,
+                c.name as cafeteria_name,
+                (SELECT COUNT(*) FROM daily_menu_items dmi WHERE dmi.daily_menu_id = dm.id AND dmi.is_active = TRUE) as item_count
+            FROM daily_menus dm
+            LEFT JOIN cafeterias c ON dm.cafeteria_id = c.id
+            WHERE 1=1
+        `;
+        
+        const params = [];
+        
+        if (status) {
+            params.push(status);
+            query += ` AND dm.status = $${params.length}`;
+        }
+        
+        query += ` ORDER BY dm.menu_date DESC, dm.meal_type LIMIT $${params.length + 1}`;
+        params.push(parseInt(limit));
+        
+        const result = await db.query(query, params);
+        
+        // Transform to match menu format expected by frontend
+        const menus = result.rows.map(row => ({
+            id: row.id,
+            name: `${row.meal_type === 'breakfast' ? '🌅' : '🍽️'} ${new Date(row.menu_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} - ${row.meal_type}`,
+            cafeteria_id: row.cafeteria_id,
+            cafeteria_name: row.cafeteria_name,
+            menu_date: row.menu_date,
+            meal_type: row.meal_type,
+            menu_type: 'daily',
+            status: row.status,
+            item_count: parseInt(row.item_count) || 0,
+            cutoff_time: row.cutoff_time,
+            created_at: row.created_at,
+            published_at: row.published_at,
+            isDailyMenu: true
+        }));
+        
+        res.status(200).json({
+            success: true,
+            data: { menus }
+        });
+        
+    } catch (error) {
+        logger.error('Error fetching all daily menus:', error);
+        next(error);
+    }
+};
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
 module.exports = {
     // Phase 1 enhanced
     getDailyMenu,
+    getAllDailyMenus,
     getCatalogItemsGrouped,
     createDailyMenu,
     updateMenu,

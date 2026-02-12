@@ -1233,7 +1233,6 @@ export default function KitchenDashboard() {
                           🍽️ {m.item_count} item{m.item_count !== 1 ? 's' : ''}
                         </p>
                       )}
-                      </p>
                       <div className="flex flex-wrap gap-2">
                         <button 
                           onClick={() => { 

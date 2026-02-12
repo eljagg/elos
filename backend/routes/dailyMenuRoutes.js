@@ -23,6 +23,9 @@ router.get('/catalog/items/grouped', authenticate, requireRole(...KITCHEN_STAFF)
 // DAILY MENUS
 // ============================================================================
 
+// Get all daily menus (for kitchen dashboard list)
+router.get('/all', authenticate, requireRole(...KITCHEN_STAFF), dailyMenuController.getAllDailyMenus);
+
 // Get daily menu (any employee can view)
 // Supports: ?cafeteriaId=1&date=2024-01-20&mealType=lunch
 router.get('/', authenticate, dailyMenuController.getDailyMenu);
