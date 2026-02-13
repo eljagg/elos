@@ -842,6 +842,49 @@ const getAllDailyMenus = async (req, res, next) => {
     }
 };
 
+/**
+ * Delete a daily menu
+ * DELETE /api/daily-menu/:id
+ */
+const deleteDailyMenu = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        
+        // Check if menu exists
+        const menu = await db.query('SELECT * FROM daily_menus WHERE id = $1', [id]);
+        
+        if (menu.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: { code: 'NOT_FOUND', message: 'Menu not found' }
+            });
+        }
+        
+        // Only allow deletion of draft menus (not published)
+        if (menu.rows[0].status === 'published') {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'CANNOT_DELETE_PUBLISHED', message: 'Cannot delete a published menu. Archive it instead.' }
+            });
+        }
+        
+        // Delete menu items first (foreign key constraint)
+        await db.query('DELETE FROM daily_menu_items WHERE daily_menu_id = $1', [id]);
+        
+        // Delete the menu
+        await db.query('DELETE FROM daily_menus WHERE id = $1', [id]);
+        
+        res.json({
+            success: true,
+            message: 'Menu deleted successfully'
+        });
+        
+    } catch (error) {
+        logger.error('Error deleting daily menu:', error);
+        next(error);
+    }
+};
+
 // ============================================================================
 // EXPORTS
 // ============================================================================
@@ -853,6 +896,7 @@ module.exports = {
     getCatalogItemsGrouped,
     createDailyMenu,
     updateMenu,
+    deleteDailyMenu,
     addItemsToMenu,
     updateMenuItem,
     removeMenuItem,

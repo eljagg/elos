@@ -113,15 +113,23 @@ export default function KitchenDashboard() {
     if (!menuToDelete) return;
     
     try {
-      const response = await fetch(`/api/menus/${menuToDelete.id}`, {
+      // Check if this is a daily menu
+      const isDailyMenu = menuToDelete.isDailyMenu || menuToDelete.menu_date || menuToDelete.menuDate;
+      const apiUrl = isDailyMenu 
+        ? `/api/daily-menu/${menuToDelete.id}`
+        : `/api/menus/${menuToDelete.id}`;
+      
+      const response = await fetch(apiUrl, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         },
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete menu');
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.error?.message || 'Failed to delete menu');
       }
 
       // Remove from state
@@ -134,7 +142,7 @@ export default function KitchenDashboard() {
       toast.success('Menu deleted successfully');
     } catch (error) {
       console.error('Error deleting menu:', error);
-      toast.error('Failed to delete menu. Please try again.');
+      toast.error(error.message || 'Failed to delete menu. Please try again.');
     }
   };
 
@@ -148,6 +156,18 @@ export default function KitchenDashboard() {
     if (!menuToArchive) return;
     
     try {
+      // Check if this is a daily menu
+      const isDailyMenu = menuToArchive.isDailyMenu || menuToArchive.menu_date || menuToArchive.menuDate;
+      
+      if (isDailyMenu) {
+        // For daily menus, we'll just delete them since they're date-specific
+        // and archiving doesn't make as much sense
+        toast.error('Daily menus cannot be archived. Use Delete instead.');
+        setShowArchiveConfirm(false);
+        setMenuToArchive(null);
+        return;
+      }
+      
       const response = await fetch(`/api/menus/${menuToArchive.id}/archive`, {
         method: 'PUT',
         headers: {
@@ -1261,8 +1281,15 @@ export default function KitchenDashboard() {
                           📋 Manage Items
                         </button>
                         <span className={`text-sm ${colors.textMuted}`}>•</span>
-                        {/* Show Delete only for draft menus, Archive for published */}
-                        {m.status === 'published' || m.is_active ? (
+                        {/* Daily menus: always show Delete. Weekly menus: Archive for published, Delete for draft */}
+                        {m.isDailyMenu ? (
+                          <button 
+                            onClick={() => handleDeleteMenu(m)} 
+                            className="text-red-600 text-sm hover:underline font-medium"
+                          >
+                            🗑️ Delete
+                          </button>
+                        ) : (m.status === 'published' || m.is_active) ? (
                           <button 
                             onClick={() => handleArchiveMenu(m)} 
                             className="text-amber-600 text-sm hover:underline font-medium"

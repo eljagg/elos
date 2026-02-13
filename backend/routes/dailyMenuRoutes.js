@@ -36,6 +36,9 @@ router.post('/', authenticate, requireRole(...KITCHEN_STAFF), dailyMenuControlle
 // Update menu details (cutoff time, etc)
 router.put('/:id', authenticate, requireRole(...KITCHEN_STAFF), dailyMenuController.updateMenu);
 
+// Delete daily menu (draft only)
+router.delete('/:id', authenticate, requireRole(...KITCHEN_STAFF), dailyMenuController.deleteDailyMenu);
+
 // Add items to menu
 router.post('/:id/items', authenticate, requireRole(...KITCHEN_STAFF), dailyMenuController.addItemsToMenu);
 
