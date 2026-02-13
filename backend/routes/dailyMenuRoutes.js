@@ -51,6 +51,12 @@ router.delete('/:menuId/items/:itemId', authenticate, requireRole(...KITCHEN_STA
 // Publish daily menu
 router.post('/:id/publish', authenticate, requireRole(...KITCHEN_STAFF), dailyMenuController.publishDailyMenu);
 
+// Unpublish daily menu (set back to draft)
+router.put('/:id/unpublish', authenticate, requireRole(...KITCHEN_STAFF), dailyMenuController.unpublishDailyMenu);
+
+// Archive daily menu
+router.put('/:id/archive', authenticate, requireRole(...KITCHEN_STAFF), dailyMenuController.archiveDailyMenu);
+
 // Mark item as sold out (legacy endpoint)
 router.post('/items/:dailyMenuItemId/sold-out', authenticate, requireRole(...KITCHEN_STAFF), dailyMenuController.markItemSoldOut);
 

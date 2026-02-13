@@ -159,24 +159,20 @@ export default function KitchenDashboard() {
       // Check if this is a daily menu
       const isDailyMenu = menuToArchive.isDailyMenu || menuToArchive.menu_date || menuToArchive.menuDate;
       
-      if (isDailyMenu) {
-        // For daily menus, we'll just delete them since they're date-specific
-        // and archiving doesn't make as much sense
-        toast.error('Daily menus cannot be archived. Use Delete instead.');
-        setShowArchiveConfirm(false);
-        setMenuToArchive(null);
-        return;
-      }
+      const apiUrl = isDailyMenu 
+        ? `/api/daily-menu/${menuToArchive.id}/archive`
+        : `/api/menus/${menuToArchive.id}/archive`;
       
-      const response = await fetch(`/api/menus/${menuToArchive.id}/archive`, {
+      const response = await fetch(apiUrl, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         },
       });
 
-      if (!response.ok) {
-        const data = await response.json();
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
         throw new Error(data.error?.message || 'Failed to archive menu');
       }
 
@@ -194,17 +190,57 @@ export default function KitchenDashboard() {
     }
   };
 
-  const loadArchivedMenus = async () => {
+  // Unpublish menu handler - sets status back to draft
+  const handleUnpublishMenu = async (menu) => {
+    if (!window.confirm(`Unpublish "${menu.name}"? Employees won't be able to order from this menu until it's republished.`)) return;
+    
     try {
-      const response = await fetch('/api/menus/archived', {
+      const isDailyMenu = menu.isDailyMenu || menu.menu_date || menu.menuDate;
+      const apiUrl = isDailyMenu 
+        ? `/api/daily-menu/${menu.id}/unpublish`
+        : `/api/menus/${menu.id}/unpublish`;
+      
+      const response = await fetch(apiUrl, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         },
       });
+
       const data = await response.json();
-      if (data.success) {
-        setArchivedMenus(data.data.menus || []);
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.error?.message || 'Failed to unpublish menu');
       }
+
+      // Update menu status in state
+      setMenus(menus.map(m => m.id === menu.id ? { ...m, status: 'draft' } : m));
+      toast.success('Menu unpublished. You can now edit it and republish when ready.');
+    } catch (error) {
+      console.error('Error unpublishing menu:', error);
+      toast.error(error.message || 'Failed to unpublish menu');
+    }
+  };
+
+  const loadArchivedMenus = async () => {
+    try {
+      // Load both weekly and daily archived menus
+      const [weeklyRes, dailyRes] = await Promise.all([
+        fetch('/api/menus/archived', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+        }).catch(() => ({ json: () => ({ success: true, data: { menus: [] } }) })),
+        fetch('/api/daily-menu/all?status=archived', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+        }).catch(() => ({ json: () => ({ success: true, data: { menus: [] } }) }))
+      ]);
+      
+      const weeklyData = await weeklyRes.json();
+      const dailyData = await dailyRes.json();
+      
+      const weeklyMenus = weeklyData.success ? (weeklyData.data?.menus || []).map(m => ({ ...m, isDailyMenu: false })) : [];
+      const dailyMenus = dailyData.success ? (dailyData.data?.menus || []) : [];
+      
+      setArchivedMenus([...dailyMenus, ...weeklyMenus]);
     } catch (error) {
       console.error('Error loading archived menus:', error);
       toast.error('Failed to load archived menus');
@@ -213,15 +249,21 @@ export default function KitchenDashboard() {
 
   const handleRestoreMenu = async (menu) => {
     try {
-      const response = await fetch(`/api/menus/${menu.id}/restore`, {
+      const isDailyMenu = menu.isDailyMenu || menu.menu_date || menu.menuDate;
+      const apiUrl = isDailyMenu 
+        ? `/api/daily-menu/${menu.id}/unpublish`  // Restore to draft
+        : `/api/menus/${menu.id}/restore`;
+      
+      const response = await fetch(apiUrl, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         },
       });
 
-      if (!response.ok) {
-        const data = await response.json();
+      const data = await response.json();
+      
+      if (!response.ok || !data.success) {
         throw new Error(data.error?.message || 'Failed to restore menu');
       }
 
@@ -1246,7 +1288,7 @@ export default function KitchenDashboard() {
                         </span>
                       </div>
                       <p className={`text-sm ${colors.textMuted} mb-1`}>
-                        {m.meal_type} • {m.menu_type || 'Regular'}
+                        {m.meal_type || 'lunch'} • {m.menu_type || 'daily'}
                       </p>
                       {m.item_count !== undefined && (
                         <p className={`text-xs ${colors.textMuted} mb-3`}>
@@ -1281,21 +1323,23 @@ export default function KitchenDashboard() {
                           📋 Manage Items
                         </button>
                         <span className={`text-sm ${colors.textMuted}`}>•</span>
-                        {/* Daily menus: always show Delete. Weekly menus: Archive for published, Delete for draft */}
-                        {m.isDailyMenu ? (
-                          <button 
-                            onClick={() => handleDeleteMenu(m)} 
-                            className="text-red-600 text-sm hover:underline font-medium"
-                          >
-                            🗑️ Delete
-                          </button>
-                        ) : (m.status === 'published' || m.is_active) ? (
-                          <button 
-                            onClick={() => handleArchiveMenu(m)} 
-                            className="text-amber-600 text-sm hover:underline font-medium"
-                          >
-                            📦 Archive
-                          </button>
+                        {/* Published menus: Unpublish + Archive. Draft menus: Delete */}
+                        {m.status === 'published' ? (
+                          <>
+                            <button 
+                              onClick={() => handleUnpublishMenu(m)} 
+                              className="text-amber-600 text-sm hover:underline font-medium"
+                            >
+                              ⏸️ Unpublish
+                            </button>
+                            <span className={`text-sm ${colors.textMuted}`}>•</span>
+                            <button 
+                              onClick={() => handleArchiveMenu(m)} 
+                              className="text-gray-500 text-sm hover:underline"
+                            >
+                              📦 Archive
+                            </button>
+                          </>
                         ) : (
                           <button 
                             onClick={() => handleDeleteMenu(m)} 

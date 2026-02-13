@@ -885,6 +885,74 @@ const deleteDailyMenu = async (req, res, next) => {
     }
 };
 
+/**
+ * Unpublish a daily menu (set status back to draft)
+ * PUT /api/daily-menu/:id/unpublish
+ */
+const unpublishDailyMenu = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await db.query(`
+            UPDATE daily_menus
+            SET status = 'draft', updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1
+            RETURNING *
+        `, [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: { code: 'NOT_FOUND', message: 'Menu not found' }
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Menu unpublished successfully',
+            data: { dailyMenu: result.rows[0] }
+        });
+        
+    } catch (error) {
+        logger.error('Error unpublishing daily menu:', error);
+        next(error);
+    }
+};
+
+/**
+ * Archive a daily menu
+ * PUT /api/daily-menu/:id/archive
+ */
+const archiveDailyMenu = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        
+        const result = await db.query(`
+            UPDATE daily_menus
+            SET status = 'archived', updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1
+            RETURNING *
+        `, [id]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: { code: 'NOT_FOUND', message: 'Menu not found' }
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Menu archived successfully',
+            data: { dailyMenu: result.rows[0] }
+        });
+        
+    } catch (error) {
+        logger.error('Error archiving daily menu:', error);
+        next(error);
+    }
+};
+
 // ============================================================================
 // EXPORTS
 // ============================================================================
@@ -897,6 +965,8 @@ module.exports = {
     createDailyMenu,
     updateMenu,
     deleteDailyMenu,
+    unpublishDailyMenu,
+    archiveDailyMenu,
     addItemsToMenu,
     updateMenuItem,
     removeMenuItem,
