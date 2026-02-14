@@ -63,32 +63,56 @@ export default function ReceptionistDashboard() {
 
   const handleGenerateCode = async (e) => { 
     e.preventDefault(); 
+    
+    if (!codeForm.cafeteriaId) {
+      toast.error('Please select a cafeteria');
+      return;
+    }
+    
     try {
       const response = await orderAPI.createGuestCode({
         cafeteriaId: codeForm.cafeteriaId,
-        validDate: codeForm.validDate,
+        validDate: codeForm.validDate || new Date().toISOString().split('T')[0],
         guestName: codeForm.guestName,
-        guestEmail: codeForm.guestEmail
+        guestEmail: codeForm.guestEmail,
+        sendEmail: true
       });
-      const newCode = response.data?.data?.code || response.data?.code;
-      toast.success(`Code: ${newCode}`); 
+      
+      const guestCode = response.data?.data?.guestCode;
+      const code = guestCode?.code || response.data?.data?.code || response.data?.code;
+      
+      if (guestCode?.emailSent) {
+        toast.success(`Code ${code} generated and emailed to ${codeForm.guestEmail}!`);
+      } else if (codeForm.guestEmail) {
+        toast.success(`Code ${code} generated! Email could not be sent - you can email manually.`);
+      } else {
+        toast.success(`Code generated: ${code}`);
+      }
+      
       setShowGenerateModal(false); 
       setCodeForm({ cafeteriaId: '', validDate: '', guestName: '', guestEmail: '' }); 
       loadData();
     } catch (error) {
-      // Fallback to localStorage if API fails
-      console.error('API failed, using localStorage fallback:', error);
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase(); 
-      const newCode = { id: Date.now().toString(), code, ...codeForm, is_used: false, created_at: new Date().toISOString() }; 
-      const codes = [...guestCodes, newCode]; 
-      setGuestCodes(codes); 
-      localStorage.setItem('guestCodes', JSON.stringify(codes)); 
-      toast.success(`Code: ${code}`); 
-      setShowGenerateModal(false); 
-      setCodeForm({ cafeteriaId: '', validDate: '', guestName: '', guestEmail: '' }); 
+      console.error('Failed to generate code:', error);
+      toast.error(error.response?.data?.error?.message || 'Failed to generate code. Please try again.');
     }
   };
-  const handleEmailCode = () => { const subject = encodeURIComponent(`Your Guest Code: ${selectedCode.code}`); const body = encodeURIComponent(`Hello,\n\nYour guest code: ${selectedCode.code}\nValid: ${selectedCode.validDate || 'Today'}`); window.location.href = `mailto:${selectedCode.guestEmail}?subject=${subject}&body=${body}`; setShowEmailModal(false); };
+  
+  const handleEmailCode = async () => { 
+    // This is now a fallback - server should have sent email already
+    // But keep it for manual re-send
+    const subject = encodeURIComponent(`Your Guest Lunch Code: ${selectedCode.code}`);
+    const body = encodeURIComponent(
+      `Hello ${selectedCode.guestName || ''},\n\n` +
+      `Your guest code for lunch ordering is: ${selectedCode.code}\n\n` +
+      `Valid Date: ${selectedCode.validDate || 'Today'}\n` +
+      `This code can only be used once and expires at end of day.\n\n` +
+      `To order, visit: ${window.location.origin}/guest\n\n` +
+      `Regards,\nELOS System`
+    );
+    window.location.href = `mailto:${selectedCode.guestEmail}?subject=${subject}&body=${body}`; 
+    setShowEmailModal(false); 
+  };
   const handleConfirmDelivery = async (delivery) => { 
     try {
       // Try API first

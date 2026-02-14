@@ -30,6 +30,7 @@
 const crypto = require('crypto');
 const db = require('../config/database');
 const logger = require('../utils/logger');
+const emailService = require('../utils/emailService');
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -245,15 +246,22 @@ const generateCode = async (req, res, next) => {
             visitorId,
             cafeteriaId,
             validDate,
-            notes
+            notes,
+            guestName,
+            guestEmail,
+            sendEmail
         } = req.body;
         
         // Use today if no date specified
         const targetDate = validDate || new Date().toISOString().split('T')[0];
         
-        // Validate cafeteria
+        // Validate cafeteria and get company info
         const cafeteriaResult = await db.query(
-            'SELECT id, name FROM cafeterias WHERE id = $1 AND is_active = TRUE',
+            `SELECT cf.id, cf.name, c.name as company_name 
+             FROM cafeterias cf
+             LEFT JOIN cafeteria_companies cc ON cf.id = cc.cafeteria_id
+             LEFT JOIN companies c ON cc.company_id = c.id
+             WHERE cf.id = $1 AND cf.is_active = TRUE`,
             [cafeteriaId]
         );
         
@@ -266,6 +274,8 @@ const generateCode = async (req, res, next) => {
                 }
             });
         }
+        
+        const cafeteria = cafeteriaResult.rows[0];
         
         // Generate unique code
         let code;
@@ -293,12 +303,14 @@ const generateCode = async (req, res, next) => {
         const result = await db.query(
             `INSERT INTO guest_codes (
                 code, visitor_id, cafeteria_id, company_id,
-                valid_date, expires_at, notes, created_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                valid_date, expires_at, notes, created_by,
+                guest_name, guest_email
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *`,
             [
                 code, visitorId, cafeteriaId, userCompanyId,
-                targetDate, expiresAt, notes, receptionistId
+                targetDate, expiresAt, notes, receptionistId,
+                guestName || null, guestEmail || null
             ]
         );
         
@@ -307,19 +319,53 @@ const generateCode = async (req, res, next) => {
         logger.info('Guest code generated:', { 
             codeId: guestCode.id, 
             code: guestCode.code,
+            guestEmail: guestEmail || 'none',
             createdBy: receptionistId 
         });
         
+        // Send email if guest email provided and sendEmail flag is true (or email is provided)
+        let emailSent = false;
+        if (guestEmail && (sendEmail !== false)) {
+            try {
+                await emailService.sendGuestCodeEmail(
+                    guestEmail,
+                    guestName || 'Guest',
+                    code,
+                    {
+                        companyName: cafeteria.company_name || 'ELOS',
+                        cafeteriaName: cafeteria.name,
+                        validDate: targetDate
+                    }
+                );
+                emailSent = true;
+                logger.info('Guest code email sent:', { 
+                    codeId: guestCode.id, 
+                    email: guestEmail 
+                });
+            } catch (emailError) {
+                // Log but don't fail the request
+                logger.error('Failed to send guest code email:', {
+                    error: emailError.message,
+                    email: guestEmail
+                });
+            }
+        }
+        
         res.status(201).json({
             success: true,
-            message: 'Guest code generated successfully',
+            message: emailSent 
+                ? 'Guest code generated and emailed successfully' 
+                : 'Guest code generated successfully',
             data: {
                 guestCode: {
                     id: guestCode.id,
                     code: guestCode.code,
                     validDate: guestCode.valid_date,
                     expiresAt: guestCode.expires_at,
-                    cafeteriaName: cafeteriaResult.rows[0].name
+                    cafeteriaName: cafeteria.name,
+                    guestName: guestName,
+                    guestEmail: guestEmail,
+                    emailSent
                 }
             }
         });
@@ -387,13 +433,18 @@ const getCodes = async (req, res, next) => {
                     expiresAt: gc.expires_at,
                     status: gc.is_used ? 'used' : (new Date(gc.expires_at) < new Date() ? 'expired' : 'active'),
                     isUsed: gc.is_used,
+                    is_used: gc.is_used, // Also include snake_case for frontend compatibility
                     usedAt: gc.used_at,
+                    used_at: gc.used_at,
+                    guestName: gc.guest_name,
+                    guestEmail: gc.guest_email,
                     visitor: gc.visitor_first_name ? {
                         name: `${gc.visitor_first_name} ${gc.visitor_last_name}`
                     } : null,
                     cafeteriaName: gc.cafeteria_name,
                     createdBy: `${gc.created_by_first_name} ${gc.created_by_last_name}`,
-                    createdAt: gc.created_at
+                    createdAt: gc.created_at,
+                    created_at: gc.created_at
                 }))
             }
         });
