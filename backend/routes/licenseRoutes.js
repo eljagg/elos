@@ -34,15 +34,15 @@ router.get('/check', authenticate, licenseController.checkValid);
 // ============================================================================
 
 // Get full license details - admin only
-router.get('/details', authenticate, requireRole('admin', 'super_admin'), licenseController.getDetails);
+router.get('/details', authenticate, requireRole('SYSTEM_OWNER', 'SUPER_ADMIN'), licenseController.getDetails);
 
 // Activate a license key - admin only
-router.post('/activate', authenticate, requireRole('admin', 'super_admin'), licenseController.activate);
+router.post('/activate', authenticate, requireRole('SYSTEM_OWNER', 'SUPER_ADMIN'), licenseController.activate);
 
 // Extend current license - admin only
-router.post('/extend', authenticate, requireRole('admin', 'super_admin'), licenseController.extend);
+router.post('/extend', authenticate, requireRole('SYSTEM_OWNER', 'SUPER_ADMIN'), licenseController.extend);
 
 // Generate a new license key - admin only
-router.post('/generate', authenticate, requireRole('admin', 'super_admin'), licenseController.generateKey);
+router.post('/generate', authenticate, requireRole('SYSTEM_OWNER', 'SUPER_ADMIN'), licenseController.generateKey);
 
 module.exports = router;
