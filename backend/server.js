@@ -292,7 +292,7 @@ const menuCatalogRoutes = require('./routes/menuCatalogRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
 const dailyMenuRoutes = require('./routes/dailyMenuRoutes');
 const adminRoutes = require('./routes/adminRoutes');
-const licenseRoutes = require('./routes/licenseRoutes');
+// const licenseRoutes = require('./routes/licenseRoutes'); // TEMPORARILY DISABLED
 
 /**
  * Mount routes with prefixes
@@ -313,7 +313,7 @@ app.use('/api/messages', messageRoutes); // Messaging system
 app.use('/api/reports', reportRoutes);   // Reports and analytics
 app.use('/api/delivery', deliveryRoutes); // Delivery management
 app.use('/api/admin', adminRoutes);      // Admin functions
-app.use('/api/license', licenseRoutes);  // License management
+// app.use('/api/license', licenseRoutes);  // License management - TEMPORARILY DISABLED
 
 // PHASE 3 TEST: Direct inline route
 app.get("/api/menu-catalog-test", (req, res) => {
