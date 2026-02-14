@@ -5,7 +5,9 @@ import { useTheme } from '../../context/ThemeContext';
 import toast from 'react-hot-toast';
 
 export default function ReceptionistDashboard() {
-  const { colors, getStatCardColors } = useTheme();
+  const themeContext = useTheme();
+  const colors = themeContext?.colors || {};
+  const getStatCardColors = themeContext?.getStatCardColors || ((i) => ({ bg: 'bg-gray-50', border: 'border-gray-300', text: 'text-gray-700' }));
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'codes');
   
@@ -357,19 +359,27 @@ export default function ReceptionistDashboard() {
     </div>
   );
 
+  // Fallback colors if theme context fails
+  const textPrimary = colors.textPrimary || 'text-gray-900';
+  const textSecondary = colors.textSecondary || 'text-gray-600';
+  const textMuted = colors.textMuted || 'text-gray-500';
+  const bgCard = colors.bgCard || 'bg-white';
+  const bgSecondary = colors.bgSecondary || 'bg-gray-50';
+  const border = colors.border || 'border-gray-200';
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className={`text-2xl font-bold ${colors.textPrimary}`}>Reception Dashboard</h1>
-          <p className={colors.textMuted}>Manage guest codes, deliveries, and orders</p>
+          <h1 className={`text-2xl font-bold ${textPrimary}`}>Reception Dashboard</h1>
+          <p className={textMuted}>Manage guest codes, deliveries, and orders</p>
         </div>
         
         {/* Notification Bell */}
         <button 
           onClick={() => setActiveTab('notifications')}
-          className={`p-3 rounded-lg ${colors.bgSecondary} relative hover:bg-gray-200`}
+          className={`p-3 rounded-lg ${bgSecondary} relative hover:bg-gray-200`}
         >
           🔔
           {unreadNotifications > 0 && (
@@ -383,27 +393,27 @@ export default function ReceptionistDashboard() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         {[
-          { l: 'Active Codes', v: stats.activeCodes, icon: '🎟️' },
-          { l: 'Used Today', v: stats.usedToday, icon: '✅' },
-          { l: "Today's Orders", v: stats.todayOrders, icon: '📦' },
-          { l: 'Pending Orders', v: stats.pendingOrders, icon: '⏳' },
-          { l: 'Pending Deliveries', v: stats.pendingDeliveries, icon: '🚚' },
-          { l: 'Open Issues', v: stats.openIssues, icon: '⚠️' }
+          { l: 'Active Codes', v: stats.activeCodes || 0, icon: '🎟️' },
+          { l: 'Used Today', v: stats.usedToday || 0, icon: '✅' },
+          { l: "Today's Orders", v: stats.todayOrders || 0, icon: '📦' },
+          { l: 'Pending Orders', v: stats.pendingOrders || 0, icon: '⏳' },
+          { l: 'Pending Deliveries', v: stats.pendingDeliveries || 0, icon: '🚚' },
+          { l: 'Open Issues', v: stats.openIssues || 0, icon: '⚠️' }
         ].map((s, i) => { 
-          const c = getStatCardColors(i); 
+          const c = getStatCardColors(i) || { bg: 'bg-gray-50', border: 'border-gray-300', text: 'text-gray-700' }; 
           return (
-            <div key={i} className={`${c.bg} rounded-xl p-4 border-l-4 ${c.border}`}>
-              <p className={`text-sm ${c.text} opacity-80`}>{s.icon} {s.l}</p>
-              <p className={`text-2xl font-bold ${c.text}`}>{s.v || 0}</p>
+            <div key={i} className={`${c.bg || 'bg-gray-50'} rounded-xl p-4 border-l-4 ${c.border || 'border-gray-300'}`}>
+              <p className={`text-sm ${c.text || 'text-gray-700'} opacity-80`}>{s.icon} {s.l}</p>
+              <p className={`text-2xl font-bold ${c.text || 'text-gray-700'}`}>{s.v}</p>
             </div>
           ); 
         })}
       </div>
 
       {/* Main Content */}
-      <div className={`${colors.bgCard} rounded-xl shadow-sm border ${colors.border}`}>
+      <div className={`${bgCard} rounded-xl shadow-sm border ${border}`}>
         {/* Tabs */}
-        <div className={`border-b ${colors.border} flex overflow-x-auto`}>
+        <div className={`border-b ${border} flex overflow-x-auto`}>
           {[
             { id: 'codes', l: '🎟️ Guest Codes' },
             { id: 'deliveries', l: '📦 Deliveries' },
@@ -419,7 +429,7 @@ export default function ReceptionistDashboard() {
               className={`px-6 py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 activeTab === t.id 
                   ? 'border-indigo-500 text-indigo-600' 
-                  : `border-transparent ${colors.textMuted} hover:text-indigo-500`
+                  : `border-transparent ${textMuted} hover:text-indigo-500`
               }`}
             >
               {t.l}
@@ -432,7 +442,7 @@ export default function ReceptionistDashboard() {
           {activeTab === 'codes' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className={`font-semibold ${colors.textPrimary}`}>Guest Codes</h3>
+                <h3 className={`font-semibold ${textPrimary}`}>Guest Codes</h3>
                 <button 
                   onClick={() => setShowGenerateModal(true)} 
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
@@ -445,12 +455,12 @@ export default function ReceptionistDashboard() {
                 {guestCodes.length > 0 ? guestCodes.map(code => (
                   <div 
                     key={code.id} 
-                    className={`border ${colors.border} rounded-xl p-4 ${
-                      code.is_used ? 'opacity-60 bg-gray-50' : colors.bgCard
+                    className={`border ${border} rounded-xl p-4 ${
+                      code.is_used ? 'opacity-60 bg-gray-50' : bgCard
                     }`}
                   >
                     <div className="flex justify-between items-start mb-2">
-                      <p className={`font-mono text-2xl font-bold ${colors.textPrimary}`}>
+                      <p className={`font-mono text-2xl font-bold ${textPrimary}`}>
                         {code.code}
                       </p>
                       <span className={`px-2 py-1 text-xs rounded-full ${
@@ -461,14 +471,14 @@ export default function ReceptionistDashboard() {
                         {code.is_used ? 'Used' : 'Active'}
                       </span>
                     </div>
-                    <p className={`text-sm font-medium ${colors.textSecondary}`}>
+                    <p className={`text-sm font-medium ${textSecondary}`}>
                       {code.guestName || 'Guest'}
                     </p>
-                    <p className={`text-sm ${colors.textMuted}`}>
+                    <p className={`text-sm ${textMuted}`}>
                       Valid: {code.validDate || 'Today'}
                     </p>
                     {code.is_used && code.used_at && (
-                      <p className={`text-xs ${colors.textMuted} mt-1`}>
+                      <p className={`text-xs ${textMuted} mt-1`}>
                         Used: {new Date(code.used_at).toLocaleString()}
                       </p>
                     )}
@@ -483,7 +493,7 @@ export default function ReceptionistDashboard() {
                   </div>
                 )) : (
                   <div className="col-span-3 text-center py-8">
-                    <p className={colors.textMuted}>No guest codes yet. Click "Generate Code" to create one.</p>
+                    <p className={textMuted}>No guest codes yet. Click "Generate Code" to create one.</p>
                   </div>
                 )}
               </div>
@@ -494,7 +504,7 @@ export default function ReceptionistDashboard() {
           {activeTab === 'deliveries' && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h3 className={`font-semibold ${colors.textPrimary}`}>Pending Deliveries by Company</h3>
+                <h3 className={`font-semibold ${textPrimary}`}>Pending Deliveries by Company</h3>
               </div>
 
               {Object.keys(deliveriesByCompany).length > 0 ? (
@@ -502,8 +512,8 @@ export default function ReceptionistDashboard() {
                   <div key={companyName} className={`border-2 border-cyan-200 bg-cyan-50 rounded-xl p-4`}>
                     <div className="flex justify-between items-center mb-4">
                       <div>
-                        <h4 className={`font-semibold text-lg ${colors.textPrimary}`}>{companyName}</h4>
-                        <p className={`text-sm ${colors.textMuted}`}>
+                        <h4 className={`font-semibold text-lg ${textPrimary}`}>{companyName}</h4>
+                        <p className={`text-sm ${textMuted}`}>
                           {companyDeliveries.length} order(s) awaiting confirmation
                         </p>
                       </div>
@@ -520,10 +530,10 @@ export default function ReceptionistDashboard() {
                         <div key={i} className="flex justify-between items-center p-3 bg-white rounded-lg border">
                           <div>
                             <p className="font-mono font-bold text-lg">#{d.orderNumber}</p>
-                            <p className={`text-sm ${colors.textMuted}`}>
+                            <p className={`text-sm ${textMuted}`}>
                               {d.employeeName || 'Employee'} {d.departmentName ? `• ${d.departmentName}` : ''}
                             </p>
-                            <p className={`text-xs ${colors.textMuted}`}>
+                            <p className={`text-xs ${textMuted}`}>
                               🚗 {d.deliveryPersonPlate || 'N/A'}
                             </p>
                           </div>
@@ -541,8 +551,8 @@ export default function ReceptionistDashboard() {
               ) : (
                 <div className="text-center py-12">
                   <p className="text-5xl mb-3">📦</p>
-                  <p className={`text-lg ${colors.textMuted}`}>No pending deliveries</p>
-                  <p className={`text-sm ${colors.textMuted}`}>All orders have been confirmed</p>
+                  <p className={`text-lg ${textMuted}`}>No pending deliveries</p>
+                  <p className={`text-sm ${textMuted}`}>All orders have been confirmed</p>
                 </div>
               )}
             </div>
@@ -556,7 +566,7 @@ export default function ReceptionistDashboard() {
                 <select
                   value={orderFilters.companyId}
                   onChange={e => setOrderFilters({ ...orderFilters, companyId: e.target.value, departmentId: '' })}
-                  className={`px-3 py-2 border ${colors.border} rounded-lg`}
+                  className={`px-3 py-2 border ${border} rounded-lg`}
                 >
                   <option value="">All Companies</option>
                   {companies.map(c => (
@@ -567,7 +577,7 @@ export default function ReceptionistDashboard() {
                 <select
                   value={orderFilters.departmentId}
                   onChange={e => setOrderFilters({ ...orderFilters, departmentId: e.target.value })}
-                  className={`px-3 py-2 border ${colors.border} rounded-lg`}
+                  className={`px-3 py-2 border ${border} rounded-lg`}
                   disabled={!orderFilters.companyId}
                 >
                   <option value="">All Departments</option>
@@ -579,7 +589,7 @@ export default function ReceptionistDashboard() {
                 <select
                   value={orderFilters.status}
                   onChange={e => setOrderFilters({ ...orderFilters, status: e.target.value })}
-                  className={`px-3 py-2 border ${colors.border} rounded-lg`}
+                  className={`px-3 py-2 border ${border} rounded-lg`}
                 >
                   <option value="">All Statuses</option>
                   <option value="pending">Pending</option>
@@ -593,55 +603,55 @@ export default function ReceptionistDashboard() {
                   type="date"
                   value={orderFilters.dateFrom}
                   onChange={e => setOrderFilters({ ...orderFilters, dateFrom: e.target.value })}
-                  className={`px-3 py-2 border ${colors.border} rounded-lg`}
+                  className={`px-3 py-2 border ${border} rounded-lg`}
                 />
                 
                 <input
                   type="date"
                   value={orderFilters.dateTo}
                   onChange={e => setOrderFilters({ ...orderFilters, dateTo: e.target.value })}
-                  className={`px-3 py-2 border ${colors.border} rounded-lg`}
+                  className={`px-3 py-2 border ${border} rounded-lg`}
                 />
               </div>
 
-              <p className={`text-sm ${colors.textMuted}`}>
+              <p className={`text-sm ${textMuted}`}>
                 Showing {filteredOrders.length} order(s)
               </p>
 
               {/* Orders Table */}
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className={colors.bgSecondary}>
+                  <thead className={bgSecondary}>
                     <tr>
-                      <th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>Order #</th>
-                      <th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>Customer</th>
-                      <th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>Company</th>
-                      <th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>Department</th>
-                      <th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>Meal</th>
-                      <th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>Date</th>
-                      <th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>Status</th>
-                      <th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>Actions</th>
+                      <th className={`px-4 py-3 text-left text-xs font-medium ${textMuted} uppercase`}>Order #</th>
+                      <th className={`px-4 py-3 text-left text-xs font-medium ${textMuted} uppercase`}>Customer</th>
+                      <th className={`px-4 py-3 text-left text-xs font-medium ${textMuted} uppercase`}>Company</th>
+                      <th className={`px-4 py-3 text-left text-xs font-medium ${textMuted} uppercase`}>Department</th>
+                      <th className={`px-4 py-3 text-left text-xs font-medium ${textMuted} uppercase`}>Meal</th>
+                      <th className={`px-4 py-3 text-left text-xs font-medium ${textMuted} uppercase`}>Date</th>
+                      <th className={`px-4 py-3 text-left text-xs font-medium ${textMuted} uppercase`}>Status</th>
+                      <th className={`px-4 py-3 text-left text-xs font-medium ${textMuted} uppercase`}>Actions</th>
                     </tr>
                   </thead>
-                  <tbody className={`divide-y ${colors.border}`}>
+                  <tbody className={`divide-y ${border}`}>
                     {filteredOrders.slice(0, 50).map(o => (
                       <tr key={o.id} className="hover:bg-gray-50">
-                        <td className={`px-4 py-3 font-mono font-bold ${colors.textPrimary}`}>
+                        <td className={`px-4 py-3 font-mono font-bold ${textPrimary}`}>
                           #{o.order_number || o.id?.slice(0, 8)}
                         </td>
-                        <td className={`px-4 py-3 ${colors.textSecondary}`}>
+                        <td className={`px-4 py-3 ${textSecondary}`}>
                           {o.user_first_name} {o.user_last_name}
                         </td>
-                        <td className={`px-4 py-3 ${colors.textSecondary}`}>
+                        <td className={`px-4 py-3 ${textSecondary}`}>
                           {o.company_name || '-'}
                         </td>
-                        <td className={`px-4 py-3 ${colors.textSecondary}`}>
+                        <td className={`px-4 py-3 ${textSecondary}`}>
                           {o.department_name || '-'}
                         </td>
-                        <td className={`px-4 py-3 ${colors.textSecondary} capitalize`}>
+                        <td className={`px-4 py-3 ${textSecondary} capitalize`}>
                           {o.meal_type || 'lunch'}
                         </td>
-                        <td className={`px-4 py-3 ${colors.textMuted}`}>
+                        <td className={`px-4 py-3 ${textMuted}`}>
                           {new Date(o.order_date || o.created_at).toLocaleDateString()}
                         </td>
                         <td className="px-4 py-3">
@@ -680,7 +690,7 @@ export default function ReceptionistDashboard() {
           {activeTab === 'issues' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className={`font-semibold ${colors.textPrimary}`}>Order Issues</h3>
+                <h3 className={`font-semibold ${textPrimary}`}>Order Issues</h3>
                 <button 
                   onClick={() => setShowIssueModal(true)}
                   className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
@@ -692,16 +702,16 @@ export default function ReceptionistDashboard() {
               {issues.length > 0 ? issues.map(issue => (
                 <div 
                   key={issue.id} 
-                  className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}
+                  className={`border ${border} rounded-xl p-4 ${bgCard}`}
                 >
                   <div className="flex justify-between mb-2">
                     <div>
-                      <h4 className={`font-semibold ${colors.textPrimary}`}>{issue.subject}</h4>
-                      <p className={`text-sm ${colors.textMuted}`}>
+                      <h4 className={`font-semibold ${textPrimary}`}>{issue.subject}</h4>
+                      <p className={`text-sm ${textMuted}`}>
                         {issue.user_name} • {issue.company_name || 'N/A'} • {issue.department_name || 'N/A'}
                       </p>
                       {issue.order_id && (
-                        <p className={`text-xs ${colors.textMuted}`}>Order: #{issue.order_number || issue.order_id.slice(0, 8)}</p>
+                        <p className={`text-xs ${textMuted}`}>Order: #{issue.order_number || issue.order_id.slice(0, 8)}</p>
                       )}
                     </div>
                     <span className={`px-2 py-1 h-fit text-xs rounded-full ${
@@ -712,8 +722,8 @@ export default function ReceptionistDashboard() {
                       {issue.status === 'resolved' ? 'Resolved' : issue.priority || 'Open'}
                     </span>
                   </div>
-                  <p className={`${colors.textSecondary} mb-2`}>{issue.message}</p>
-                  <p className={`text-xs ${colors.textMuted}`}>
+                  <p className={`${textSecondary} mb-2`}>{issue.message}</p>
+                  <p className={`text-xs ${textMuted}`}>
                     {new Date(issue.created_at).toLocaleString()}
                   </p>
                   {issue.status !== 'resolved' && (
@@ -728,7 +738,7 @@ export default function ReceptionistDashboard() {
               )) : (
                 <div className="text-center py-12">
                   <p className="text-5xl mb-3">✅</p>
-                  <p className={`text-lg ${colors.textMuted}`}>No issues reported</p>
+                  <p className={`text-lg ${textMuted}`}>No issues reported</p>
                 </div>
               )}
             </div>
@@ -737,15 +747,15 @@ export default function ReceptionistDashboard() {
           {/* ==================== REPORTS TAB ==================== */}
           {activeTab === 'reports' && (
             <div className="space-y-6">
-              <h3 className={`font-semibold ${colors.textPrimary}`}>Generate Reports</h3>
+              <h3 className={`font-semibold ${textPrimary}`}>Generate Reports</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 bg-gray-50 rounded-xl">
                 <div>
-                  <label className={`block text-xs font-medium ${colors.textMuted} mb-1`}>Report Type</label>
+                  <label className={`block text-xs font-medium ${textMuted} mb-1`}>Report Type</label>
                   <select
                     value={reportForm.type}
                     onChange={e => setReportForm({ ...reportForm, type: e.target.value })}
-                    className={`w-full px-3 py-2 border ${colors.border} rounded-lg`}
+                    className={`w-full px-3 py-2 border ${border} rounded-lg`}
                   >
                     <option value="orders">Orders Report</option>
                     <option value="issues">Issues Report</option>
@@ -753,11 +763,11 @@ export default function ReceptionistDashboard() {
                 </div>
                 
                 <div>
-                  <label className={`block text-xs font-medium ${colors.textMuted} mb-1`}>Group By</label>
+                  <label className={`block text-xs font-medium ${textMuted} mb-1`}>Group By</label>
                   <select
                     value={reportForm.groupBy}
                     onChange={e => setReportForm({ ...reportForm, groupBy: e.target.value })}
-                    className={`w-full px-3 py-2 border ${colors.border} rounded-lg`}
+                    className={`w-full px-3 py-2 border ${border} rounded-lg`}
                   >
                     <option value="company">By Company</option>
                     <option value="department">By Department</option>
@@ -767,22 +777,22 @@ export default function ReceptionistDashboard() {
                 </div>
                 
                 <div>
-                  <label className={`block text-xs font-medium ${colors.textMuted} mb-1`}>From Date</label>
+                  <label className={`block text-xs font-medium ${textMuted} mb-1`}>From Date</label>
                   <input
                     type="date"
                     value={reportForm.dateFrom}
                     onChange={e => setReportForm({ ...reportForm, dateFrom: e.target.value })}
-                    className={`w-full px-3 py-2 border ${colors.border} rounded-lg`}
+                    className={`w-full px-3 py-2 border ${border} rounded-lg`}
                   />
                 </div>
                 
                 <div>
-                  <label className={`block text-xs font-medium ${colors.textMuted} mb-1`}>To Date</label>
+                  <label className={`block text-xs font-medium ${textMuted} mb-1`}>To Date</label>
                   <input
                     type="date"
                     value={reportForm.dateTo}
                     onChange={e => setReportForm({ ...reportForm, dateTo: e.target.value })}
-                    className={`w-full px-3 py-2 border ${colors.border} rounded-lg`}
+                    className={`w-full px-3 py-2 border ${border} rounded-lg`}
                   />
                 </div>
                 
@@ -797,11 +807,11 @@ export default function ReceptionistDashboard() {
               </div>
 
               {reportData && (
-                <div className={`border ${colors.border} rounded-xl overflow-hidden`}>
+                <div className={`border ${border} rounded-xl overflow-hidden`}>
                   <div className="flex justify-between items-center p-4 bg-gray-50">
-                    <h4 className={`font-semibold ${colors.textPrimary}`}>
+                    <h4 className={`font-semibold ${textPrimary}`}>
                       {reportForm.type === 'orders' ? 'Orders' : 'Issues'} Report 
-                      <span className={`font-normal ${colors.textMuted} ml-2`}>
+                      <span className={`font-normal ${textMuted} ml-2`}>
                         ({reportForm.dateFrom} to {reportForm.dateTo})
                       </span>
                     </h4>
@@ -815,25 +825,25 @@ export default function ReceptionistDashboard() {
                   
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className={colors.bgSecondary}>
+                      <thead className={bgSecondary}>
                         <tr>
-                          <th className={`px-4 py-3 text-left text-xs font-medium ${colors.textMuted} uppercase`}>
+                          <th className={`px-4 py-3 text-left text-xs font-medium ${textMuted} uppercase`}>
                             {reportForm.groupBy === 'company' ? 'Company' : 
                              reportForm.groupBy === 'department' ? 'Department' :
                              reportForm.groupBy === 'date' ? 'Date' : 'Meal Type'}
                           </th>
-                          <th className={`px-4 py-3 text-right text-xs font-medium ${colors.textMuted} uppercase`}>Orders</th>
-                          <th className={`px-4 py-3 text-right text-xs font-medium ${colors.textMuted} uppercase`}>Total Value</th>
-                          <th className={`px-4 py-3 text-right text-xs font-medium ${colors.textMuted} uppercase`}>Completed</th>
-                          <th className={`px-4 py-3 text-right text-xs font-medium ${colors.textMuted} uppercase`}>Cancelled</th>
+                          <th className={`px-4 py-3 text-right text-xs font-medium ${textMuted} uppercase`}>Orders</th>
+                          <th className={`px-4 py-3 text-right text-xs font-medium ${textMuted} uppercase`}>Total Value</th>
+                          <th className={`px-4 py-3 text-right text-xs font-medium ${textMuted} uppercase`}>Completed</th>
+                          <th className={`px-4 py-3 text-right text-xs font-medium ${textMuted} uppercase`}>Cancelled</th>
                         </tr>
                       </thead>
-                      <tbody className={`divide-y ${colors.border}`}>
+                      <tbody className={`divide-y ${border}`}>
                         {reportData.data.map((row, i) => (
                           <tr key={i} className="hover:bg-gray-50">
-                            <td className={`px-4 py-3 font-medium ${colors.textPrimary}`}>{row.name || 'N/A'}</td>
-                            <td className={`px-4 py-3 text-right ${colors.textSecondary}`}>{row.orderCount}</td>
-                            <td className={`px-4 py-3 text-right ${colors.textSecondary}`}>
+                            <td className={`px-4 py-3 font-medium ${textPrimary}`}>{row.name || 'N/A'}</td>
+                            <td className={`px-4 py-3 text-right ${textSecondary}`}>{row.orderCount}</td>
+                            <td className={`px-4 py-3 text-right ${textSecondary}`}>
                               ${(row.totalValue || 0).toFixed(2)}
                             </td>
                             <td className={`px-4 py-3 text-right text-green-600 font-medium`}>{row.completedCount}</td>
@@ -843,7 +853,7 @@ export default function ReceptionistDashboard() {
                       </tbody>
                       <tfoot className="bg-gray-100">
                         <tr>
-                          <td className={`px-4 py-3 font-bold ${colors.textPrimary}`}>TOTAL</td>
+                          <td className={`px-4 py-3 font-bold ${textPrimary}`}>TOTAL</td>
                           <td className={`px-4 py-3 text-right font-bold`}>
                             {reportData.data.reduce((sum, r) => sum + r.orderCount, 0)}
                           </td>
@@ -868,15 +878,15 @@ export default function ReceptionistDashboard() {
           {/* ==================== MENUS TAB ==================== */}
           {activeTab === 'menus' && (
             <div className="space-y-4">
-              <h3 className={`font-semibold ${colors.textPrimary}`}>All Menus</h3>
+              <h3 className={`font-semibold ${textPrimary}`}>All Menus</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {menus.length > 0 ? menus.map(m => (
-                  <div key={m.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}>
-                    <h4 className={`font-semibold ${colors.textPrimary}`}>{m.name}</h4>
-                    <p className={`text-sm ${colors.textMuted}`}>
+                  <div key={m.id} className={`border ${border} rounded-xl p-4 ${bgCard}`}>
+                    <h4 className={`font-semibold ${textPrimary}`}>{m.name}</h4>
+                    <p className={`text-sm ${textMuted}`}>
                       {m.meal_type || 'Lunch'} • {m.menu_type || 'Regular'}
                     </p>
-                    <p className={`text-xs ${colors.textMuted} mt-1`}>
+                    <p className={`text-xs ${textMuted} mt-1`}>
                       {m.cafeteria_name || 'Cafeteria'}
                     </p>
                     <span className={`inline-block mt-2 px-2 py-1 text-xs rounded-full ${
@@ -889,7 +899,7 @@ export default function ReceptionistDashboard() {
                   </div>
                 )) : (
                   <div className="col-span-3 text-center py-8">
-                    <p className={colors.textMuted}>No menus available</p>
+                    <p className={textMuted}>No menus available</p>
                   </div>
                 )}
               </div>
@@ -900,8 +910,8 @@ export default function ReceptionistDashboard() {
           {activeTab === 'notifications' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className={`font-semibold ${colors.textPrimary}`}>Code Usage Notifications</h3>
-                <p className={`text-sm ${colors.textMuted}`}>
+                <h3 className={`font-semibold ${textPrimary}`}>Code Usage Notifications</h3>
+                <p className={`text-sm ${textMuted}`}>
                   Shows codes used in the last hour
                 </p>
               </div>
@@ -911,16 +921,16 @@ export default function ReceptionistDashboard() {
                   key={notif.id}
                   className={`border rounded-xl p-4 ${
                     notif.read 
-                      ? `${colors.border} opacity-60` 
+                      ? `${border} opacity-60` 
                       : 'border-blue-300 bg-blue-50'
                   }`}
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className={`font-medium ${colors.textPrimary}`}>
+                      <p className={`font-medium ${textPrimary}`}>
                         🎟️ {notif.message}
                       </p>
-                      <p className={`text-sm ${colors.textMuted}`}>
+                      <p className={`text-sm ${textMuted}`}>
                         {new Date(notif.time).toLocaleString()}
                       </p>
                     </div>
@@ -937,8 +947,8 @@ export default function ReceptionistDashboard() {
               )) : (
                 <div className="text-center py-12">
                   <p className="text-5xl mb-3">🔔</p>
-                  <p className={`text-lg ${colors.textMuted}`}>No recent notifications</p>
-                  <p className={`text-sm ${colors.textMuted}`}>
+                  <p className={`text-lg ${textMuted}`}>No recent notifications</p>
+                  <p className={`text-sm ${textMuted}`}>
                     You'll see alerts here when guest codes are used
                   </p>
                 </div>
@@ -953,47 +963,47 @@ export default function ReceptionistDashboard() {
       {/* Generate Code Modal */}
       {showGenerateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-md`}>
-            <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>Generate Guest Code</h2>
+          <div className={`${bgCard} rounded-xl p-6 w-full max-w-md`}>
+            <h2 className={`text-xl font-bold mb-4 ${textPrimary}`}>Generate Guest Code</h2>
             <form onSubmit={handleGenerateCode} className="space-y-4">
               <div>
-                <label className={`block text-sm font-medium ${colors.textSecondary} mb-1`}>Guest Name</label>
+                <label className={`block text-sm font-medium ${textSecondary} mb-1`}>Guest Name</label>
                 <input 
                   placeholder="John Doe" 
                   value={codeForm.guestName} 
                   onChange={e => setCodeForm({ ...codeForm, guestName: e.target.value })} 
-                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} 
+                  className={`w-full px-4 py-2 border ${border} rounded-lg`} 
                 />
               </div>
               <div>
-                <label className={`block text-sm font-medium ${colors.textSecondary} mb-1`}>Guest Email</label>
+                <label className={`block text-sm font-medium ${textSecondary} mb-1`}>Guest Email</label>
                 <input 
                   type="email" 
                   placeholder="guest@example.com" 
                   value={codeForm.guestEmail} 
                   onChange={e => setCodeForm({ ...codeForm, guestEmail: e.target.value })} 
-                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} 
+                  className={`w-full px-4 py-2 border ${border} rounded-lg`} 
                 />
-                <p className={`text-xs ${colors.textMuted} mt-1`}>
+                <p className={`text-xs ${textMuted} mt-1`}>
                   Code will be emailed automatically if provided
                 </p>
               </div>
               <div>
-                <label className={`block text-sm font-medium ${colors.textSecondary} mb-1`}>Valid Date</label>
+                <label className={`block text-sm font-medium ${textSecondary} mb-1`}>Valid Date</label>
                 <input 
                   type="date" 
                   value={codeForm.validDate} 
                   min={new Date().toISOString().split('T')[0]}
                   onChange={e => setCodeForm({ ...codeForm, validDate: e.target.value })} 
-                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg`} 
+                  className={`w-full px-4 py-2 border ${border} rounded-lg`} 
                 />
               </div>
               <div>
-                <label className={`block text-sm font-medium ${colors.textSecondary} mb-1`}>Cafeteria *</label>
+                <label className={`block text-sm font-medium ${textSecondary} mb-1`}>Cafeteria *</label>
                 <select 
                   value={codeForm.cafeteriaId} 
                   onChange={e => setCodeForm({ ...codeForm, cafeteriaId: e.target.value })} 
-                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}
+                  className={`w-full px-4 py-2 border ${border} rounded-lg`}
                   required
                 >
                   <option value="">Select Cafeteria</option>
@@ -1006,7 +1016,7 @@ export default function ReceptionistDashboard() {
                 <button 
                   type="button" 
                   onClick={() => setShowGenerateModal(false)} 
-                  className={`px-4 py-2 border ${colors.border} rounded-lg hover:bg-gray-50`}
+                  className={`px-4 py-2 border ${border} rounded-lg hover:bg-gray-50`}
                 >
                   Cancel
                 </button>
@@ -1025,23 +1035,23 @@ export default function ReceptionistDashboard() {
       {/* Email Code Modal */}
       {showEmailModal && selectedCode && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-md`}>
-            <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>Email Guest Code</h2>
+          <div className={`${bgCard} rounded-xl p-6 w-full max-w-md`}>
+            <h2 className={`text-xl font-bold mb-4 ${textPrimary}`}>Email Guest Code</h2>
             <div className="text-center mb-4">
-              <p className={`font-mono text-3xl font-bold ${colors.textPrimary} mb-2`}>
+              <p className={`font-mono text-3xl font-bold ${textPrimary} mb-2`}>
                 {selectedCode.code}
               </p>
-              <p className={colors.textSecondary}>
+              <p className={textSecondary}>
                 Send to: {selectedCode.guestEmail}
               </p>
             </div>
-            <p className={`text-sm ${colors.textMuted} mb-4`}>
+            <p className={`text-sm ${textMuted} mb-4`}>
               This will open your default email client with the code details.
             </p>
             <div className="flex justify-end gap-3">
               <button 
                 onClick={() => setShowEmailModal(false)} 
-                className={`px-4 py-2 border ${colors.border} rounded-lg hover:bg-gray-50`}
+                className={`px-4 py-2 border ${border} rounded-lg hover:bg-gray-50`}
               >
                 Cancel
               </button>
@@ -1059,45 +1069,45 @@ export default function ReceptionistDashboard() {
       {/* Log Issue Modal */}
       {showIssueModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-md`}>
-            <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>Log Order Issue</h2>
+          <div className={`${bgCard} rounded-xl p-6 w-full max-w-md`}>
+            <h2 className={`text-xl font-bold mb-4 ${textPrimary}`}>Log Order Issue</h2>
             {selectedOrder && (
               <div className={`p-3 rounded-lg bg-gray-50 mb-4`}>
-                <p className={`text-sm font-medium ${colors.textPrimary}`}>
+                <p className={`text-sm font-medium ${textPrimary}`}>
                   Order #{selectedOrder.order_number || selectedOrder.id?.slice(0, 8)}
                 </p>
-                <p className={`text-sm ${colors.textMuted}`}>
+                <p className={`text-sm ${textMuted}`}>
                   {selectedOrder.user_first_name} {selectedOrder.user_last_name} • {selectedOrder.company_name || 'N/A'}
                 </p>
               </div>
             )}
             <form onSubmit={handleCreateIssue} className="space-y-4">
               <div>
-                <label className={`block text-sm font-medium ${colors.textSecondary} mb-1`}>Subject *</label>
+                <label className={`block text-sm font-medium ${textSecondary} mb-1`}>Subject *</label>
                 <input 
                   placeholder="e.g., Wrong item delivered" 
                   value={issueForm.subject} 
                   onChange={e => setIssueForm({ ...issueForm, subject: e.target.value })} 
-                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}
+                  className={`w-full px-4 py-2 border ${border} rounded-lg`}
                   required
                 />
               </div>
               <div>
-                <label className={`block text-sm font-medium ${colors.textSecondary} mb-1`}>Description *</label>
+                <label className={`block text-sm font-medium ${textSecondary} mb-1`}>Description *</label>
                 <textarea 
                   placeholder="Describe the issue in detail..." 
                   value={issueForm.description} 
                   onChange={e => setIssueForm({ ...issueForm, description: e.target.value })} 
-                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg h-24 resize-none`}
+                  className={`w-full px-4 py-2 border ${border} rounded-lg h-24 resize-none`}
                   required
                 />
               </div>
               <div>
-                <label className={`block text-sm font-medium ${colors.textSecondary} mb-1`}>Priority</label>
+                <label className={`block text-sm font-medium ${textSecondary} mb-1`}>Priority</label>
                 <select 
                   value={issueForm.priority} 
                   onChange={e => setIssueForm({ ...issueForm, priority: e.target.value })} 
-                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}
+                  className={`w-full px-4 py-2 border ${border} rounded-lg`}
                 >
                   <option value="low">🟢 Low</option>
                   <option value="medium">🟡 Medium</option>
@@ -1112,7 +1122,7 @@ export default function ReceptionistDashboard() {
                     setSelectedOrder(null);
                     setIssueForm({ orderId: '', subject: '', description: '', priority: 'medium' });
                   }} 
-                  className={`px-4 py-2 border ${colors.border} rounded-lg hover:bg-gray-50`}
+                  className={`px-4 py-2 border ${border} rounded-lg hover:bg-gray-50`}
                 >
                   Cancel
                 </button>
