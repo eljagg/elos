@@ -149,7 +149,12 @@ export const orderAPI = {
   
   // Guest codes - uses /guests/codes route
   getGuestCodes: () => api.get('/guests/codes'),
-  createGuestCode: (data) => api.post('/guests/codes', data)
+  createGuestCode: (data) => api.post('/guests/codes', data),
+  
+  // Favorites
+  getFavorites: () => api.get('/orders/favorites'),
+  saveFavorite: (itemId) => api.post('/orders/favorites', { itemId }),
+  deleteFavorite: (id) => api.delete(`/orders/favorites/${id}`)
 };
 
 // ============================================================================
