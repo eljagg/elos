@@ -11,12 +11,12 @@ export const themes = {
     name: 'Soft Blue',
     description: 'Corporate, professional - trustworthy and clean',
     colors: {
-      // Backgrounds
-      bgPrimary: 'bg-slate-100',
-      bgSecondary: 'bg-slate-50',
-      bgCard: 'bg-[#f8fafc]',
+      // Backgrounds - softer, easier on eyes
+      bgPrimary: 'bg-slate-200',
+      bgSecondary: 'bg-slate-100',
+      bgCard: 'bg-slate-50',
       bgInput: 'bg-white',
-      bgHover: 'hover:bg-blue-50',
+      bgHover: 'hover:bg-slate-100',
       bgActive: 'bg-blue-100',
       
       // Sidebar
@@ -38,7 +38,7 @@ export const themes = {
       accentLight: 'bg-indigo-100',
       
       // Borders
-      border: 'border-slate-200',
+      border: 'border-slate-300',
       borderFocus: 'focus:border-indigo-500',
       
       // Buttons

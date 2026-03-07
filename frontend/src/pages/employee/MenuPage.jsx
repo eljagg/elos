@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { dailyMenuAPI, orderAPI, companyAPI } from '../../services/api';
-import { useTheme } from '../../context/ThemeContext';
 
 const CATEGORY_CONFIG = {
   'proteins': { bg: 'bg-red-500', light: 'bg-red-50', required: true, label: 'PROTEIN' },
@@ -24,7 +23,6 @@ const getCatConfig = (cat) => CATEGORY_CONFIG[(cat||'other').toLowerCase()] || C
 const CATEGORY_ORDER = ['proteins', 'protein', 'carbohydrates', 'carbohydrate', 'sides', 'fibre', 'vegetables', 'soup', 'vegetarian', 'done to order', 'beverage', 'dessert', 'specials', 'other'];
 
 const MenuPage = () => {
-  const { colors } = useTheme();
   const [loading, setLoading] = useState(true);
   const [menuItems, setMenuItems] = useState([]);
   const [dailyMenu, setDailyMenu] = useState(null);
