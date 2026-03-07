@@ -984,23 +984,41 @@ const deleteUser = async (req, res, next) => {
             });
         }
         
-        // Soft delete
+        // Check if user exists
+        const userCheck = await db.query('SELECT id, email FROM users WHERE id = $1', [id]);
+        if (userCheck.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: {
+                    code: 'USER_NOT_FOUND',
+                    message: 'User not found'
+                }
+            });
+        }
+        
+        // Soft delete - mark as inactive and mangle email to allow reuse
+        const timestamp = Date.now();
         await db.query(
             `UPDATE users 
              SET is_active = FALSE, 
-                 email = email || '.deleted.' || $1,
+                 email = email || '.deleted.' || $2,
                  updated_at = CURRENT_TIMESTAMP,
-                 updated_by = $2
+                 updated_by = $3
              WHERE id = $1`,
-            [id, adminId]
+            [id, timestamp, adminId]
         );
         
-        // Log audit
-        await db.query(
-            `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, ip_address)
-             VALUES ($1, 'USER_DELETED', 'user', $2, $3)`,
-            [adminId, id, req.ip]
-        );
+        // Try to log audit (don't fail if audit_logs table doesn't exist)
+        try {
+            await db.query(
+                `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, ip_address)
+                 VALUES ($1, 'USER_DELETED', 'user', $2, $3)`,
+                [adminId, id, req.ip]
+            );
+        } catch (auditError) {
+            // Audit log is optional - don't fail the delete
+            console.log('Audit log skipped:', auditError.message);
+        }
         
         res.status(200).json({
             success: true,

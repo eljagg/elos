@@ -393,7 +393,7 @@ const requireCompanyAccess = (req, res, next) => {
  * Restricts access to super administrators only.
  * Use for critical system operations.
  */
-const requireSuperAdmin = requireRole('SUPER_ADMIN');
+const requireSuperAdmin = requireRole('SYSTEM_OWNER', 'SUPER_ADMIN');
 
 /**
  * Kitchen staff middleware
@@ -407,7 +407,7 @@ const requireKitchenStaff = requireRole('KITCHEN_HEAD', 'KITCHEN_SOUS', 'KITCHEN
  * 
  * Restricts access to HR personnel.
  */
-const requireHRStaff = requireRole('SUPER_ADMIN', 'HR_ADMIN');
+const requireHRStaff = requireRole('SYSTEM_OWNER', 'SUPER_ADMIN', 'HR_ADMIN');
 
 // ============================================================================
 // EXPORTS
