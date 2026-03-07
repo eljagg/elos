@@ -144,15 +144,25 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDeleteUser = async (id) => { if (!confirm('Delete this user?')) return; try { await userAPI.deleteUser(id); toast.success('Deleted'); loadAllData(); } catch { toast.error('Failed'); } };
-  const handleUnlockUser = async (id) => { try { await userAPI.enableUser(id); toast.success('Unlocked'); loadAllData(); } catch { toast.error('Failed'); } };
-  const handleSaveCompany = async (e) => { e.preventDefault(); try { if (selectedCompany) { await companyAPI.updateCompany(selectedCompany.id, companyForm); toast.success('Updated'); } else { await companyAPI.createCompany(companyForm); toast.success('Created'); } setShowCompanyModal(false); loadAllData(); } catch { toast.error('Failed'); } };
-  const handleDeleteCompany = async (id) => { if (!confirm('Delete this company?')) return; try { await companyAPI.deleteCompany(id); toast.success('Deleted'); loadAllData(); } catch { toast.error('Failed'); } };
-  const handleDeleteDepartment = async (companyId, deptId) => { if (!confirm("Delete this department?")) return; try { await companyAPI.deleteDepartment(companyId, deptId); toast.success("Deleted"); loadAllData(); } catch { toast.error("Failed"); } };
-  const handleDeleteCafeteria = async (id) => { if (!confirm("Delete this cafeteria?")) return; try { await companyAPI.deleteCafeteria(id); toast.success("Deleted"); loadAllData(); } catch { toast.error("Failed"); } };
-  const handleSaveDepartment = async (e) => { e.preventDefault(); try { if (selectedDepartment) { await companyAPI.updateDepartment(selectedDepartment.company_id, selectedDepartment.id, departmentForm); toast.success('Updated'); } else { await companyAPI.createDepartment(departmentForm.companyId, departmentForm); toast.success('Created'); } setShowDepartmentModal(false); loadAllData(); } catch { toast.error('Failed'); } };
-  const handleSaveCafeteria = async (e) => { e.preventDefault(); try { if (selectedCafeteria) { await companyAPI.updateCafeteria(selectedCafeteria.company_id, selectedCafeteria.id, cafeteriaForm); toast.success('Updated'); } else { await companyAPI.createCafeteria(cafeteriaForm); toast.success('Created'); } setShowCafeteriaModal(false); loadAllData(); } catch { toast.error('Failed'); } };
-  const handleSaveDomain = async (e) => { e.preventDefault(); try { await adminAPI.addDomain({ domain: domainForm.domain, companyId: domainForm.companyId }); toast.success('Added'); setShowDomainModal(false); loadAllData(); } catch { toast.error('Failed'); } };
+  const handleDeleteUser = async (id) => { 
+    if (!confirm('Delete this user? This action cannot be undone.')) return; 
+    try { 
+      await userAPI.deleteUser(id); 
+      toast.success('User deleted'); 
+      loadAllData(); 
+    } catch (error) { 
+      console.error('Delete user error:', error);
+      toast.error(error.response?.data?.error?.message || 'Failed to delete user'); 
+    } 
+  };
+  const handleUnlockUser = async (id) => { try { await userAPI.enableUser(id); toast.success('Unlocked'); loadAllData(); } catch (error) { toast.error(error.response?.data?.error?.message || 'Failed'); } };
+  const handleSaveCompany = async (e) => { e.preventDefault(); try { if (selectedCompany) { await companyAPI.updateCompany(selectedCompany.id, companyForm); toast.success('Updated'); } else { await companyAPI.createCompany(companyForm); toast.success('Created'); } setShowCompanyModal(false); loadAllData(); } catch (error) { toast.error(error.response?.data?.error?.message || 'Failed'); } };
+  const handleDeleteCompany = async (id) => { if (!confirm('Delete this company?')) return; try { await companyAPI.deleteCompany(id); toast.success('Deleted'); loadAllData(); } catch (error) { toast.error(error.response?.data?.error?.message || 'Failed'); } };
+  const handleDeleteDepartment = async (companyId, deptId) => { if (!confirm("Delete this department?")) return; try { await companyAPI.deleteDepartment(companyId, deptId); toast.success("Deleted"); loadAllData(); } catch (error) { toast.error(error.response?.data?.error?.message || "Failed"); } };
+  const handleDeleteCafeteria = async (id) => { if (!confirm("Delete this cafeteria?")) return; try { await companyAPI.deleteCafeteria(id); toast.success("Deleted"); loadAllData(); } catch (error) { toast.error(error.response?.data?.error?.message || "Failed"); } };
+  const handleSaveDepartment = async (e) => { e.preventDefault(); try { if (selectedDepartment) { await companyAPI.updateDepartment(selectedDepartment.company_id, selectedDepartment.id, departmentForm); toast.success('Updated'); } else { await companyAPI.createDepartment(departmentForm.companyId, departmentForm); toast.success('Created'); } setShowDepartmentModal(false); loadAllData(); } catch (error) { toast.error(error.response?.data?.error?.message || 'Failed'); } };
+  const handleSaveCafeteria = async (e) => { e.preventDefault(); try { if (selectedCafeteria) { await companyAPI.updateCafeteria(selectedCafeteria.company_id, selectedCafeteria.id, cafeteriaForm); toast.success('Updated'); } else { await companyAPI.createCafeteria(cafeteriaForm); toast.success('Created'); } setShowCafeteriaModal(false); loadAllData(); } catch (error) { toast.error(error.response?.data?.error?.message || 'Failed'); } };
+  const handleSaveDomain = async (e) => { e.preventDefault(); try { await adminAPI.addDomain({ domain: domainForm.domain, companyId: domainForm.companyId }); toast.success('Added'); setShowDomainModal(false); loadAllData(); } catch (error) { toast.error(error.response?.data?.error?.message || 'Failed'); } };
   const handleDeleteDomain = async (id) => { if (!confirm('Delete this domain?')) return; try { await adminAPI.removeDomain(id); toast.success('Deleted'); loadAllData(); } catch { toast.error('Failed'); } };
   const handleSaveAnnouncement = async (e) => { e.preventDefault(); try { await messageAPI.createAnnouncement(announcementForm); toast.success('Created'); setShowAnnouncementModal(false); setAnnouncements([...announcements, { id: Date.now(), ...announcementForm }]); } catch { toast.error('Failed'); } };
   const handleThemeChange = (themeId) => { changeTheme(themeId); toast.success(`Theme changed to ${themeOptions.find(t => t.id === themeId)?.name}`); };
