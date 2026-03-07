@@ -1,7 +1,8 @@
 /**
  * Dish Library - Master catalog of all menu items
+ * Mobile-first responsive design
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { catalogAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -15,6 +16,8 @@ export default function DishLibrary() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [filter, setFilter] = useState({ categoryId: '', search: '', isActive: 'true' });
+  const [viewMode, setViewMode] = useState('grid');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
   
   const [form, setForm] = useState({
     name: '',
@@ -41,6 +44,22 @@ export default function DishLibrary() {
     displayOrder: 0
   });
 
+  // Category styling
+  const getCategoryStyle = (categoryName) => {
+    const styles = {
+      'Proteins': { icon: '🍗', bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-100 text-red-700 border-red-200' },
+      'Carbs': { icon: '🍚', bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700 border-amber-200' },
+      'Carbohydrates': { icon: '🍚', bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700 border-amber-200' },
+      'Vegetables': { icon: '🥗', bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700', badge: 'bg-green-100 text-green-700 border-green-200' },
+      'Soups': { icon: '🍲', bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', badge: 'bg-orange-100 text-orange-700 border-orange-200' },
+      'Beverages': { icon: '🥤', bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700', badge: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
+      'Desserts': { icon: '🍰', bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-700', badge: 'bg-pink-100 text-pink-700 border-pink-200' },
+      'Specials': { icon: '⭐', bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', badge: 'bg-purple-100 text-purple-700 border-purple-200' },
+      'Sides': { icon: '🍟', bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700', badge: 'bg-slate-100 text-slate-700 border-slate-200' },
+    };
+    return styles[categoryName] || { icon: '📦', bg: 'bg-gray-50', border: 'border-gray-200', text: 'text-gray-700', badge: 'bg-gray-100 text-gray-700 border-gray-200' };
+  };
+
   useEffect(() => {
     loadData();
   }, [filter]);
@@ -66,6 +85,48 @@ export default function DishLibrary() {
       setLoading(false);
     }
   };
+
+  // Stats calculation
+  const stats = useMemo(() => {
+    const uniqueCategories = new Set(items.map(item => item.category_name).filter(Boolean));
+    return {
+      total: items.length,
+      categories: uniqueCategories.size,
+      vegetarian: items.filter(item => item.is_vegetarian).length,
+      vegan: items.filter(item => item.is_vegan).length,
+      spicy: items.filter(item => item.is_spicy).length,
+      featured: items.filter(item => item.is_featured).length
+    };
+  }, [items]);
+
+  // Category counts for filter pills
+  const categoryCounts = useMemo(() => {
+    const counts = {};
+    items.forEach(item => {
+      const cat = item.category_name || 'Uncategorized';
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+    return counts;
+  }, [items]);
+
+  // Filtered items
+  const filteredItems = useMemo(() => {
+    let result = items;
+    if (selectedCategoryFilter !== 'all') {
+      result = result.filter(item => item.category_name === selectedCategoryFilter);
+    }
+    return result;
+  }, [items, selectedCategoryFilter]);
+
+  // Group items by category
+  const groupedItems = useMemo(() => {
+    return filteredItems.reduce((acc, item) => {
+      const cat = item.category_name || 'Uncategorized';
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(item);
+      return acc;
+    }, {});
+  }, [filteredItems]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -159,55 +220,109 @@ export default function DishLibrary() {
   };
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-JM', { style: 'currency', currency: 'JMD' }).format(price);
+    return `$${parseFloat(price || 0).toLocaleString()}`;
   };
 
-  // Group items by category
-  const groupedItems = items.reduce((acc, item) => {
-    const cat = item.category_name || 'Uncategorized';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(item);
-    return acc;
-  }, {});
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
+    <div className="p-3 sm:p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Dish Library</h1>
-          <p className="text-gray-600">Manage your master catalog of dishes</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Dish Library</h1>
+          <p className="text-gray-500 text-sm">Manage your master catalog of dishes</p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setShowCategoryModal(true)}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+            className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
           >
             + Category
           </button>
           <button
             onClick={() => { resetForm(); setShowModal(true); }}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium"
           >
             + Add Dish
           </button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="flex gap-4 flex-wrap">
-          <input
-            type="text"
-            placeholder="Search dishes..."
-            value={filter.search}
-            onChange={(e) => setFilter({ ...filter, search: e.target.value })}
-            className="px-4 py-2 border rounded-lg w-64"
-          />
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
+        <div className="bg-white rounded-xl p-3 border border-gray-200 flex items-center gap-2">
+          <div className="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center text-lg shrink-0">🍽️</div>
+          <div className="min-w-0">
+            <p className="text-xl font-bold text-gray-900">{stats.total}</p>
+            <p className="text-xs text-gray-500 truncate">Total Dishes</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-3 border border-gray-200 flex items-center gap-2">
+          <div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center text-lg shrink-0">📁</div>
+          <div className="min-w-0">
+            <p className="text-xl font-bold text-gray-900">{stats.categories}</p>
+            <p className="text-xs text-gray-500 truncate">Categories</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-3 border border-gray-200 flex items-center gap-2">
+          <div className="w-9 h-9 bg-lime-100 rounded-lg flex items-center justify-center text-lg shrink-0">🥬</div>
+          <div className="min-w-0">
+            <p className="text-xl font-bold text-gray-900">{stats.vegetarian}</p>
+            <p className="text-xs text-gray-500 truncate">Vegetarian</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-3 border border-gray-200 flex items-center gap-2">
+          <div className="w-9 h-9 bg-red-100 rounded-lg flex items-center justify-center text-lg shrink-0">🌶️</div>
+          <div className="min-w-0">
+            <p className="text-xl font-bold text-gray-900">{stats.spicy}</p>
+            <p className="text-xs text-gray-500 truncate">Spicy Items</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Search & Filters */}
+      <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4 space-y-3">
+        {/* Search + View Toggle */}
+        <div className="flex gap-2">
+          <div className="flex-1 relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+            <input
+              type="text"
+              placeholder="Search dishes..."
+              value={filter.search}
+              onChange={(e) => setFilter({ ...filter, search: e.target.value })}
+              className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+            />
+          </div>
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'grid' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'}`}
+            >
+              ▦
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600'}`}
+            >
+              ☰
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Dropdowns */}
+        <div className="flex gap-2 flex-wrap">
           <select
             value={filter.categoryId}
             onChange={(e) => setFilter({ ...filter, categoryId: e.target.value })}
-            className="px-4 py-2 border rounded-lg"
+            className="flex-1 min-w-[140px] px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
           >
             <option value="">All Categories</option>
             {categories.map(cat => (
@@ -217,106 +332,227 @@ export default function DishLibrary() {
           <select
             value={filter.isActive}
             onChange={(e) => setFilter({ ...filter, isActive: e.target.value })}
-            className="px-4 py-2 border rounded-lg"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
           >
             <option value="true">Active Only</option>
-            <option value="">All Items</option>
-            <option value="false">Inactive Only</option>
+            <option value="false">Inactive</option>
+            <option value="">All Status</option>
           </select>
         </div>
+
+        {/* Category Quick Filters */}
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3">
+          <button
+            onClick={() => setSelectedCategoryFilter('all')}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${
+              selectedCategoryFilter === 'all' 
+                ? 'bg-indigo-600 text-white border-indigo-600' 
+                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            All ({items.length})
+          </button>
+          {Object.entries(categoryCounts).map(([cat, count]) => {
+            const style = getCategoryStyle(cat);
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategoryFilter(cat)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors flex items-center gap-1 ${
+                  selectedCategoryFilter === cat 
+                    ? 'bg-indigo-600 text-white border-indigo-600' 
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <span>{style.icon}</span>
+                <span>{cat}</span>
+                <span className="opacity-70">({count})</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-3xl font-bold text-indigo-600">{items.length}</div>
-          <div className="text-gray-600">Total Dishes</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-3xl font-bold text-green-600">{categories.length}</div>
-          <div className="text-gray-600">Categories</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-3xl font-bold text-orange-600">{items.filter(i => i.is_featured).length}</div>
-          <div className="text-gray-600">Featured</div>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="text-3xl font-bold text-red-600">{items.filter(i => i.is_spicy).length}</div>
-          <div className="text-gray-600">Spicy Items</div>
-        </div>
-      </div>
-
-      {/* Items List */}
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto"></div>
-        </div>
-      ) : items.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <div className="text-6xl mb-4">🍽️</div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">No dishes yet</h3>
-          <p className="text-gray-500 mb-4">Start building your dish library by adding your first item</p>
+      {/* Content */}
+      {filteredItems.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+          <p className="text-4xl mb-3">🍽️</p>
+          <p className="text-lg text-gray-600 font-medium">No dishes found</p>
+          <p className="text-sm text-gray-400 mt-1">Add your first dish to get started</p>
           <button
             onClick={() => { resetForm(); setShowModal(true); }}
-            className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
           >
-            Add First Dish
+            + Add First Dish
           </button>
         </div>
-      ) : (
+      ) : viewMode === 'grid' ? (
+        /* Grid View */
         <div className="space-y-6">
-          {Object.entries(groupedItems).map(([category, categoryItems]) => (
-            <div key={category} className="bg-white rounded-lg shadow">
-              <div className="px-4 py-3 border-b bg-gray-50 rounded-t-lg">
-                <h3 className="font-semibold text-gray-700">{category} ({categoryItems.length})</h3>
-              </div>
-              <div className="divide-y">
-                {categoryItems.map(item => (
-                  <div key={item.id} className="p-4 hover:bg-gray-50 flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-800">{item.name}</span>
-                        {item.is_featured && <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded">Featured</span>}
-                        {item.is_spicy && <span className="text-red-500">🌶️</span>}
-                        {item.is_vegetarian && <span className="text-green-500">🥬</span>}
-                        {item.is_vegan && <span className="text-green-600">🌱</span>}
-                        {item.is_gluten_free && <span className="text-yellow-600">🌾</span>}
+          {Object.entries(groupedItems).map(([category, categoryItems]) => {
+            const style = getCategoryStyle(category);
+            return (
+              <div key={category}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-2xl">{style.icon}</span>
+                  <h3 className="text-lg font-bold text-gray-900">{category}</h3>
+                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
+                    {categoryItems.length}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {categoryItems.map(item => (
+                    <div 
+                      key={item.id} 
+                      className={`${style.bg} ${style.border} border-2 rounded-xl overflow-hidden hover:shadow-md transition-all group`}
+                    >
+                      {/* Card Header */}
+                      <div className="h-20 sm:h-24 flex items-center justify-center text-4xl relative bg-white/50">
+                        {style.icon}
+                        {/* Badges */}
+                        <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+                          {item.is_vegan && <span className="bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">🌱</span>}
+                          {item.is_vegetarian && !item.is_vegan && <span className="bg-lime-500 text-white text-xs px-1.5 py-0.5 rounded-full">🥬</span>}
+                          {item.is_spicy && <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">🌶️</span>}
+                          {item.is_featured && <span className="bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded-full">⭐</span>}
+                        </div>
+                        {/* Hover Actions */}
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex items-center justify-center gap-2">
+                          <button onClick={() => handleEdit(item)} className="px-3 py-1.5 bg-white text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-100">Edit</button>
+                          <button onClick={() => handleDelete(item)} className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600">Delete</button>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-500 mt-1">{item.description}</p>
-                      <div className="flex gap-2 mt-2">
-                        {item.dietary_tags?.map(tag => (
-                          <span key={tag.id} className="px-2 py-0.5 text-xs rounded" style={{ backgroundColor: tag.color + '20', color: tag.color }}>
-                            {tag.icon} {tag.name}
-                          </span>
-                        ))}
+                      
+                      {/* Card Content */}
+                      <div className="p-3">
+                        <h4 className="font-semibold text-gray-900 mb-1 truncate">{item.name}</h4>
+                        <p className="text-lg font-bold text-green-600 mb-2">{formatPrice(item.price)}</p>
+                        
+                        <div className="flex items-center gap-2 flex-wrap mb-2">
+                          <span className={`text-xs px-2 py-0.5 rounded-full border ${style.badge}`}>{category}</span>
+                          {item.prep_time_minutes && <span className="text-xs text-gray-500">⏱️ {item.prep_time_minutes}m</span>}
+                        </div>
+
+                        {item.description && (
+                          <p className="text-xs text-gray-500 line-clamp-2 mb-3">{item.description}</p>
+                        )}
+
+                        {/* Mobile Actions */}
+                        <div className="flex gap-2 sm:hidden">
+                          <button onClick={() => handleEdit(item)} className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg font-medium">Edit</button>
+                          <button onClick={() => handleDelete(item)} className="flex-1 px-3 py-2 bg-red-600 text-white text-sm rounded-lg font-medium">Delete</button>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-green-600">{formatPrice(item.price)}</div>
-                      <div className="text-sm text-gray-500">{item.prep_time_minutes} min</div>
-                      <div className="mt-2 flex gap-2">
-                        <button onClick={() => handleEdit(item)} className="text-indigo-600 hover:text-indigo-800 text-sm">Edit</button>
-                        <button onClick={() => handleDelete(item)} className="text-red-600 hover:text-red-800 text-sm">Remove</button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* List View */
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          {/* Desktop Table */}
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Dish</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Category</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tags</th>
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Price</th>
+                  <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredItems.map(item => {
+                  const style = getCategoryStyle(item.category_name);
+                  return (
+                    <tr key={item.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 ${style.bg} rounded-lg flex items-center justify-center text-lg`}>{style.icon}</div>
+                          <div>
+                            <span className="font-medium text-gray-900">{item.name}</span>
+                            {item.description && <p className="text-xs text-gray-500 truncate max-w-[200px]">{item.description}</p>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-1 rounded-full border ${style.badge}`}>{item.category_name || 'Uncategorized'}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1 flex-wrap">
+                          {item.is_vegan && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">🌱 Vegan</span>}
+                          {item.is_vegetarian && !item.is_vegan && <span className="text-xs bg-lime-100 text-lime-700 px-2 py-0.5 rounded">🥬 Veg</span>}
+                          {item.is_spicy && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">🌶️ Spicy</span>}
+                          {!item.is_vegan && !item.is_vegetarian && !item.is_spicy && <span className="text-gray-300">—</span>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-green-600">{formatPrice(item.price)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-center gap-2">
+                          <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
+                          <button onClick={() => handleDelete(item)} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile List */}
+          <div className="sm:hidden divide-y divide-gray-100">
+            {filteredItems.map(item => {
+              const style = getCategoryStyle(item.category_name);
+              return (
+                <div key={item.id} className="p-4 hover:bg-gray-50">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-12 h-12 ${style.bg} rounded-lg flex items-center justify-center text-2xl shrink-0`}>{style.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="font-semibold text-gray-900 truncate">{item.name}</h4>
+                        <span className="font-bold text-green-600 shrink-0 ml-2">{formatPrice(item.price)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full border ${style.badge}`}>{item.category_name || 'Uncategorized'}</span>
+                        {item.is_vegan && <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">🌱</span>}
+                        {item.is_vegetarian && !item.is_vegan && <span className="text-xs bg-lime-100 text-lime-700 px-1.5 py-0.5 rounded">🥬</span>}
+                      </div>
+                      <div className="flex gap-3 mt-2">
+                        <button onClick={() => handleEdit(item)} className="text-blue-600 text-sm font-medium">Edit</button>
+                        <button onClick={() => handleDelete(item)} className="text-red-600 text-sm font-medium">Delete</button>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          ))}
+                </div>
+              );
+            })}
+          </div>
         </div>
+      )}
+
+      {/* Results count */}
+      {filteredItems.length > 0 && (
+        <p className="text-center text-sm text-gray-500 py-4">
+          Showing {filteredItems.length} of {items.length} dishes
+        </p>
       )}
 
       {/* Add/Edit Dish Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b">
+            <div className="p-4 sm:p-6 border-b sticky top-0 bg-white">
               <h2 className="text-xl font-bold">{selectedItem ? 'Edit Dish' : 'Add New Dish'}</h2>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
                   <label className="block text-sm font-medium mb-1">Dish Name *</label>
                   <input
                     type="text"
@@ -326,7 +562,7 @@ export default function DishLibrary() {
                     required
                   />
                 </div>
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <label className="block text-sm font-medium mb-1">Description</label>
                   <textarea
                     value={form.description}
@@ -385,81 +621,85 @@ export default function DishLibrary() {
               {/* Dietary Options */}
               <div>
                 <label className="block text-sm font-medium mb-2">Dietary Options</label>
-                <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" checked={form.isVegetarian} onChange={(e) => setForm({ ...form, isVegetarian: e.target.checked })} />
-                    🥬 Vegetarian
+                <div className="flex flex-wrap gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={form.isVegetarian} onChange={(e) => setForm({ ...form, isVegetarian: e.target.checked })} className="rounded" />
+                    <span>🥬 Vegetarian</span>
                   </label>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" checked={form.isVegan} onChange={(e) => setForm({ ...form, isVegan: e.target.checked })} />
-                    🌱 Vegan
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={form.isVegan} onChange={(e) => setForm({ ...form, isVegan: e.target.checked })} className="rounded" />
+                    <span>🌱 Vegan</span>
                   </label>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" checked={form.isGlutenFree} onChange={(e) => setForm({ ...form, isGlutenFree: e.target.checked })} />
-                    🌾 Gluten-Free
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={form.isGlutenFree} onChange={(e) => setForm({ ...form, isGlutenFree: e.target.checked })} className="rounded" />
+                    <span>🌾 Gluten-Free</span>
                   </label>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" checked={form.isSpicy} onChange={(e) => setForm({ ...form, isSpicy: e.target.checked })} />
-                    🌶️ Spicy
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={form.isSpicy} onChange={(e) => setForm({ ...form, isSpicy: e.target.checked })} className="rounded" />
+                    <span>🌶️ Spicy</span>
                   </label>
-                  <label className="flex items-center gap-2">
-                    <input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })} />
-                    ⭐ Featured
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })} className="rounded" />
+                    <span>⭐ Featured</span>
                   </label>
                 </div>
               </div>
 
               {/* Dietary Tags */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Dietary Tags</label>
-                <div className="flex flex-wrap gap-2">
-                  {dietaryTags.map(tag => (
-                    <label key={tag.id} className="flex items-center gap-1 px-3 py-1 border rounded-full cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="checkbox"
-                        checked={form.dietaryTagIds.includes(tag.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setForm({ ...form, dietaryTagIds: [...form.dietaryTagIds, tag.id] });
-                          } else {
-                            setForm({ ...form, dietaryTagIds: form.dietaryTagIds.filter(id => id !== tag.id) });
-                          }
-                        }}
-                        className="hidden"
-                      />
-                      <span style={{ color: form.dietaryTagIds.includes(tag.id) ? tag.color : '#666' }}>
-                        {tag.icon} {tag.name}
-                      </span>
-                    </label>
-                  ))}
+              {dietaryTags.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Dietary Tags</label>
+                  <div className="flex flex-wrap gap-2">
+                    {dietaryTags.map(tag => (
+                      <label key={tag.id} className={`flex items-center gap-1 px-3 py-1.5 border rounded-full cursor-pointer transition-colors ${form.dietaryTagIds.includes(tag.id) ? 'bg-indigo-50 border-indigo-300' : 'hover:bg-gray-50'}`}>
+                        <input
+                          type="checkbox"
+                          checked={form.dietaryTagIds.includes(tag.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setForm({ ...form, dietaryTagIds: [...form.dietaryTagIds, tag.id] });
+                            } else {
+                              setForm({ ...form, dietaryTagIds: form.dietaryTagIds.filter(id => id !== tag.id) });
+                            }
+                          }}
+                          className="hidden"
+                        />
+                        <span className={form.dietaryTagIds.includes(tag.id) ? 'text-indigo-700' : 'text-gray-600'}>
+                          {tag.icon} {tag.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Allergens */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Contains Allergens</label>
-                <div className="flex flex-wrap gap-2">
-                  {allergens.map(allergen => (
-                    <label key={allergen.id} className={`flex items-center gap-1 px-3 py-1 border rounded-full cursor-pointer ${form.allergenIds.includes(allergen.id) ? 'bg-red-50 border-red-300' : 'hover:bg-gray-50'}`}>
-                      <input
-                        type="checkbox"
-                        checked={form.allergenIds.includes(allergen.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setForm({ ...form, allergenIds: [...form.allergenIds, allergen.id] });
-                          } else {
-                            setForm({ ...form, allergenIds: form.allergenIds.filter(id => id !== allergen.id) });
-                          }
-                        }}
-                        className="hidden"
-                      />
-                      <span className={form.allergenIds.includes(allergen.id) ? 'text-red-600' : 'text-gray-600'}>
-                        {allergen.icon} {allergen.name}
-                      </span>
-                    </label>
-                  ))}
+              {allergens.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Contains Allergens</label>
+                  <div className="flex flex-wrap gap-2">
+                    {allergens.map(allergen => (
+                      <label key={allergen.id} className={`flex items-center gap-1 px-3 py-1.5 border rounded-full cursor-pointer transition-colors ${form.allergenIds.includes(allergen.id) ? 'bg-red-50 border-red-300' : 'hover:bg-gray-50'}`}>
+                        <input
+                          type="checkbox"
+                          checked={form.allergenIds.includes(allergen.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setForm({ ...form, allergenIds: [...form.allergenIds, allergen.id] });
+                            } else {
+                              setForm({ ...form, allergenIds: form.allergenIds.filter(id => id !== allergen.id) });
+                            }
+                          }}
+                          className="hidden"
+                        />
+                        <span className={form.allergenIds.includes(allergen.id) ? 'text-red-600' : 'text-gray-600'}>
+                          {allergen.icon} {allergen.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
