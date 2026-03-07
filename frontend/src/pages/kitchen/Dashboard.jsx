@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { orderAPI, menuAPI, messageAPI, companyAPI, catalogAPI, dailyMenuAPI } from '../../services/api';
-import { useTheme } from '../../context/ThemeContext';
 import DishLibrary from '../../components/kitchen/DishLibrary';
 import EnhancedPrepList from '../../components/kitchen/EnhancedPrepList';
 import toast from 'react-hot-toast';
 
 export default function KitchenDashboard() {
-  const { colors, getStatCardColors } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -839,59 +837,65 @@ export default function KitchenDashboard() {
   };
 
   return (
-    <div className={`min-h-screen ${colors.bgPrimary}`}>
-      <div className="container mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-3 sm:px-6 py-4 sm:py-6">
+        {/* Header - Mobile optimized */}
+        <div className="flex justify-between items-center mb-4 sm:mb-6">
           <div>
-            <h1 className={`text-3xl font-bold ${colors.textPrimary}`}>Kitchen Dashboard</h1>
-            <p className={colors.textMuted}>Manage orders, menus, and prep</p>
+            <h1 className="text-xl sm:text-3xl font-bold text-gray-900">Kitchen Dashboard</h1>
+            <p className="text-gray-500 text-sm sm:text-base">Manage orders, menus, and prep</p>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+        {/* Stats Cards - 3 cols on mobile, 6 on desktop */}
+        <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4 mb-4 sm:mb-6">
           {[
-            { label: 'Pending', value: stats.pending, color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
-            { label: 'Preparing', value: stats.preparing, color: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
-            { label: 'Ready', value: stats.ready, color: 'bg-blue-100 text-blue-700 border-blue-200' },
-            { label: 'Completed', value: stats.completed, color: 'bg-green-100 text-green-700 border-green-200' },
-            { label: 'In-Process', value: stats.inProcess, color: 'bg-orange-100 text-orange-700 border-orange-200' },
-            { label: 'Issues', value: stats.issues, color: 'bg-red-100 text-red-700 border-red-200' }
+            { label: 'Pending', value: stats.pending, icon: '⏳', color: 'bg-yellow-50 border-yellow-200', textColor: 'text-yellow-700' },
+            { label: 'Preparing', value: stats.preparing, icon: '👨‍🍳', color: 'bg-cyan-50 border-cyan-200', textColor: 'text-cyan-700' },
+            { label: 'Ready', value: stats.ready, icon: '✅', color: 'bg-blue-50 border-blue-200', textColor: 'text-blue-700' },
+            { label: 'Done', value: stats.completed, icon: '🎉', color: 'bg-green-50 border-green-200', textColor: 'text-green-700' },
+            { label: 'Active', value: stats.inProcess, icon: '🔥', color: 'bg-orange-50 border-orange-200', textColor: 'text-orange-700' },
+            { label: 'Issues', value: stats.issues, icon: '⚠️', color: 'bg-red-50 border-red-200', textColor: 'text-red-700' }
           ].map((stat, idx) => (
-            <div key={idx} className={`border rounded-xl p-4 ${stat.color}`}>
-              <p className="text-sm font-medium">{stat.label}</p>
-              <p className="text-3xl font-bold">{stat.value || 0}</p>
+            <div key={idx} className={`border rounded-xl p-2 sm:p-4 ${stat.color}`}>
+              <div className="flex items-center gap-1 sm:gap-2 mb-0.5 sm:mb-1">
+                <span className="text-sm sm:text-lg">{stat.icon}</span>
+                <p className={`text-xs sm:text-sm font-medium ${stat.textColor} truncate`}>{stat.label}</p>
+              </div>
+              <p className={`text-xl sm:text-3xl font-bold ${stat.textColor}`}>{stat.value || 0}</p>
             </div>
           ))}
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        {/* Tab Navigation - Mobile scrollable with better touch targets */}
+        <div className="flex gap-1.5 sm:gap-2 mb-4 sm:mb-6 overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0">
           {[
-            { id: 'orders', label: 'Orders', icon: '📦' },
-            { id: 'prep', label: 'Prep List', icon: '📋' },
-            { id: 'deliveries', label: `Deliveries ${stats.ready > 0 ? `(${stats.ready})` : ''}`, icon: '🚚' },
-            { id: 'menus', label: 'Menus', icon: '📝' },
-            { id: 'items', label: 'Items', icon: '🍽️' },
-            { id: 'issues', label: 'Issues', icon: '⚠️' },
-            { id: 'messages', label: `Messages ${unreadCount > 0 ? `(${unreadCount})` : ''}`, icon: '💬' }
+            { id: 'orders', label: 'Orders', mobileLabel: 'Orders', icon: '📦' },
+            { id: 'prep', label: 'Prep List', mobileLabel: 'Prep', icon: '📋' },
+            { id: 'deliveries', label: `Deliveries ${stats.ready > 0 ? `(${stats.ready})` : ''}`, mobileLabel: `Delivery${stats.ready > 0 ? ` (${stats.ready})` : ''}`, icon: '🚚' },
+            { id: 'menus', label: 'Menus', mobileLabel: 'Menus', icon: '📝' },
+            { id: 'items', label: 'Dish Library', mobileLabel: 'Dishes', icon: '🍽️' },
+            { id: 'issues', label: 'Issues', mobileLabel: 'Issues', icon: '⚠️' },
+            { id: 'messages', label: `Messages ${unreadCount > 0 ? `(${unreadCount})` : ''}`, mobileLabel: `Msgs${unreadCount > 0 ? ` (${unreadCount})` : ''}`, icon: '💬' }
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+              className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg whitespace-nowrap transition-colors text-sm sm:text-base font-medium ${
                 activeTab === tab.id
-                  ? 'bg-orange-600 text-white'
-                  : `${colors.bgCard} ${colors.textSecondary} hover:bg-orange-100`
+                  ? 'bg-orange-600 text-white shadow-sm'
+                  : 'bg-white text-gray-600 hover:bg-orange-50 border border-gray-200'
               }`}
             >
-              {tab.icon} {tab.label}
+              <span className="mr-1">{tab.icon}</span>
+              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="sm:hidden">{tab.mobileLabel}</span>
             </button>
           ))}
         </div>
 
-        {/* Content Area */}
-        <div className={`${colors.bgCard} rounded-xl p-6`}>
+        {/* Content Area - Responsive padding */}
+        <div className="bg-white rounded-xl p-3 sm:p-6 border border-gray-200">
           {activeTab === 'orders' && (
             <div>
               {/* Filters */}
@@ -899,7 +903,7 @@ export default function KitchenDashboard() {
                 <select
                   value={filters.company}
                   onChange={(e) => setFilters({ ...filters, company: e.target.value })}
-                  className={`px-4 py-2 border ${colors.border} rounded-lg`}
+                  className={`px-4 py-2 border border-gray-200 rounded-lg`}
                 >
                   <option value="">All Companies</option>
                   {companies.map(c => (
@@ -910,7 +914,7 @@ export default function KitchenDashboard() {
                 <select
                   value={filters.status}
                   onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                  className={`px-4 py-2 border ${colors.border} rounded-lg`}
+                  className={`px-4 py-2 border border-gray-200 rounded-lg`}
                 >
                   <option value="">All Status</option>
                   <option value="pending">Pending</option>
@@ -925,13 +929,13 @@ export default function KitchenDashboard() {
                   type="date"
                   value={filters.date}
                   onChange={(e) => setFilters({ ...filters, date: e.target.value })}
-                  className={`px-4 py-2 border ${colors.border} rounded-lg`}
+                  className={`px-4 py-2 border border-gray-200 rounded-lg`}
                 />
               </div>
 
               {/* Orders List */}
               {loading ? (
-                <p className={colors.textMuted}>Loading...</p>
+                <p className="text-gray-500">Loading...</p>
               ) : filteredOrders.length > 0 ? (
                 <div className="space-y-4">
                   {/* Bulk Action Button */}
@@ -956,21 +960,21 @@ export default function KitchenDashboard() {
                   )}
                   
                   {filteredOrders.map(order => (
-                    <div key={order.id} className={`border ${colors.border} rounded-xl p-4`}>
+                    <div key={order.id} className={`border border-gray-200 rounded-xl p-4`}>
                       <div className="flex justify-between items-start mb-3">
                         <div className="flex-1">
-                          <h3 className={`font-semibold ${colors.textPrimary}`}>
+                          <h3 className={`font-semibold text-gray-900`}>
                             Order #{order.orderNumber || order.id?.slice(0, 8)}
                           </h3>
-                          <p className={`text-sm ${colors.textMuted} mt-1`}>
+                          <p className={`text-sm text-gray-500 mt-1`}>
                             <span className="font-medium">Customer:</span> {order.userName}
                           </p>
-                          <p className={`text-sm ${colors.textMuted}`}>
+                          <p className={`text-sm text-gray-500`}>
                             <span className="font-medium">Company:</span> {order.companyName}
                             {order.departmentName && ` • ${order.departmentName}`}
                           </p>
                           {order.orderDate && (
-                            <p className={`text-xs ${colors.textMuted} mt-1`}>
+                            <p className={`text-xs text-gray-500 mt-1`}>
                               {order.orderDate}
                             </p>
                           )}
@@ -988,7 +992,7 @@ export default function KitchenDashboard() {
                       {/* Order Items */}
                       <div className="space-y-2 mb-3">
                         {order.items?.map((item, idx) => (
-                          <div key={idx} className={`text-sm ${colors.textSecondary}`}>
+                          <div key={idx} className={`text-sm text-gray-600`}>
                             • {item.quantity}x {item.name}
                             {item.specialInstructions && (
                               <span className="text-xs italic ml-2">({item.specialInstructions})</span>
@@ -1043,21 +1047,21 @@ export default function KitchenDashboard() {
                   ))}
                 </div>
               ) : (
-                <p className={colors.textMuted}>No orders found for this date</p>
+                <p className="text-gray-500">No orders found for this date</p>
               )}
             </div>
           )}
 
           {activeTab === 'prep' && (
             <div>
-              <h3 className={`font-semibold mb-4 ${colors.textPrimary}`}>📋 Today's Prep List</h3>
+              <h3 className={`font-semibold mb-4 text-gray-900`}>📋 Today's Prep List</h3>
               <EnhancedPrepList orders={filteredOrders} />
             </div>
           )}
 
           {activeTab === 'deliveries' && (
             <div>
-              <h3 className={`font-semibold mb-4 ${colors.textPrimary}`}>Delivery Management</h3>
+              <h3 className={`font-semibold mb-4 text-gray-900`}>Delivery Management</h3>
               
               {(() => {
                 // Group ready orders by company and department
@@ -1083,19 +1087,19 @@ export default function KitchenDashboard() {
                   <div className="space-y-6">
                     {/* Summary Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className={`${colors.bgCard} border ${colors.border} rounded-lg p-4`}>
-                        <p className={`text-sm ${colors.textMuted}`}>Ready for Delivery</p>
-                        <p className={`text-2xl font-bold ${colors.textPrimary}`}>{readyOrders.length}</p>
+                      <div className={`bg-white border border-gray-200 rounded-lg p-4`}>
+                        <p className={`text-sm text-gray-500`}>Ready for Delivery</p>
+                        <p className={`text-2xl font-bold text-gray-900`}>{readyOrders.length}</p>
                         <p className="text-xs text-gray-500">orders</p>
                       </div>
-                      <div className={`${colors.bgCard} border ${colors.border} rounded-lg p-4`}>
-                        <p className={`text-sm ${colors.textMuted}`}>Delivery Locations</p>
-                        <p className={`text-2xl font-bold ${colors.textPrimary}`}>{groupKeys.length}</p>
+                      <div className={`bg-white border border-gray-200 rounded-lg p-4`}>
+                        <p className={`text-sm text-gray-500`}>Delivery Locations</p>
+                        <p className={`text-2xl font-bold text-gray-900`}>{groupKeys.length}</p>
                         <p className="text-xs text-gray-500">companies/departments</p>
                       </div>
-                      <div className={`${colors.bgCard} border ${colors.border} rounded-lg p-4`}>
-                        <p className={`text-sm ${colors.textMuted}`}>Total Items</p>
-                        <p className={`text-2xl font-bold ${colors.textPrimary}`}>
+                      <div className={`bg-white border border-gray-200 rounded-lg p-4`}>
+                        <p className={`text-sm text-gray-500`}>Total Items</p>
+                        <p className={`text-2xl font-bold text-gray-900`}>
                           {readyOrders.reduce((sum, o) => sum + (o.items?.length || 0), 0)}
                         </p>
                         <p className="text-xs text-gray-500">food items</p>
@@ -1107,19 +1111,19 @@ export default function KitchenDashboard() {
                       {groupKeys.map(groupKey => {
                         const group = deliveryGroups[groupKey];
                         return (
-                          <div key={groupKey} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}>
+                          <div key={groupKey} className={`border border-gray-200 rounded-xl p-4 bg-white`}>
                             {/* Group Header */}
                             <div className="flex justify-between items-start mb-4">
                               <div>
-                                <h4 className={`font-bold text-lg ${colors.textPrimary}`}>
+                                <h4 className={`font-bold text-lg text-gray-900`}>
                                   🏢 {group.company}
                                 </h4>
                                 {group.department && (
-                                  <p className={`text-sm ${colors.textMuted}`}>
+                                  <p className={`text-sm text-gray-500`}>
                                     📍 {group.department} Department
                                   </p>
                                 )}
-                                <p className={`text-xs ${colors.textMuted} mt-1`}>
+                                <p className={`text-xs text-gray-500 mt-1`}>
                                   {group.orders.length} order{group.orders.length > 1 ? 's' : ''} ready
                                 </p>
                               </div>
@@ -1157,13 +1161,13 @@ export default function KitchenDashboard() {
                             {/* Orders in this group */}
                             <div className="space-y-2">
                               {group.orders.map(order => (
-                                <div key={order.id} className={`border ${colors.border} rounded-lg p-3 bg-white`}>
+                                <div key={order.id} className={`border border-gray-200 rounded-lg p-3 bg-white`}>
                                   <div className="flex justify-between items-start">
                                     <div className="flex-1">
-                                      <p className={`font-semibold ${colors.textPrimary}`}>
+                                      <p className={`font-semibold text-gray-900`}>
                                         Order #{order.orderNumber}
                                       </p>
-                                      <p className={`text-sm ${colors.textMuted}`}>
+                                      <p className={`text-sm text-gray-500`}>
                                         For: {order.userName}
                                       </p>
                                       <div className="mt-2 space-y-1">
@@ -1196,8 +1200,8 @@ export default function KitchenDashboard() {
                   </div>
                 ) : (
                   <div className="text-center py-12">
-                    <p className={`text-lg ${colors.textMuted}`}>No orders ready for delivery</p>
-                    <p className={`text-sm ${colors.textMuted} mt-2`}>Orders will appear here when marked as "Ready"</p>
+                    <p className={`text-lg text-gray-500`}>No orders ready for delivery</p>
+                    <p className={`text-sm text-gray-500 mt-2`}>Orders will appear here when marked as "Ready"</p>
                   </div>
                 );
               })()}
@@ -1214,7 +1218,7 @@ export default function KitchenDashboard() {
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       menusSubTab === 'active' 
                         ? 'bg-orange-600 text-white' 
-                        : `${colors.bgSecondary} ${colors.textSecondary} hover:bg-orange-100`
+                        : `bg-gray-100 text-gray-600 hover:bg-orange-100`
                     }`}
                   >
                     Active Menus ({menus.filter(m => m.status !== 'archived').length})
@@ -1227,7 +1231,7 @@ export default function KitchenDashboard() {
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       menusSubTab === 'archived' 
                         ? 'bg-gray-600 text-white' 
-                        : `${colors.bgSecondary} ${colors.textSecondary} hover:bg-gray-100`
+                        : `bg-gray-100 text-gray-600 hover:bg-gray-100`
                     }`}
                   >
                     📦 Archived ({archivedMenus.length})
@@ -1271,10 +1275,10 @@ export default function KitchenDashboard() {
               {menusSubTab === 'active' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {menus.filter(m => m.status !== 'archived').length > 0 ? menus.filter(m => m.status !== 'archived').map(m => (
-                    <div key={m.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}>
+                    <div key={m.id} className={`border border-gray-200 rounded-xl p-4 bg-white`}>
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex-1">
-                          <h3 className={`font-semibold ${colors.textPrimary}`}>{m.name}</h3>
+                          <h3 className={`font-semibold text-gray-900`}>{m.name}</h3>
                           {m.isDailyMenu && (
                             <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">📅 Daily Menu</span>
                           )}
@@ -1287,11 +1291,11 @@ export default function KitchenDashboard() {
                           {m.status || (m.is_active ? 'Active' : 'Draft')}
                         </span>
                       </div>
-                      <p className={`text-sm ${colors.textMuted} mb-1`}>
+                      <p className={`text-sm text-gray-500 mb-1`}>
                         {m.meal_type || 'lunch'} • {m.menu_type || 'daily'}
                       </p>
                       {m.item_count !== undefined && (
-                        <p className={`text-xs ${colors.textMuted} mb-3`}>
+                        <p className={`text-xs text-gray-500 mb-3`}>
                           🍽️ {m.item_count} item{m.item_count !== 1 ? 's' : ''}
                         </p>
                       )}
@@ -1315,14 +1319,14 @@ export default function KitchenDashboard() {
                         >
                           Edit
                         </button>
-                        <span className={`text-sm ${colors.textMuted}`}>•</span>
+                        <span className={`text-sm text-gray-500`}>•</span>
                         <button 
                           onClick={() => handleManageMenuItems(m)} 
                           className="text-orange-600 text-sm hover:underline font-medium"
                         >
                           📋 Manage Items
                         </button>
-                        <span className={`text-sm ${colors.textMuted}`}>•</span>
+                        <span className={`text-sm text-gray-500`}>•</span>
                         {/* Published menus: Unpublish + Archive. Draft menus: Delete */}
                         {m.status === 'published' ? (
                           <>
@@ -1332,7 +1336,7 @@ export default function KitchenDashboard() {
                             >
                               ⏸️ Unpublish
                             </button>
-                            <span className={`text-sm ${colors.textMuted}`}>•</span>
+                            <span className={`text-sm text-gray-500`}>•</span>
                             <button 
                               onClick={() => handleArchiveMenu(m)} 
                               className="text-gray-500 text-sm hover:underline"
@@ -1352,7 +1356,7 @@ export default function KitchenDashboard() {
                     </div>
                   )) : (
                     <div className="col-span-3 text-center py-8">
-                      <p className={colors.textMuted}>No active menus. Click "+ Add Menu" to create one.</p>
+                      <p className="text-gray-500">No active menus. Click "+ Add Menu" to create one.</p>
                     </div>
                   )}
                 </div>
@@ -1362,17 +1366,17 @@ export default function KitchenDashboard() {
               {menusSubTab === 'archived' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {archivedMenus.length > 0 ? archivedMenus.map(m => (
-                    <div key={m.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard} opacity-75`}>
+                    <div key={m.id} className={`border border-gray-200 rounded-xl p-4 bg-white opacity-75`}>
                       <div className="flex justify-between items-start mb-2">
-                        <h3 className={`font-semibold ${colors.textPrimary}`}>{m.name}</h3>
+                        <h3 className={`font-semibold text-gray-900`}>{m.name}</h3>
                         <span className="px-2 py-1 text-xs rounded-full bg-gray-200 text-gray-600">
                           Archived
                         </span>
                       </div>
-                      <p className={`text-sm ${colors.textMuted} mb-1`}>
+                      <p className={`text-sm text-gray-500 mb-1`}>
                         {m.itemCount || 0} items
                       </p>
-                      <p className={`text-xs ${colors.textMuted} mb-3`}>
+                      <p className={`text-xs text-gray-500 mb-3`}>
                         Archived: {m.updatedAt ? new Date(m.updatedAt).toLocaleDateString() : 'N/A'}
                       </p>
                       <div className="flex gap-2">
@@ -1386,8 +1390,8 @@ export default function KitchenDashboard() {
                     </div>
                   )) : (
                     <div className="col-span-3 text-center py-8">
-                      <p className={colors.textMuted}>No archived menus.</p>
-                      <p className={`text-sm ${colors.textMuted} mt-1`}>
+                      <p className="text-gray-500">No archived menus.</p>
+                      <p className={`text-sm text-gray-500 mt-1`}>
                         Published menus that are no longer needed can be archived here for historical reference.
                       </p>
                     </div>
@@ -1409,15 +1413,15 @@ export default function KitchenDashboard() {
                       setSelectedMenuForItems(null);
                       setMenuCatalogItems([]);
                     }}
-                    className={`px-3 py-2 border ${colors.border} rounded-lg hover:bg-gray-50`}
+                    className={`px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50`}
                   >
                     ← Back to Menus
                   </button>
                   <div>
-                    <h2 className={`text-2xl font-bold ${colors.textPrimary}`}>
+                    <h2 className={`text-2xl font-bold text-gray-900`}>
                       {selectedMenuForItems.name}
                     </h2>
-                    <p className={`text-sm ${colors.textMuted}`}>
+                    <p className={`text-sm text-gray-500`}>
                       {selectedMenuForItems.meal_type} • {selectedMenuForItems.menu_type || 'Regular'}
                     </p>
                   </div>
@@ -1434,9 +1438,9 @@ export default function KitchenDashboard() {
               {menuCatalogItems.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {menuCatalogItems.map(item => (
-                    <div key={item.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}>
+                    <div key={item.id} className={`border border-gray-200 rounded-xl p-4 bg-white`}>
                       <div className="flex justify-between items-start mb-2">
-                        <h3 className={`font-semibold ${colors.textPrimary}`}>{item.name}</h3>
+                        <h3 className={`font-semibold text-gray-900`}>{item.name}</h3>
                         <button 
                           onClick={() => handleRemoveItemFromMenu(item.catalog_item_id)}
                           className="text-red-600 text-sm hover:underline"
@@ -1445,20 +1449,20 @@ export default function KitchenDashboard() {
                         </button>
                       </div>
                       {item.description && (
-                        <p className={`text-sm ${colors.textMuted} mb-2`}>{item.description}</p>
+                        <p className={`text-sm text-gray-500 mb-2`}>{item.description}</p>
                       )}
                       <div className="flex gap-4 text-sm">
                         <div>
-                          <span className={`font-medium ${colors.textPrimary}`}>Base: </span>
+                          <span className={`font-medium text-gray-900`}>Base: </span>
                           <span className="text-green-600 font-semibold">${parseFloat(item.price || 0).toFixed(2)}</span>
                         </div>
                         <div>
-                          <span className={`font-medium ${colors.textPrimary}`}>Extra: </span>
+                          <span className={`font-medium text-gray-900`}>Extra: </span>
                           <span className="text-blue-600 font-semibold">${parseFloat(item.add_on_price || 0).toFixed(2)}</span>
                         </div>
                       </div>
                       {item.category && (
-                        <p className={`text-xs ${colors.textMuted} mt-2`}>
+                        <p className={`text-xs text-gray-500 mt-2`}>
                           Category: {item.category}
                         </p>
                       )}
@@ -1466,9 +1470,9 @@ export default function KitchenDashboard() {
                   ))}
                 </div>
               ) : (
-                <div className={`text-center py-12 border ${colors.border} rounded-xl ${colors.bgCard}`}>
-                  <p className={`text-lg ${colors.textMuted} mb-2`}>No items in this menu yet</p>
-                  <p className={`text-sm ${colors.textMuted} mb-4`}>Add items from your catalog to get started</p>
+                <div className={`text-center py-12 border border-gray-200 rounded-xl bg-white`}>
+                  <p className={`text-lg text-gray-500 mb-2`}>No items in this menu yet</p>
+                  <p className={`text-sm text-gray-500 mb-4`}>Add items from your catalog to get started</p>
                   <button 
                     onClick={handleOpenAddItemsModal}
                     className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
@@ -1518,29 +1522,29 @@ export default function KitchenDashboard() {
 
           {activeTab === 'issues' && (
             <div className="space-y-4">
-              {issues.length > 0 ? issues.map(issue => <div key={issue.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard}`}><div className="flex justify-between mb-2"><div><h3 className={`font-semibold ${colors.textPrimary}`}>{issue.subject}</h3><p className={`text-sm ${colors.textMuted}`}>{issue.user_name}</p></div><span className={`px-2 py-1 text-xs rounded-full ${issue.status === 'resolved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{issue.status}</span></div><p className={colors.textSecondary}>{issue.message}</p>{issue.status !== 'resolved' && <button onClick={() => { setSelectedIssue(issue); setIssueResponse(''); setShowIssueModal(true); }} className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Respond & Resolve</button>}</div>) : <p className={colors.textMuted}>No issues</p>}
+              {issues.length > 0 ? issues.map(issue => <div key={issue.id} className={`border border-gray-200 rounded-xl p-4 bg-white`}><div className="flex justify-between mb-2"><div><h3 className={`font-semibold text-gray-900`}>{issue.subject}</h3><p className={`text-sm text-gray-500`}>{issue.user_name}</p></div><span className={`px-2 py-1 text-xs rounded-full ${issue.status === 'resolved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{issue.status}</span></div><p className="text-gray-600">{issue.message}</p>{issue.status !== 'resolved' && <button onClick={() => { setSelectedIssue(issue); setIssueResponse(''); setShowIssueModal(true); }} className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Respond & Resolve</button>}</div>) : <p className="text-gray-500">No issues</p>}
             </div>
           )}
 
           {activeTab === 'messages' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className={`font-semibold ${colors.textPrimary}`}>Inbox ({unreadCount} unread)</h3>
+                <h3 className={`font-semibold text-gray-900`}>Inbox ({unreadCount} unread)</h3>
                 {messages.length > 0 && <button onClick={async () => { await messageAPI.markAllAsRead(); loadData(); toast.success('All marked as read'); }} className="text-sm text-blue-600">Mark all as read</button>}
               </div>
               {messages.length > 0 ? messages.map(msg => (
-                <div key={msg.id} className={`border ${colors.border} rounded-xl p-4 ${colors.bgCard} ${!msg.isRead ? 'border-l-4 border-l-blue-500' : ''}`}>
+                <div key={msg.id} className={`border border-gray-200 rounded-xl p-4 bg-white ${!msg.isRead ? 'border-l-4 border-l-blue-500' : ''}`}>
                   <div className="flex justify-between mb-2">
                     <div>
-                      <h3 className={`font-semibold ${colors.textPrimary}`}>{msg.subject}</h3>
-                      <p className={`text-sm ${colors.textMuted}`}>From: {msg.sender?.name || 'Unknown'} {msg.sender?.role ? `(${msg.sender.role})` : ''}</p>
+                      <h3 className={`font-semibold text-gray-900`}>{msg.subject}</h3>
+                      <p className={`text-sm text-gray-500`}>From: {msg.sender?.name || 'Unknown'} {msg.sender?.role ? `(${msg.sender.role})` : ''}</p>
                     </div>
-                    <span className={`text-xs ${colors.textMuted}`}>{new Date(msg.createdAt).toLocaleString()}</span>
+                    <span className={`text-xs text-gray-500`}>{new Date(msg.createdAt).toLocaleString()}</span>
                   </div>
-                  <p className={colors.textSecondary}>{msg.body}</p>
+                  <p className="text-gray-600">{msg.body}</p>
                   {!msg.isRead && <button onClick={async () => { await messageAPI.markAsRead(msg.id); loadData(); }} className="mt-2 text-sm text-blue-600">Mark as read</button>}
                 </div>
-              )) : <p className={colors.textMuted}>No messages</p>}
+              )) : <p className="text-gray-500">No messages</p>}
             </div>
           )}
         </div>
@@ -1549,23 +1553,23 @@ export default function KitchenDashboard() {
       {/* Menu Modal */}
       {showMenuModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto`}>
-            <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>
+          <div className={`bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto`}>
+            <h2 className={`text-xl font-bold mb-4 text-gray-900`}>
               {selectedMenu ? 'Edit' : 'Add'} Menu
             </h2>
             <form onSubmit={handleSaveMenu} className="space-y-4">
               
               {/* Daily vs Weekly Toggle */}
               <div>
-                <label className={`block text-sm font-medium mb-2 ${colors.textMuted}`}>Menu Type</label>
-                <div className="flex rounded-lg overflow-hidden border ${colors.border}">
+                <label className={`block text-sm font-medium mb-2 text-gray-500`}>Menu Type</label>
+                <div className="flex rounded-lg overflow-hidden border border-gray-200">
                   <button
                     type="button"
                     onClick={() => setMenuForm({ ...menuForm, menuScope: 'daily' })}
                     className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
                       menuForm.menuScope === 'daily' 
                         ? 'bg-orange-600 text-white' 
-                        : `${colors.bgSecondary} ${colors.textPrimary} hover:bg-gray-100`
+                        : `bg-gray-100 text-gray-900 hover:bg-gray-100`
                     }`}
                   >
                     📅 Daily Menu
@@ -1576,13 +1580,13 @@ export default function KitchenDashboard() {
                     className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
                       menuForm.menuScope === 'weekly' 
                         ? 'bg-orange-600 text-white' 
-                        : `${colors.bgSecondary} ${colors.textPrimary} hover:bg-gray-100`
+                        : `bg-gray-100 text-gray-900 hover:bg-gray-100`
                     }`}
                   >
                     📆 Weekly Menu
                   </button>
                 </div>
-                <p className={`text-xs mt-1 ${colors.textMuted}`}>
+                <p className={`text-xs mt-1 text-gray-500`}>
                   {menuForm.menuScope === 'daily' 
                     ? 'Create a menu for a specific day with unique items' 
                     : 'Create a template menu that spans multiple days'}
@@ -1595,18 +1599,18 @@ export default function KitchenDashboard() {
                   placeholder="Menu Name (e.g., Week of Feb 10-16)" 
                   value={menuForm.name} 
                   onChange={e => setMenuForm({ ...menuForm, name: e.target.value })} 
-                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`} 
+                  className={`w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-900`} 
                   required 
                 />
               )}
               
               {/* Cafeteria Selector */}
               <div>
-                <label className={`block text-sm font-medium mb-1 ${colors.textMuted}`}>Cafeteria *</label>
+                <label className={`block text-sm font-medium mb-1 text-gray-500`}>Cafeteria *</label>
                 <select 
                   value={menuForm.cafeteriaId} 
                   onChange={e => setMenuForm({ ...menuForm, cafeteriaId: e.target.value })} 
-                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`}
+                  className={`w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-900`}
                   required
                 >
                   <option value="">Select Cafeteria</option>
@@ -1619,19 +1623,19 @@ export default function KitchenDashboard() {
               {/* Date Selection - Different for Daily vs Weekly */}
               {menuForm.menuScope === 'daily' ? (
                 <div>
-                  <label className={`block text-sm font-medium mb-1 ${colors.textMuted}`}>Menu Date *</label>
+                  <label className={`block text-sm font-medium mb-1 text-gray-500`}>Menu Date *</label>
                   <input 
                     type="date" 
                     value={menuForm.menuDate} 
                     onChange={e => setMenuForm({ ...menuForm, menuDate: e.target.value })} 
-                    className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`}
+                    className={`w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-900`}
                     required
                   />
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className={`block text-sm font-medium mb-1 ${colors.textMuted}`}>Week Start</label>
+                    <label className={`block text-sm font-medium mb-1 text-gray-500`}>Week Start</label>
                     <input 
                       type="date" 
                       value={menuForm.weekStartDate} 
@@ -1645,16 +1649,16 @@ export default function KitchenDashboard() {
                           weekEndDate: end.toISOString().split('T')[0]
                         });
                       }} 
-                      className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`}
+                      className={`w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-900`}
                     />
                   </div>
                   <div>
-                    <label className={`block text-sm font-medium mb-1 ${colors.textMuted}`}>Week End</label>
+                    <label className={`block text-sm font-medium mb-1 text-gray-500`}>Week End</label>
                     <input 
                       type="date" 
                       value={menuForm.weekEndDate} 
                       onChange={e => setMenuForm({ ...menuForm, weekEndDate: e.target.value })} 
-                      className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`}
+                      className={`w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-900`}
                     />
                   </div>
                 </div>
@@ -1662,11 +1666,11 @@ export default function KitchenDashboard() {
               
               {/* Meal Type */}
               <div>
-                <label className={`block text-sm font-medium mb-1 ${colors.textMuted}`}>Meal Type</label>
+                <label className={`block text-sm font-medium mb-1 text-gray-500`}>Meal Type</label>
                 <select 
                   value={menuForm.mealType} 
                   onChange={e => setMenuForm({ ...menuForm, mealType: e.target.value })} 
-                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`}
+                  className={`w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-900`}
                 >
                   <option value="breakfast">🌅 Breakfast</option>
                   <option value="lunch">🍽️ Lunch</option>
@@ -1678,7 +1682,7 @@ export default function KitchenDashboard() {
                 placeholder="Notes (optional)" 
                 value={menuForm.description} 
                 onChange={e => setMenuForm({ ...menuForm, description: e.target.value })} 
-                className={`w-full px-4 py-2 border ${colors.border} rounded-lg ${colors.bgSecondary} ${colors.textPrimary}`} 
+                className={`w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-100 text-gray-900`} 
                 rows="2" 
               />
               
@@ -1686,7 +1690,7 @@ export default function KitchenDashboard() {
                 <button 
                   type="button" 
                   onClick={() => setShowMenuModal(false)} 
-                  className={`px-4 py-2 border ${colors.border} rounded-lg ${colors.textPrimary}`}
+                  className={`px-4 py-2 border border-gray-200 rounded-lg text-gray-900`}
                 >
                   Cancel
                 </button>
@@ -1704,8 +1708,8 @@ export default function KitchenDashboard() {
 
       {showItemModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto`}>
-            <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>
+          <div className={`bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto`}>
+            <h2 className={`text-xl font-bold mb-4 text-gray-900`}>
               {selectedItem ? 'Edit' : 'Add'} Item
             </h2>
             
@@ -1715,7 +1719,7 @@ export default function KitchenDashboard() {
                 placeholder="Item Name"
                 value={itemForm.name}
                 onChange={e => setItemForm({ ...itemForm, name: e.target.value })}
-                className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}
+                className={`w-full px-4 py-2 border border-gray-200 rounded-lg`}
                 required
               />
               
@@ -1724,7 +1728,7 @@ export default function KitchenDashboard() {
                 placeholder="Description"
                 value={itemForm.description}
                 onChange={e => setItemForm({ ...itemForm, description: e.target.value })}
-                className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}
+                className={`w-full px-4 py-2 border border-gray-200 rounded-lg`}
                 rows="2"
               />
               
@@ -1734,7 +1738,7 @@ export default function KitchenDashboard() {
                 <select
                   value={itemForm.category}
                   onChange={e => setItemForm({ ...itemForm, category: e.target.value })}
-                  className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}
+                  className={`w-full px-4 py-2 border border-gray-200 rounded-lg`}
                 >
                   <option value="protein">Protein</option>
                   <option value="carbohydrate">Carbohydrate</option>
@@ -1762,7 +1766,7 @@ export default function KitchenDashboard() {
                       min="0"
                       value={itemForm.basePrice}
                       onChange={e => setItemForm({ ...itemForm, basePrice: e.target.value })}
-                      className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}
+                      className={`w-full px-4 py-2 border border-gray-200 rounded-lg`}
                       placeholder="0.00"
                     />
                     <p className="text-xs text-gray-500 mt-1">Price when included in meal</p>
@@ -1793,7 +1797,7 @@ export default function KitchenDashboard() {
                 placeholder="Ingredients (for soups)"
                 value={itemForm.ingredients}
                 onChange={e => setItemForm({ ...itemForm, ingredients: e.target.value })}
-                className={`w-full px-4 py-2 border ${colors.border} rounded-lg`}
+                className={`w-full px-4 py-2 border border-gray-200 rounded-lg`}
                 rows="2"
               />
               
@@ -1822,7 +1826,7 @@ export default function KitchenDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowItemModal(false)}
-                  className={`px-4 py-2 border ${colors.border} rounded-lg`}
+                  className={`px-4 py-2 border border-gray-200 rounded-lg`}
                 >
                   Cancel
                 </button>
@@ -1841,12 +1845,12 @@ export default function KitchenDashboard() {
       {/* PHASE 3: Add Items from Catalog Modal */}
       {showAddItemsModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto`}>
-            <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>
+          <div className={`bg-white rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto`}>
+            <h2 className={`text-xl font-bold mb-4 text-gray-900`}>
               Add Items to {selectedMenuForItems?.name}
             </h2>
             
-            <p className={`text-sm ${colors.textMuted} mb-4`}>
+            <p className={`text-sm text-gray-500 mb-4`}>
               Select items from your catalog to add to this menu. Prices will be inherited from the catalog.
             </p>
             
@@ -1863,7 +1867,7 @@ export default function KitchenDashboard() {
             {loadingCatalogItems ? (
               <div className="text-center py-12">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-orange-500 border-t-transparent"></div>
-                <p className={`mt-4 ${colors.textMuted}`}>Loading catalog items...</p>
+                <p className={`mt-4 text-gray-500`}>Loading catalog items...</p>
               </div>
             ) : availableCatalogItems.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
@@ -1873,10 +1877,10 @@ export default function KitchenDashboard() {
                     <div 
                       key={item.id} 
                       onClick={() => toggleCatalogItemSelection(item.id)}
-                      className={`border ${isSelected ? 'border-orange-500 bg-orange-50' : colors.border} rounded-xl p-4 cursor-pointer hover:shadow-md transition-all ${isSelected ? 'ring-2 ring-orange-200' : ''}`}
+                      className={`border ${isSelected ? 'border-orange-500 bg-orange-50' : 'border-gray-200'} rounded-xl p-4 cursor-pointer hover:shadow-md transition-all ${isSelected ? 'ring-2 ring-orange-200' : ''}`}
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <h3 className={`font-semibold ${colors.textPrimary} flex-1`}>
+                        <h3 className={`font-semibold text-gray-900 flex-1`}>
                           {item.name}
                         </h3>
                         <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected ? 'border-orange-500 bg-orange-500' : 'border-gray-300'}`}>
@@ -1884,7 +1888,7 @@ export default function KitchenDashboard() {
                         </div>
                       </div>
                       {item.description && (
-                        <p className={`text-sm ${colors.textMuted} mb-3`}>{item.description}</p>
+                        <p className={`text-sm text-gray-500 mb-3`}>{item.description}</p>
                       )}
                       <div className="flex gap-3 text-sm">
                         <div>
@@ -1901,7 +1905,7 @@ export default function KitchenDashboard() {
                         </div>
                       </div>
                       {item.category && (
-                        <p className={`text-xs ${colors.textMuted} mt-2`}>
+                        <p className={`text-xs text-gray-500 mt-2`}>
                           📦 {item.category}
                         </p>
                       )}
@@ -1912,15 +1916,15 @@ export default function KitchenDashboard() {
             ) : (
               <div className="text-center py-8">
                 <p className="text-4xl mb-2">📦</p>
-                <p className={`${colors.textMuted}`}>No catalog items available</p>
-                <p className={`text-sm ${colors.textMuted}`}>Add items to your Dish Library first</p>
+                <p className={`text-gray-500`}>No catalog items available</p>
+                <p className={`text-sm text-gray-500`}>Add items to your Dish Library first</p>
               </div>
             )}
             {/* Modal Buttons */}
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => { setShowAddItemsModal(false); setSelectedCatalogItems([]); setAvailableCatalogItems([]); }}
-                className={`px-4 py-2 border ${colors.border} rounded-lg`}
+                className={`px-4 py-2 border border-gray-200 rounded-lg`}
               >
                 Close
               </button>
@@ -1939,9 +1943,9 @@ export default function KitchenDashboard() {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-md`}>
-            <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>Delete Menu</h2>
-            <p className={`mb-6 ${colors.textSecondary}`}>
+          <div className={`bg-white rounded-xl p-6 w-full max-w-md`}>
+            <h2 className={`text-xl font-bold mb-4 text-gray-900`}>Delete Menu</h2>
+            <p className={`mb-6 text-gray-600`}>
               Are you sure you want to delete <strong>{menuToDelete?.name}</strong>?
               This action cannot be undone.
             </p>
@@ -1951,7 +1955,7 @@ export default function KitchenDashboard() {
                   setShowDeleteConfirm(false);
                   setMenuToDelete(null);
                 }}
-                className={`px-4 py-2 border ${colors.border} rounded-lg`}
+                className={`px-4 py-2 border border-gray-200 rounded-lg`}
               >
                 Cancel
               </button>
@@ -1969,12 +1973,12 @@ export default function KitchenDashboard() {
       {/* Archive Confirmation Modal */}
       {showArchiveConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-md`}>
-            <h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>📦 Archive Menu</h2>
-            <p className={`mb-4 ${colors.textSecondary}`}>
+          <div className={`bg-white rounded-xl p-6 w-full max-w-md`}>
+            <h2 className={`text-xl font-bold mb-4 text-gray-900`}>📦 Archive Menu</h2>
+            <p className={`mb-4 text-gray-600`}>
               Are you sure you want to archive <strong>{menuToArchive?.name}</strong>?
             </p>
-            <p className={`mb-6 text-sm ${colors.textMuted}`}>
+            <p className={`mb-6 text-sm text-gray-500`}>
               Archived menus are preserved for historical records and can be restored later if needed.
             </p>
             <div className="flex justify-end gap-3">
@@ -1983,7 +1987,7 @@ export default function KitchenDashboard() {
                   setShowArchiveConfirm(false);
                   setMenuToArchive(null);
                 }}
-                className={`px-4 py-2 border ${colors.border} rounded-lg`}
+                className={`px-4 py-2 border border-gray-200 rounded-lg`}
               >
                 Cancel
               </button>
@@ -1998,7 +2002,7 @@ export default function KitchenDashboard() {
         </div>
       )}
 
-      {showIssueModal && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className={`${colors.bgCard} rounded-xl p-6 w-full max-w-lg`}><h2 className={`text-xl font-bold mb-4 ${colors.textPrimary}`}>Respond to Issue</h2><div className={`${colors.bgSecondary} rounded-lg p-4 mb-4`}><h3 className={colors.textPrimary}>{selectedIssue?.subject}</h3><p className={`text-sm ${colors.textMuted}`}>{selectedIssue?.message}</p></div><textarea placeholder="Your response..." value={issueResponse} onChange={e => setIssueResponse(e.target.value)} className={`w-full px-4 py-2 border ${colors.border} rounded-lg mb-4`} rows="4" /><div className="flex justify-end gap-3"><button onClick={() => setShowIssueModal(false)} className={`px-4 py-2 border ${colors.border} rounded-lg`}>Cancel</button><button onClick={handleRespondIssue} className="px-4 py-2 bg-green-600 text-white rounded-lg">Resolve</button></div></div></div>}
+      {showIssueModal && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className={`bg-white rounded-xl p-6 w-full max-w-lg`}><h2 className={`text-xl font-bold mb-4 text-gray-900`}>Respond to Issue</h2><div className={`bg-gray-100 rounded-lg p-4 mb-4`}><h3 className="text-gray-900">{selectedIssue?.subject}</h3><p className={`text-sm text-gray-500`}>{selectedIssue?.message}</p></div><textarea placeholder="Your response..." value={issueResponse} onChange={e => setIssueResponse(e.target.value)} className={`w-full px-4 py-2 border border-gray-200 rounded-lg mb-4`} rows="4" /><div className="flex justify-end gap-3"><button onClick={() => setShowIssueModal(false)} className={`px-4 py-2 border border-gray-200 rounded-lg`}>Cancel</button><button onClick={handleRespondIssue} className="px-4 py-2 bg-green-600 text-white rounded-lg">Resolve</button></div></div></div>}
     </div>
   );
 }
