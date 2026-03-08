@@ -287,6 +287,13 @@ export const dailyMenuAPI = {
   getAllDailyMenus: (params) => api.get('/daily-menu/all', { params }),
   createDailyMenu: (data) => api.post('/daily-menu', data),
   publishDailyMenu: (id, data) => api.post(`/daily-menu/${id}/publish`, data),
+  unpublishDailyMenu: (id) => api.put(`/daily-menu/${id}/unpublish`),
+  archiveDailyMenu: (id) => api.put(`/daily-menu/${id}/archive`),
+  deleteDailyMenu: (id) => api.delete(`/daily-menu/${id}`),
+  
+  // Menu Items
+  addItemsToMenu: (menuId, items) => api.post(`/daily-menu/${menuId}/items`, { items }),
+  removeMenuItem: (menuId, itemId) => api.delete(`/daily-menu/${menuId}/items/${itemId}`),
   markItemSoldOut: (dailyMenuItemId, data) => api.post(`/daily-menu/items/${dailyMenuItemId}/sold-out`, data),
   updatePortions: (dailyMenuItemId, data) => api.patch(`/daily-menu/items/${dailyMenuItemId}/portions`, data),
   
