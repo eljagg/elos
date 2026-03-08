@@ -167,14 +167,18 @@ const createCompany = async (req, res, next) => {
 const updateCompany = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { name, address, logoUrl, primaryColor, secondaryColor, settings, isActive } = req.body;
+        const { name, code, address, phone, email, contactPerson, logoUrl, primaryColor, secondaryColor, settings, isActive } = req.body;
         
         const updates = [];
         const params = [];
         let idx = 1;
         
         if (name !== undefined) { updates.push(`name = $${idx++}`); params.push(name); }
+        if (code !== undefined) { updates.push(`code = $${idx++}`); params.push(code); }
         if (address !== undefined) { updates.push(`address = $${idx++}`); params.push(address); }
+        if (phone !== undefined) { updates.push(`phone = $${idx++}`); params.push(phone); }
+        if (email !== undefined) { updates.push(`email = $${idx++}`); params.push(email); }
+        if (contactPerson !== undefined) { updates.push(`contact_person = $${idx++}`); params.push(contactPerson); }
         if (logoUrl !== undefined) { updates.push(`logo_url = $${idx++}`); params.push(logoUrl); }
         if (primaryColor !== undefined) { updates.push(`primary_color = $${idx++}`); params.push(primaryColor); }
         if (secondaryColor !== undefined) { updates.push(`secondary_color = $${idx++}`); params.push(secondaryColor); }
@@ -191,6 +195,43 @@ const updateCompany = async (req, res, next) => {
         await db.query(`UPDATE companies SET ${updates.join(', ')} WHERE id = $${idx}`, params);
         
         res.status(200).json({ success: true, message: 'Company updated successfully' });
+        
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * DELETE /api/companies/:id
+ * Delete a company (soft delete - set is_active = false)
+ */
+const deleteCompany = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        
+        // Check if company has active users
+        const usersCheck = await db.query(
+            'SELECT COUNT(*) FROM users WHERE company_id = $1 AND is_active = TRUE',
+            [id]
+        );
+        
+        if (parseInt(usersCheck.rows[0].count) > 0) {
+            return res.status(400).json({
+                success: false,
+                error: {
+                    code: 'HAS_ACTIVE_USERS',
+                    message: 'Cannot delete company with active users. Please reassign or deactivate users first.'
+                }
+            });
+        }
+        
+        // Soft delete
+        await db.query(
+            'UPDATE companies SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+            [id]
+        );
+        
+        res.status(200).json({ success: true, message: 'Company deleted successfully' });
         
     } catch (error) {
         next(error);
@@ -286,6 +327,43 @@ const updateDepartment = async (req, res, next) => {
         );
         
         res.status(200).json({ success: true, message: 'Department updated successfully' });
+        
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * DELETE /api/companies/:companyId/departments/:id
+ * Delete a department (soft delete)
+ */
+const deleteDepartment = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        
+        // Check if department has active users
+        const usersCheck = await db.query(
+            'SELECT COUNT(*) FROM users WHERE department_id = $1 AND is_active = TRUE',
+            [id]
+        );
+        
+        if (parseInt(usersCheck.rows[0].count) > 0) {
+            return res.status(400).json({
+                success: false,
+                error: {
+                    code: 'HAS_ACTIVE_USERS',
+                    message: 'Cannot delete department with active users. Please reassign users first.'
+                }
+            });
+        }
+        
+        // Soft delete
+        await db.query(
+            'UPDATE departments SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+            [id]
+        );
+        
+        res.status(200).json({ success: true, message: 'Department deleted successfully' });
         
     } catch (error) {
         next(error);
@@ -582,11 +660,13 @@ module.exports = {
     getCompanyById,
     createCompany,
     updateCompany,
+    deleteCompany,
     
     // Departments
     getDepartments,
     createDepartment,
     updateDepartment,
+    deleteDepartment,
     
     // Cafeterias
     getCafeterias,

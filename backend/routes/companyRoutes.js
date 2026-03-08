@@ -26,10 +26,12 @@ router.get('/', authenticate, companyController.getCompanies);
 router.post('/', authenticate, requireSuperAdmin, companyController.createCompany);
 router.get('/:id', authenticate, companyController.getCompanyById);
 router.put('/:id', authenticate, requireHRStaff, companyController.updateCompany);
+router.delete('/:id', authenticate, requireSuperAdmin, companyController.deleteCompany);
 
 // Departments
 router.get('/:companyId/departments', authenticate, companyController.getDepartments);
 router.post('/:companyId/departments', authenticate, requireHRStaff, companyController.createDepartment);
 router.put('/:companyId/departments/:id', authenticate, requireHRStaff, companyController.updateDepartment);
+router.delete('/:companyId/departments/:id', authenticate, requireHRStaff, companyController.deleteDepartment);
 
 module.exports = router;
