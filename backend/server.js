@@ -385,14 +385,12 @@ app.use((err, req, res, next) => {
     // Determine status code
     const statusCode = err.statusCode || err.status || 500;
     
-    // Prepare error response
+    // Prepare error response - show actual message for debugging
     const errorResponse = {
         success: false,
         error: {
             code: err.code || 'INTERNAL_ERROR',
-            message: process.env.NODE_ENV === 'production' 
-                ? 'An unexpected error occurred' 
-                : err.message
+            message: err.message || 'An unexpected error occurred'
         }
     };
     
