@@ -27,7 +27,7 @@ export default function CompanySettings() {
   const [deleteTarget, setDeleteTarget] = useState({ type: '', item: null });
 
   // Forms
-  const [companyForm, setCompanyForm] = useState({ name: '', code: '', address: '', phone: '', email: '', contactPerson: '' });
+  const [companyForm, setCompanyForm] = useState({ name: '', code: '', address: '', phone: '', email: '' });
   const [departmentForm, setDepartmentForm] = useState({ name: '', code: '', companyId: '' });
   const [cafeteriaForm, setCafeteriaForm] = useState({ name: '', location: '', breakfastCutoff: '08:00', lunchCutoff: '10:00' });
 
@@ -76,9 +76,8 @@ export default function CompanySettings() {
       code: company.code || '',
       address: company.address || '',
       phone: company.phone || '',
-      email: company.email || '',
-      contactPerson: company.contact_person || company.contactPerson || ''
-    } : { name: '', code: '', address: '', phone: '', email: '', contactPerson: '' });
+      email: company.email_domain || company.emailDomain || ''
+    } : { name: '', code: '', address: '', phone: '', email: '' });
     setShowCompanyModal(true);
   };
 
@@ -492,25 +491,15 @@ export default function CompanySettings() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email Domain</label>
                   <input
-                    type="email"
+                    type="text"
                     value={companyForm.email}
                     onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })}
                     className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                    placeholder="info@company.com"
+                    placeholder="company.com"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
-                <input
-                  type="text"
-                  value={companyForm.contactPerson}
-                  onChange={(e) => setCompanyForm({ ...companyForm, contactPerson: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  placeholder="John Doe"
-                />
               </div>
               <div className="flex gap-3 pt-4 border-t">
                 <button

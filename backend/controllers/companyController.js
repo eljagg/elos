@@ -167,7 +167,7 @@ const createCompany = async (req, res, next) => {
 const updateCompany = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { name, code, address, phone, email, contactPerson, logoUrl, primaryColor, secondaryColor, settings, isActive } = req.body;
+        const { name, code, address, phone, email, emailDomain, contactPerson, logoUrl, primaryColor, secondaryColor, settings, isActive } = req.body;
         
         const updates = [];
         const params = [];
@@ -177,13 +177,15 @@ const updateCompany = async (req, res, next) => {
         if (code !== undefined) { updates.push(`code = $${idx++}`); params.push(code); }
         if (address !== undefined) { updates.push(`address = $${idx++}`); params.push(address); }
         if (phone !== undefined) { updates.push(`phone = $${idx++}`); params.push(phone); }
-        if (email !== undefined) { updates.push(`email = $${idx++}`); params.push(email); }
-        if (contactPerson !== undefined) { updates.push(`contact_person = $${idx++}`); params.push(contactPerson); }
+        // Use email_domain column (frontend may send as email or emailDomain)
+        if (email !== undefined) { updates.push(`email_domain = $${idx++}`); params.push(email); }
+        if (emailDomain !== undefined) { updates.push(`email_domain = $${idx++}`); params.push(emailDomain); }
         if (logoUrl !== undefined) { updates.push(`logo_url = $${idx++}`); params.push(logoUrl); }
         if (primaryColor !== undefined) { updates.push(`primary_color = $${idx++}`); params.push(primaryColor); }
         if (secondaryColor !== undefined) { updates.push(`secondary_color = $${idx++}`); params.push(secondaryColor); }
         if (settings !== undefined) { updates.push(`settings = $${idx++}`); params.push(JSON.stringify(settings)); }
         if (isActive !== undefined) { updates.push(`is_active = $${idx++}`); params.push(isActive); }
+        // Note: contact_person column doesn't exist in schema - ignoring for now
         
         if (updates.length === 0) {
             return res.status(400).json({ success: false, error: { message: 'No fields to update' } });
@@ -197,6 +199,7 @@ const updateCompany = async (req, res, next) => {
         res.status(200).json({ success: true, message: 'Company updated successfully' });
         
     } catch (error) {
+        console.error('Update company error:', error);
         next(error);
     }
 };
