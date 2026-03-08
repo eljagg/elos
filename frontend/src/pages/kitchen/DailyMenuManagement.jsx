@@ -120,9 +120,9 @@ export default function DailyMenuManagement() {
   const loadWeekMenus = async () => {
     try {
       const weekData = {};
-      for (let i = 0; i < 5; i++) { // Mon-Fri
+      for (let i = 0; i < 7; i++) { // Sun-Sat (full week)
         const date = new Date(weekStart);
-        date.setDate(date.getDate() + i + 1); // Start from Monday
+        date.setDate(date.getDate() + i); // Start from Sunday
         const dateStr = date.toISOString().split('T')[0];
         
         try {
@@ -377,7 +377,7 @@ export default function DailyMenuManagement() {
 
   const getWeekDates = () => {
     const dates = [];
-    for (let i = 1; i <= 5; i++) { // Mon-Fri
+    for (let i = 0; i < 7; i++) { // Sun-Sat (full week)
       const date = new Date(weekStart);
       date.setDate(date.getDate() + i);
       dates.push(date.toISOString().split('T')[0]);
@@ -698,7 +698,7 @@ export default function DailyMenuManagement() {
       {/* WEEK VIEW */}
       {viewMode === 'week' && (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="grid grid-cols-5 divide-x divide-slate-200">
+          <div className="grid grid-cols-7 divide-x divide-slate-200">
             {getWeekDates().map(dateStr => {
               const dayData = weekMenus[dateStr] || { menu: null, items: [] };
               const dayName = new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short' });
