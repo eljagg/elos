@@ -1,32 +1,39 @@
+/**
+ * Enhanced Employee Menu Page
+ * Features:
+ * - Quick Reorder from past orders
+ * - Favorites (saved in database)
+ * - Weekly meal planning
+ * - Cleaner UX with tabs
+ */
 import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { dailyMenuAPI, orderAPI, companyAPI } from '../../services/api';
 
 const CATEGORY_CONFIG = {
-  'proteins': { bg: 'bg-red-500', light: 'bg-red-50', required: true, label: 'PROTEIN' },
-  'protein': { bg: 'bg-red-500', light: 'bg-red-50', required: true, label: 'PROTEIN' },
-  'carbohydrates': { bg: 'bg-yellow-500', light: 'bg-yellow-50', required: true, label: 'CARBOHYDRATE' },
-  'carbohydrate': { bg: 'bg-yellow-500', light: 'bg-yellow-50', required: true, label: 'CARBOHYDRATE' },
-  'sides': { bg: 'bg-green-500', light: 'bg-green-50', required: false, label: 'SIDES' },
-  'fibre': { bg: 'bg-teal-500', light: 'bg-teal-50', required: true, label: 'FIBRE' },
-  'vegetables': { bg: 'bg-teal-500', light: 'bg-teal-50', required: true, label: 'FIBRE' },
-  'soup': { bg: 'bg-purple-500', light: 'bg-purple-50', required: false, label: 'SOUP' },
-  'vegetarian': { bg: 'bg-green-600', light: 'bg-green-50', required: false, label: 'VEGETARIAN' },
-  'done to order': { bg: 'bg-blue-500', light: 'bg-blue-50', required: false, label: 'DONE TO ORDER' },
-  'beverage': { bg: 'bg-cyan-500', light: 'bg-cyan-50', required: false, label: 'BEVERAGE' },
-  'dessert': { bg: 'bg-pink-500', light: 'bg-pink-50', required: false, label: 'DESSERT' },
-  'specials': { bg: 'bg-orange-500', light: 'bg-orange-50', required: false, label: 'SPECIALS' },
-  'other': { bg: 'bg-gray-500', light: 'bg-gray-50', required: false, label: 'OTHER' },
+  'proteins': { bg: 'bg-rose-600', light: 'bg-rose-50', label: 'PROTEIN', icon: '🍗' },
+  'protein': { bg: 'bg-rose-600', light: 'bg-rose-50', label: 'PROTEIN', icon: '🍗' },
+  'carbohydrates': { bg: 'bg-amber-600', light: 'bg-amber-50', label: 'CARBS', icon: '🍚' },
+  'carbohydrate': { bg: 'bg-amber-600', light: 'bg-amber-50', label: 'CARBS', icon: '🍚' },
+  'sides': { bg: 'bg-emerald-600', light: 'bg-emerald-50', label: 'SIDES', icon: '🥗' },
+  'fibre': { bg: 'bg-teal-600', light: 'bg-teal-50', label: 'FIBRE', icon: '🥬' },
+  'vegetables': { bg: 'bg-teal-600', light: 'bg-teal-50', label: 'VEGGIES', icon: '🥬' },
+  'soup': { bg: 'bg-purple-600', light: 'bg-purple-50', label: 'SOUP', icon: '🍲' },
+  'vegetarian': { bg: 'bg-green-600', light: 'bg-green-50', label: 'VEGETARIAN', icon: '🥕' },
+  'beverage': { bg: 'bg-cyan-600', light: 'bg-cyan-50', label: 'DRINKS', icon: '🥤' },
+  'dessert': { bg: 'bg-pink-600', light: 'bg-pink-50', label: 'DESSERT', icon: '🍰' },
+  'specials': { bg: 'bg-orange-600', light: 'bg-orange-50', label: 'SPECIALS', icon: '⭐' },
+  'other': { bg: 'bg-slate-600', light: 'bg-slate-50', label: 'OTHER', icon: '🍽️' },
 };
-const getCatConfig = (cat) => CATEGORY_CONFIG[(cat||'other').toLowerCase()] || CATEGORY_CONFIG['other'];
 
-const CATEGORY_ORDER = ['proteins', 'protein', 'carbohydrates', 'carbohydrate', 'sides', 'fibre', 'vegetables', 'soup', 'vegetarian', 'done to order', 'beverage', 'dessert', 'specials', 'other'];
+const getCatConfig = (cat) => CATEGORY_CONFIG[(cat || 'other').toLowerCase()] || CATEGORY_CONFIG['other'];
+const CATEGORY_ORDER = ['proteins', 'protein', 'carbohydrates', 'carbohydrate', 'sides', 'fibre', 'vegetables', 'soup', 'vegetarian', 'beverage', 'dessert', 'specials', 'other'];
 
-const MenuPage = () => {
+export default function MenuPage() {
+  const [activeTab, setActiveTab] = useState('menu'); // menu, favorites, history
   const [loading, setLoading] = useState(true);
   const [menuItems, setMenuItems] = useState([]);
   const [dailyMenu, setDailyMenu] = useState(null);
-  const [meals, setMeals] = useState([{ id: 1, selections: {} }]);
   const [cafeterias, setCafeterias] = useState([]);
   const [selectedCafeteria, setSelectedCafeteria] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -37,11 +44,28 @@ const MenuPage = () => {
     startDate.setDate(today.getDate() - today.getDay());
     return startDate;
   });
-  const [placingOrder, setPlacingOrder] = useState(false);
+  
+  // Meal selections
+  const [meals, setMeals] = useState([{ id: 1, selections: {} }]);
   const [orderNotes, setOrderNotes] = useState('');
+  const [placingOrder, setPlacingOrder] = useState(false);
+  
+  // Favorites & History
+  const [favorites, setFavorites] = useState([]);
+  const [orderHistory, setOrderHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  
+  // Quick Reorder
+  const [showReorderModal, setShowReorderModal] = useState(false);
+  const [reorderTarget, setReorderTarget] = useState(null);
+  
+  // Save Favorite Modal
+  const [showSaveFavoriteModal, setShowSaveFavoriteModal] = useState(false);
+  const [favoriteName, setFavoriteName] = useState('');
 
-  useEffect(() => { loadCafeterias(); }, []);
+  useEffect(() => { loadCafeterias(); loadFavorites(); }, []);
   useEffect(() => { if (selectedCafeteria) loadDailyMenu(); }, [selectedCafeteria, selectedDate]);
+  useEffect(() => { if (activeTab === 'history') loadOrderHistory(); }, [activeTab]);
 
   const loadCafeterias = async () => {
     try {
@@ -66,6 +90,28 @@ const MenuPage = () => {
     } finally { setLoading(false); }
   };
 
+  const loadFavorites = async () => {
+    try {
+      const res = await orderAPI.getFavorites();
+      setFavorites(res.data?.data?.favorites || []);
+    } catch (error) {
+      // Fallback to localStorage
+      const saved = localStorage.getItem('elos_favorites');
+      if (saved) setFavorites(JSON.parse(saved));
+    }
+  };
+
+  const loadOrderHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const res = await orderAPI.getMyOrderHistory();
+      setOrderHistory(res.data?.data?.orders || []);
+    } catch (error) {
+      console.error('Failed to load order history:', error);
+    } finally { setLoadingHistory(false); }
+  };
+
+  // Meal management
   const addMeal = () => {
     const newId = Math.max(...meals.map(m => m.id)) + 1;
     setMeals([...meals, { id: newId, selections: {} }]);
@@ -90,21 +136,15 @@ const MenuPage = () => {
     }));
   };
 
-  const getMealPrice = () => {
-    return parseFloat(dailyMenu?.meal_price) || 900.00;
-  };
-
+  const getMealPrice = () => parseFloat(dailyMenu?.meal_price) || 900.00;
   const getTotalPrice = () => meals.filter(m => Object.keys(m.selections).length > 0).length * getMealPrice();
-
-  const isMealComplete = (meal) => {
-    return Object.keys(meal.selections).length > 0;
-  };
-
+  const isMealComplete = (meal) => Object.keys(meal.selections).length > 0;
   const allMealsComplete = () => meals.every(isMealComplete);
 
+  // Place Order
   const placeOrder = async () => {
     if (!allMealsComplete()) {
-      toast.error('Please complete all meals (select protein, carbohydrate, and fibre)');
+      toast.error('Please select at least one item for each meal');
       return;
     }
     try {
@@ -134,12 +174,131 @@ const MenuPage = () => {
       setOrderNotes('');
       loadDailyMenu();
     } catch (error) {
-      toast.error('Failed to place order');
+      toast.error(error.response?.data?.error?.message || 'Failed to place order');
     } finally {
       setPlacingOrder(false);
     }
   };
 
+  // Save as Favorite
+  const saveCurrentAsFavorite = async () => {
+    if (!favoriteName.trim()) {
+      toast.error('Please enter a name for this favorite');
+      return;
+    }
+    try {
+      const items = [];
+      meals.forEach(meal => {
+        Object.entries(meal.selections).forEach(([cat, itemId]) => {
+          const item = menuItems.find(i => i.id === itemId);
+          if (item) {
+            items.push({
+              id: item.id,
+              name: item.item_name || item.name,
+              category: cat,
+              price: item.price
+            });
+          }
+        });
+      });
+      
+      // Try to save to database
+      try {
+        await orderAPI.saveFavorite({
+          name: favoriteName,
+          mealType: 'lunch',
+          items: items
+        });
+      } catch (e) {
+        // Fallback to localStorage
+        const existing = JSON.parse(localStorage.getItem('elos_favorites') || '[]');
+        existing.push({ id: Date.now(), name: favoriteName, items, createdAt: new Date().toISOString() });
+        localStorage.setItem('elos_favorites', JSON.stringify(existing));
+      }
+      
+      toast.success('Saved to favorites!');
+      setShowSaveFavoriteModal(false);
+      setFavoriteName('');
+      loadFavorites();
+    } catch (error) {
+      toast.error('Failed to save favorite');
+    }
+  };
+
+  // Quick Reorder from history
+  const handleReorder = (order) => {
+    setReorderTarget(order);
+    setShowReorderModal(true);
+  };
+
+  const confirmReorder = async () => {
+    if (!reorderTarget) return;
+    try {
+      const orderDate = selectedDate.toISOString().split('T')[0];
+      const items = (reorderTarget.items || []).map(item => ({
+        menuItemId: item.menu_item_id || item.id,
+        quantity: item.quantity || 1,
+        specialInstructions: ''
+      }));
+      
+      await orderAPI.createDailyOrder({
+        cafeteriaId: selectedCafeteria,
+        mealType: 'lunch',
+        orderDate: orderDate,
+        items: items,
+        mealCount: 1,
+        notes: `Reorder of order #${reorderTarget.order_number || reorderTarget.id}`
+      });
+      
+      toast.success('Reorder placed successfully!');
+      setShowReorderModal(false);
+      setReorderTarget(null);
+      setActiveTab('menu');
+      loadDailyMenu();
+    } catch (error) {
+      toast.error(error.response?.data?.error?.message || 'Failed to reorder');
+    }
+  };
+
+  // Apply Favorite to current selection
+  const applyFavorite = (favorite) => {
+    const newSelections = {};
+    (favorite.items || []).forEach(item => {
+      // Find matching item in today's menu
+      const menuItem = menuItems.find(m => 
+        (m.item_name || m.name)?.toLowerCase() === item.name?.toLowerCase()
+      );
+      if (menuItem) {
+        newSelections[item.category] = menuItem.id;
+      }
+    });
+    
+    if (Object.keys(newSelections).length === 0) {
+      toast.error('None of the favorite items are available today');
+      return;
+    }
+    
+    setMeals([{ id: 1, selections: newSelections }]);
+    setActiveTab('menu');
+    toast.success('Favorite applied! Review and place order.');
+  };
+
+  const deleteFavorite = async (id) => {
+    try {
+      await orderAPI.deleteFavorite(id);
+      toast.success('Favorite removed');
+      loadFavorites();
+    } catch (error) {
+      // Fallback to localStorage
+      const existing = JSON.parse(localStorage.getItem('elos_favorites') || '[]');
+      const updated = existing.filter(f => f.id !== id);
+      localStorage.setItem('elos_favorites', JSON.stringify(updated));
+      setFavorites(updated);
+      toast.success('Favorite removed');
+    }
+  };
+
+  // Week navigation
   const getWeekDates = () => {
     const dates = [];
     for (let i = 0; i < 7; i++) {
@@ -165,6 +324,9 @@ const MenuPage = () => {
     return `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
   };
 
+  const getCafeName = () => cafeterias.find(c => c.id === selectedCafeteria)?.name || 'Cafeteria';
+
+  // Group items by category
   const groupedItems = menuItems.reduce((acc, item) => {
     const cat = (item.category_name || item.category || 'Other').toLowerCase();
     if (!acc[cat]) acc[cat] = [];
@@ -175,188 +337,404 @@ const MenuPage = () => {
   const sortedCategories = Object.keys(groupedItems).sort((a, b) => {
     const aIdx = CATEGORY_ORDER.indexOf(a.toLowerCase());
     const bIdx = CATEGORY_ORDER.indexOf(b.toLowerCase());
-    return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+    return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
   });
 
-  const getCafeName = () => cafeterias.find(c => c.id === selectedCafeteria)?.name || 'Cafeteria';
-
-  if (loading && !dailyMenu) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>;
+  const tabs = [
+    { id: 'menu', label: "Today's Menu", icon: '🍽️' },
+    { id: 'favorites', label: 'My Favorites', icon: '❤️', count: favorites.length },
+    { id: 'history', label: 'Order History', icon: '📋' }
+  ];
 
   return (
-    <div className="space-y-4">
-      {/* Company Header */}
-      <div className="bg-gradient-to-r from-green-600 to-green-700 text-white text-center py-4 rounded-xl">
+    <div className="p-3 sm:p-6 space-y-4 max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white text-center py-4 px-4 rounded-xl shadow-lg">
         <h2 className="text-xl font-bold uppercase">{getCafeName()} - LUNCH MENU</h2>
-        <p className="text-sm text-green-100 mt-1">Tick your selections for each meal</p>
-        {dailyMenu?.status !== 'published' && (
-          <p className="text-yellow-200 text-sm mt-1">⚠️ Menu for this day has not been published yet</p>
-        )}
+        <p className="text-sm text-slate-300 mt-1">Order your meals for the week</p>
       </div>
 
-      {/* Week Calendar */}
-      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-sm text-gray-500">📅 Menu For the Week</p>
-            <p className="text-indigo-600 font-semibold text-lg">{formatWeekRange()}</p>
+      {/* Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-all ${
+              activeTab === tab.id
+                ? 'bg-slate-700 text-white shadow-md'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <span>{tab.icon}</span>
+            <span>{tab.label}</span>
+            {tab.count > 0 && (
+              <span className="bg-rose-500 text-white text-xs px-2 py-0.5 rounded-full">{tab.count}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Menu Tab */}
+      {activeTab === 'menu' && (
+        <>
+          {/* Week Calendar */}
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm text-slate-500">📅 Select a date</p>
+                <p className="text-slate-700 font-semibold text-lg">{formatWeekRange()}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => navigateWeek(-1)} className="px-4 py-2 bg-slate-100 rounded-lg hover:bg-slate-200 text-xl">‹</button>
+                <button onClick={() => navigateWeek(1)} className="px-4 py-2 bg-slate-100 rounded-lg hover:bg-slate-200 text-xl">›</button>
+              </div>
+            </div>
+            <div className="grid grid-cols-7 gap-2">
+              {weekDates.map((date, idx) => (
+                <button key={idx} onClick={() => setSelectedDate(date)}
+                  className={`p-3 rounded-lg text-center transition-all ${
+                    isSelected(date) ? 'bg-slate-700 text-white shadow-lg transform scale-105' 
+                    : isToday(date) ? 'bg-slate-200 ring-2 ring-slate-400'
+                    : 'bg-slate-50 hover:bg-slate-100'}`}>
+                  <p className="text-xs uppercase font-medium">{date.toLocaleDateString('en-US', { weekday: 'short' })}</p>
+                  <p className="text-2xl font-bold">{date.getDate()}</p>
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => navigateWeek(-1)} className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 text-xl">‹</button>
-            <button onClick={() => navigateWeek(1)} className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 text-xl">›</button>
+
+          {/* Menu Date Header */}
+          <div className="flex justify-between items-center">
+            <h3 className="font-semibold text-slate-800">
+              Menu for {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </h3>
+            {dailyMenu?.status === 'published' && (
+              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">✅ Published</span>
+            )}
           </div>
-        </div>
-        <div className="grid grid-cols-7 gap-2">
-          {weekDates.map((date, idx) => (
-            <button key={idx} onClick={() => setSelectedDate(date)}
-              className={`p-3 rounded-lg text-center transition-all ${
-                isSelected(date) ? 'bg-indigo-600 text-white shadow-lg transform scale-105' 
-                : isToday(date) ? 'bg-indigo-100 ring-2 ring-indigo-400'
-                : 'bg-gray-50 hover:bg-indigo-50'}`}>
-              <p className="text-xs uppercase font-medium">{date.toLocaleDateString('en-US', { weekday: 'short' })}</p>
-              <p className="text-2xl font-bold">{date.getDate()}</p>
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* Menu Date Header */}
-      <div className="flex justify-between items-center">
-        <h3 className="font-semibold text-gray-800">
-          Menu for {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </h3>
-        {dailyMenu?.status === 'published' && (
-          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">✅ Published</span>
-        )}
-      </div>
+          {/* Loading */}
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-600"></div>
+            </div>
+          ) : dailyMenu?.status === 'published' && sortedCategories.length > 0 ? (
+            <div className="space-y-4">
+              {/* Meals */}
+              {meals.map((meal, mealIdx) => (
+                <div key={meal.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="bg-slate-100 px-4 py-3 flex justify-between items-center">
+                    <h4 className="font-bold text-slate-700">MEAL {mealIdx + 1}</h4>
+                    <div className="flex items-center gap-4">
+                      <span className="text-green-600 font-semibold">${getMealPrice().toFixed(2)}</span>
+                      {meals.length > 1 && (
+                        <button onClick={() => removeMeal(meal.id)} className="text-red-500 hover:text-red-700 text-sm">✕ Remove</button>
+                      )}
+                    </div>
+                  </div>
 
-      {/* Meals */}
-      {dailyMenu?.status === 'published' && sortedCategories.length > 0 ? (
-        <div className="space-y-6">
-          {meals.map((meal, mealIdx) => (
-            <div key={meal.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              {/* Meal Header */}
-              <div className="bg-gray-100 px-4 py-3 flex justify-between items-center">
-                <h4 className="font-bold text-gray-700">MEAL {mealIdx + 1}</h4>
-                <div className="flex items-center gap-4">
-                  <span className="text-green-600 font-semibold">${getMealPrice().toFixed(2)}</span>
-                  {meals.length > 1 && (
-                    <button onClick={() => removeMeal(meal.id)} className="text-red-500 hover:text-red-700 text-sm">
-                      ✕ Remove
+                  {/* Category Grid */}
+                  <div className="overflow-x-auto">
+                    <div className="flex" style={{ minWidth: 'max-content' }}>
+                      {sortedCategories.map(category => {
+                        const config = getCatConfig(category);
+                        const items = groupedItems[category] || [];
+                        return (
+                          <div key={category} className="flex-shrink-0 w-44 border-r border-slate-200 last:border-r-0">
+                            <div className={`${config.bg} text-white text-center py-2 px-2`}>
+                              <h5 className="font-bold text-xs uppercase tracking-wide">{config.icon} {config.label}</h5>
+                            </div>
+                            <div className={`${config.light} p-2 min-h-[160px] space-y-1`}>
+                              {items.map(item => {
+                                const isChecked = meal.selections[category] === item.id;
+                                return (
+                                  <label key={item.id} 
+                                    className={`flex items-start gap-2 p-2 rounded cursor-pointer transition ${
+                                      isChecked ? 'bg-white shadow-sm ring-2 ring-slate-400' : 'hover:bg-white/50'
+                                    } ${item.is_sold_out ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={() => !item.is_sold_out && toggleSelection(meal.id, category, item.id)}
+                                      disabled={item.is_sold_out}
+                                      className="mt-1 w-4 h-4 rounded accent-slate-600"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-slate-800 leading-tight">{item.item_name || item.name}</p>
+                                      {item.is_sold_out && <p className="text-xs text-red-500">Sold Out</p>}
+                                    </div>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Add Another Meal */}
+              <button
+                onClick={addMeal}
+                className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:border-slate-400 hover:text-slate-600 transition font-medium"
+              >
+                + Add Another Meal
+              </button>
+
+              {/* Order Summary */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="font-bold text-slate-700">Order Summary</h4>
+                  {allMealsComplete() && (
+                    <button
+                      onClick={() => setShowSaveFavoriteModal(true)}
+                      className="text-sm text-slate-600 hover:text-slate-800 flex items-center gap-1"
+                    >
+                      ❤️ Save as Favorite
                     </button>
                   )}
                 </div>
-              </div>
-
-              {/* Category Columns */}
-              <div className="overflow-x-auto">
-                <div className="flex" style={{ minWidth: 'max-content' }}>
-                  {sortedCategories.map(category => {
-                    const config = getCatConfig(category);
-                    const items = groupedItems[category] || [];
-                    return (
-                      <div key={category} className="flex-shrink-0 w-40 border-r border-gray-200 last:border-r-0">
-                        <div className={`${config.bg} text-white text-center py-2 px-2`}>
-                          <h5 className="font-bold text-xs uppercase tracking-wide">{config.label}</h5>
-                          
-                        </div>
-                        <div className={`${config.light} p-2 min-h-[150px] space-y-1`}>
-                          {items.map(item => {
-                            const isChecked = meal.selections[category] === item.id;
-                            return (
-                              <label key={item.id} 
-                                className={`flex items-start gap-2 p-2 rounded cursor-pointer transition ${
-                                  isChecked ? 'bg-white shadow-sm ring-2 ring-indigo-400' : 'hover:bg-white/50'
-                                } ${item.is_sold_out ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={() => !item.is_sold_out && toggleSelection(meal.id, category, item.id)}
-                                  disabled={item.is_sold_out}
-                                  className="mt-1 w-4 h-4 rounded"
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-gray-800 leading-tight">{item.item_name || item.name}</p>
-                                  
-                                  {item.is_sold_out && <p className="text-xs text-red-500">Sold Out</p>}
-                                </div>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="space-y-2 mb-4">
+                  {meals.map((meal, idx) => (
+                    <div key={meal.id} className="flex justify-between text-sm">
+                      <span className="text-slate-600">
+                        Meal {idx + 1}: {Object.keys(meal.selections).length > 0 
+                          ? Object.entries(meal.selections).map(([cat, itemId]) => {
+                              const item = menuItems.find(i => i.id === itemId);
+                              return item ? (item.item_name || item.name) : '';
+                            }).filter(Boolean).join(' + ')
+                          : 'No selections'}
+                      </span>
+                      <span className="font-medium">${Object.keys(meal.selections).length > 0 ? getMealPrice().toFixed(2) : '0.00'}</span>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            </div>
-          ))}
-
-          {/* Add Another Meal Button */}
-          <button
-            onClick={addMeal}
-            className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition font-medium"
-          >
-            + Add Another Meal
-          </button>
-
-          {/* Order Summary */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-            <h4 className="font-bold text-gray-700 mb-3">Order Summary</h4>
-            <div className="space-y-2 mb-4">
-              {meals.map((meal, idx) => (
-                <div key={meal.id} className="flex justify-between text-sm">
-                  <span className="text-gray-600">
-                    Meal {idx + 1}: {Object.keys(meal.selections).length > 0 
-                      ? Object.entries(meal.selections).map(([cat, itemId]) => {
-                          const item = menuItems.find(i => i.id === itemId);
-                          return item ? (item.item_name || item.name) : '';
-                        }).filter(Boolean).join(' + ')
-                      : 'No selections'}
-                  </span>
-                  <span className="font-medium">${getMealPrice().toFixed(2)}</span>
+                <div className="border-t pt-3 flex justify-between items-center">
+                  <div>
+                    <p className="text-lg font-bold">Total: ${getTotalPrice().toFixed(2)}</p>
+                    <p className="text-sm text-slate-500">{meals.filter(m => Object.keys(m.selections).length > 0).length} meal(s)</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-            <div className="border-t pt-3 flex justify-between items-center">
-              <div>
-                <p className="text-lg font-bold">Total: ${getTotalPrice().toFixed(2)}</p>
-                <p className="text-sm text-gray-500">{meals.length} meal{meals.length > 1 ? 's' : ''}</p>
+                <textarea
+                  placeholder="Special instructions or allergies..."
+                  value={orderNotes}
+                  onChange={e => setOrderNotes(e.target.value)}
+                  className="w-full mt-3 p-3 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-slate-400"
+                  rows="2"
+                />
+                <button
+                  onClick={placeOrder}
+                  disabled={placingOrder || !allMealsComplete()}
+                  className={`w-full mt-3 py-3 rounded-lg font-semibold text-white transition ${
+                    allMealsComplete() 
+                      ? 'bg-green-600 hover:bg-green-700' 
+                      : 'bg-slate-400 cursor-not-allowed'
+                  }`}
+                >
+                  {placingOrder ? 'Placing Order...' : `Place Order`}
+                </button>
+                {!allMealsComplete() && (
+                  <p className="text-center text-sm text-orange-600 mt-2">
+                    ⚠️ Please select at least one item for each meal
+                  </p>
+                )}
               </div>
             </div>
-            <textarea
-              placeholder="Special instructions or allergies..."
-              value={orderNotes}
-              onChange={e => setOrderNotes(e.target.value)}
-              className="w-full mt-3 p-2 border border-gray-200 rounded-lg text-sm"
-              rows="2"
-            />
-            <button
-              onClick={placeOrder}
-              disabled={placingOrder || !allMealsComplete()}
-              className={`w-full mt-3 py-3 rounded-lg font-semibold text-white transition ${
-                allMealsComplete() 
-                  ? 'bg-green-600 hover:bg-green-700' 
-                  : 'bg-gray-400 cursor-not-allowed'
-              }`}
-            >
-              {placingOrder ? 'Placing Order...' : `Place Order (${meals.length} meal${meals.length > 1 ? 's' : ''})`}
-            </button>
-            {!allMealsComplete() && (
-              <p className="text-center text-sm text-orange-600 mt-2">
-                ⚠️ Please select at least one item for each meal
-              </p>
+          ) : (
+            <div className="text-center py-16 bg-slate-50 rounded-xl">
+              <p className="text-5xl mb-4">📋</p>
+              <p className="text-xl text-slate-500">No menu available for this date</p>
+              <p className="text-sm text-slate-400 mt-2">Please select another date or check back later</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Favorites Tab */}
+      {activeTab === 'favorites' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <h3 className="font-semibold text-slate-800 mb-4">❤️ My Saved Favorites</h3>
+            {favorites.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-4xl mb-3">❤️</p>
+                <p className="text-slate-500">No favorites saved yet</p>
+                <p className="text-sm text-slate-400 mt-2">Build a meal and save it for quick reordering</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {favorites.map(fav => (
+                  <div key={fav.id} className="bg-slate-50 rounded-lg p-4 flex justify-between items-center">
+                    <div>
+                      <h4 className="font-medium text-slate-800">{fav.name}</h4>
+                      <p className="text-sm text-slate-500">
+                        {(fav.items || []).map(i => i.name).join(', ')}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => applyFavorite(fav)}
+                        className="px-4 py-2 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition"
+                      >
+                        Order Now
+                      </button>
+                      <button
+                        onClick={() => deleteFavorite(fav.id)}
+                        className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm"
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
-      ) : (
-        <div className="text-center py-16 bg-gray-50 rounded-xl">
-          <p className="text-5xl mb-4">📋</p>
-          <p className="text-xl text-gray-500">No menu available for this date</p>
-          <p className="text-sm text-gray-400 mt-2">Please select another date or check back later</p>
+      )}
+
+      {/* Order History Tab */}
+      {activeTab === 'history' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <h3 className="font-semibold text-slate-800 mb-4">📋 Order History</h3>
+            {loadingHistory ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600"></div>
+              </div>
+            ) : orderHistory.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-4xl mb-3">📋</p>
+                <p className="text-slate-500">No past orders</p>
+                <p className="text-sm text-slate-400 mt-2">Your order history will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {orderHistory.slice(0, 20).map(order => (
+                  <div key={order.id} className="bg-slate-50 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h4 className="font-medium text-slate-800">
+                          Order #{order.order_number || order.id?.slice(0, 8)}
+                        </h4>
+                        <p className="text-sm text-slate-500">
+                          {new Date(order.order_date || order.created_at).toLocaleDateString('en-US', { 
+                            weekday: 'short', month: 'short', day: 'numeric' 
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          order.status === 'completed' ? 'bg-green-100 text-green-700' :
+                          order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                          'bg-slate-200 text-slate-600'
+                        }`}>
+                          {order.status}
+                        </span>
+                        <span className="font-semibold text-slate-700">${parseFloat(order.total_amount || 0).toFixed(2)}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-slate-600 mb-3">
+                      {(order.items || []).map(i => i.item_name || i.name).join(', ') || 'No items'}
+                    </p>
+                    <button
+                      onClick={() => handleReorder(order)}
+                      className="w-full py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition flex items-center justify-center gap-2"
+                    >
+                      🔄 Order Again
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Reorder Confirmation Modal */}
+      {showReorderModal && reorderTarget && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
+            <div className="p-6 border-b border-slate-200">
+              <h2 className="text-xl font-bold text-slate-800">🔄 Reorder</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-slate-600 mb-4">
+                Reorder for <strong>{selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</strong>?
+              </p>
+              <div className="bg-slate-50 rounded-lg p-4 mb-4">
+                <p className="font-medium text-slate-800">Items:</p>
+                <p className="text-sm text-slate-600">
+                  {(reorderTarget.items || []).map(i => i.item_name || i.name).join(', ') || 'No items'}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowReorderModal(false); setReorderTarget(null); }}
+                  className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmReorder}
+                  className="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                >
+                  Confirm Reorder
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save Favorite Modal */}
+      {showSaveFavoriteModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
+            <div className="p-6 border-b border-slate-200">
+              <h2 className="text-xl font-bold text-slate-800">❤️ Save as Favorite</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-slate-600 mb-4">Give your favorite meal a name for quick ordering later.</p>
+              <input
+                type="text"
+                value={favoriteName}
+                onChange={e => setFavoriteName(e.target.value)}
+                placeholder="e.g., My Monday Lunch"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-400 mb-4"
+              />
+              <div className="bg-slate-50 rounded-lg p-4 mb-4">
+                <p className="font-medium text-slate-800 mb-2">Items:</p>
+                {meals.map((meal, idx) => (
+                  <p key={meal.id} className="text-sm text-slate-600">
+                    {Object.entries(meal.selections).map(([cat, itemId]) => {
+                      const item = menuItems.find(i => i.id === itemId);
+                      return item ? (item.item_name || item.name) : '';
+                    }).filter(Boolean).join(', ')}
+                  </p>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowSaveFavoriteModal(false); setFavoriteName(''); }}
+                  className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveCurrentAsFavorite}
+                  className="flex-1 px-4 py-2.5 bg-rose-600 text-white rounded-lg hover:bg-rose-700 font-medium"
+                >
+                  Save Favorite
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
-};
-
-export default MenuPage;
+}

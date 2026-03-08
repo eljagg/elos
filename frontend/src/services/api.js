@@ -153,7 +153,7 @@ export const orderAPI = {
   
   // Favorites
   getFavorites: () => api.get('/orders/favorites'),
-  saveFavorite: (itemId) => api.post('/orders/favorites', { itemId }),
+  saveFavorite: (data) => api.post('/orders/favorites', data),
   deleteFavorite: (id) => api.delete(`/orders/favorites/${id}`)
 };
 
