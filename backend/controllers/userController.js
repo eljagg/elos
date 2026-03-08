@@ -125,6 +125,7 @@ const getUsers = async (req, res, next) => {
             departmentId,
             roleCode,
             isActive,
+            includeDeleted,
             page = 1,
             limit = 20,
             sortBy = 'created_at',
@@ -146,6 +147,11 @@ const getUsers = async (req, res, next) => {
         
         const params = [];
         let paramIndex = 1;
+        
+        // Exclude deleted users by default (those with .deleted. in email)
+        if (includeDeleted !== 'true') {
+            query += ` AND u.email NOT LIKE '%.deleted.%'`;
+        }
         
         // Role-based access control
         if (userRole === 'HR_ADMIN') {
@@ -987,13 +993,25 @@ const deleteUser = async (req, res, next) => {
         }
         
         // Check if user exists
-        const userCheck = await db.query('SELECT id, email FROM users WHERE id = $1', [id]);
+        const userCheck = await db.query('SELECT id, email, is_active FROM users WHERE id = $1', [id]);
         if (userCheck.rows.length === 0) {
             return res.status(404).json({
                 success: false,
                 error: {
                     code: 'USER_NOT_FOUND',
                     message: 'User not found'
+                }
+            });
+        }
+        
+        // Check if already deleted
+        const user = userCheck.rows[0];
+        if (user.email.includes('.deleted.')) {
+            return res.status(400).json({
+                success: false,
+                error: {
+                    code: 'ALREADY_DELETED',
+                    message: 'This user has already been deleted'
                 }
             });
         }
