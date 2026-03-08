@@ -526,54 +526,39 @@ const publishDailyMenu = async (req, res, next) => {
             });
         }
 
-        // Validate menu has required items (at least 1 protein and 1 carb)
-        const items = await db.query(`
-            SELECT mc.code, COUNT(dmi.id) as item_count
+        // Validate menu has at least 1 item
+        const itemCount = await db.query(`
+            SELECT COUNT(*) as count
             FROM daily_menu_items dmi
-            JOIN menu_item_catalog mic ON dmi.catalog_item_id = mic.id
-            JOIN menu_categories mc ON mic.category_id = mc.id
             WHERE dmi.daily_menu_id = $1 AND dmi.is_active = TRUE
-            GROUP BY mc.code
         `, [id]);
 
-        const categories = {};
-        items.rows.forEach(row => {
-            categories[row.code] = parseInt(row.item_count);
-        });
-
-        if (!categories.PROTEIN || categories.PROTEIN < 1) {
+        if (parseInt(itemCount.rows[0].count) < 1) {
             await db.query('ROLLBACK');
             return res.status(400).json({
                 success: false,
                 error: { 
                     code: 'VALIDATION_ERROR', 
-                    message: 'Menu must have at least 1 protein item' 
+                    message: 'Menu must have at least 1 item to publish' 
                 }
             });
         }
 
-        if (!categories.CARBS || categories.CARBS < 1) {
-            await db.query('ROLLBACK');
-            return res.status(400).json({
-                success: false,
-                error: { 
-                    code: 'VALIDATION_ERROR', 
-                    message: 'Menu must have at least 1 carbohydrate item' 
-                }
-            });
-        }
+        // Get mealPrice from request body
+        const { mealPrice } = req.body;
 
         // Publish menu
         const result = await db.query(`
             UPDATE daily_menus 
             SET 
                 status = 'published',
+                meal_price = COALESCE($1, meal_price, 900.00),
                 published_at = CURRENT_TIMESTAMP,
-                published_by = $1,
+                published_by = $2,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $2
+            WHERE id = $3
             RETURNING *
-        `, [userId, id]);
+        `, [mealPrice, userId, id]);
 
         // Log audit trail
         await db.query(`
