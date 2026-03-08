@@ -84,9 +84,19 @@ export default function EmployeeDashboard() {
     loadFavorites(); 
   }, []);
   
+  // Smart date selection - find first available menu when cafeteria loads
   useEffect(() => { 
-    if (selectedCafeteria) loadData(); 
-  }, [selectedCafeteria, selectedDate]);
+    if (selectedCafeteria) {
+      findFirstAvailableMenu();
+    }
+  }, [selectedCafeteria]);
+  
+  // Load menu when date changes (after initial smart selection)
+  useEffect(() => { 
+    if (selectedCafeteria && !loading) {
+      loadData(); 
+    }
+  }, [selectedDate]);
 
   const loadCafeterias = async () => {
     try {
@@ -96,6 +106,74 @@ export default function EmployeeDashboard() {
       if (list.length > 0) setSelectedCafeteria(list[0].id);
     } catch (error) { 
       console.error('Failed to load cafeterias:', error); 
+    }
+  };
+
+  // Smart date selection - check today and next 7 days for published menu
+  const findFirstAvailableMenu = async () => {
+    setLoading(true);
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Check today and next 7 days
+      for (let i = 0; i < 8; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(today.getDate() + i);
+        const dateStr = checkDate.toISOString().split('T')[0];
+        
+        try {
+          const res = await dailyMenuAPI.getDailyMenu({ 
+            cafeteriaId: selectedCafeteria, 
+            date: dateStr 
+          });
+          
+          const menu = res.data?.data?.dailyMenu;
+          const items = res.data?.data?.items || [];
+          
+          // Found a published menu with items!
+          if (menu?.status === 'published' && items.length > 0) {
+            console.log(`Found published menu for ${dateStr}`);
+            setSelectedDate(checkDate);
+            setDailyMenu(menu);
+            setMenuItems(items);
+            
+            // Update week start to show this date's week
+            const newWeekStart = new Date(checkDate);
+            newWeekStart.setDate(checkDate.getDate() - checkDate.getDay());
+            setWeekStart(newWeekStart);
+            
+            // Load orders
+            const ordersRes = await orderAPI.getMyOrders().catch(() => ({ data: { data: { orders: [] } } }));
+            const orders = ordersRes.data?.data?.orders || [];
+            setMyOrders(orders.filter(o => ['pending', 'preparing', 'ready'].includes(o.status)));
+            setOrderHistory(orders.filter(o => ['completed', 'cancelled'].includes(o.status)));
+            setCurrentOrder(orders.find(o => ['pending', 'preparing', 'ready'].includes(o.status)));
+            
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          // No menu for this date, continue checking
+        }
+      }
+      
+      // No published menu found in next 7 days, just show today
+      console.log('No published menu found, showing today');
+      setDailyMenu(null);
+      setMenuItems([]);
+      
+      // Still load orders
+      const ordersRes = await orderAPI.getMyOrders().catch(() => ({ data: { data: { orders: [] } } }));
+      const orders = ordersRes.data?.data?.orders || [];
+      setMyOrders(orders.filter(o => ['pending', 'preparing', 'ready'].includes(o.status)));
+      setOrderHistory(orders.filter(o => ['completed', 'cancelled'].includes(o.status)));
+      setCurrentOrder(orders.find(o => ['pending', 'preparing', 'ready'].includes(o.status)));
+      
+    } catch (e) { 
+      console.error('Error finding available menu:', e); 
+    } finally { 
+      setLoading(false); 
     }
   };
 

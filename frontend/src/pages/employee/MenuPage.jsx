@@ -62,9 +62,24 @@ export default function MenuPage() {
   // Save Favorite Modal
   const [showSaveFavoriteModal, setShowSaveFavoriteModal] = useState(false);
   const [favoriteName, setFavoriteName] = useState('');
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   useEffect(() => { loadCafeterias(); loadFavorites(); }, []);
-  useEffect(() => { if (selectedCafeteria) loadDailyMenu(); }, [selectedCafeteria, selectedDate]);
+  
+  // Smart date selection on cafeteria load
+  useEffect(() => { 
+    if (selectedCafeteria && !initialLoadDone) {
+      findFirstAvailableMenu();
+    }
+  }, [selectedCafeteria]);
+  
+  // Load menu when date changes (after initial smart selection)
+  useEffect(() => { 
+    if (selectedCafeteria && initialLoadDone) {
+      loadDailyMenu();
+    }
+  }, [selectedDate]);
+  
   useEffect(() => { if (activeTab === 'history') loadOrderHistory(); }, [activeTab]);
 
   const loadCafeterias = async () => {
@@ -74,6 +89,60 @@ export default function MenuPage() {
       setCafeterias(list);
       if (list.length > 0) setSelectedCafeteria(list[0].id);
     } catch (error) { console.error('Failed to load cafeterias:', error); }
+  };
+
+  // Smart date selection - check today and next 7 days for published menu
+  const findFirstAvailableMenu = async () => {
+    setLoading(true);
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Check today and next 7 days
+      for (let i = 0; i < 8; i++) {
+        const checkDate = new Date(today);
+        checkDate.setDate(today.getDate() + i);
+        const dateStr = checkDate.toISOString().split('T')[0];
+        
+        try {
+          const res = await dailyMenuAPI.getDailyMenu({ 
+            cafeteriaId: selectedCafeteria, 
+            date: dateStr 
+          });
+          
+          const menu = res.data?.data?.dailyMenu;
+          const items = res.data?.data?.items || [];
+          
+          // Found a published menu with items!
+          if (menu?.status === 'published' && items.length > 0) {
+            setSelectedDate(checkDate);
+            setDailyMenu(menu);
+            setMenuItems(items);
+            
+            // Update week start to show this date's week
+            const newWeekStart = new Date(checkDate);
+            newWeekStart.setDate(checkDate.getDate() - checkDate.getDay());
+            setWeekStart(newWeekStart);
+            
+            setInitialLoadDone(true);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          // No menu for this date, continue checking
+        }
+      }
+      
+      // No published menu found, show today
+      setDailyMenu(null);
+      setMenuItems([]);
+      setInitialLoadDone(true);
+      
+    } catch (e) { 
+      console.error('Error finding available menu:', e); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const loadDailyMenu = async () => {
