@@ -46,6 +46,7 @@ const getCompanies = async (req, res, next) => {
                     id: c.id,
                     name: c.name,
                     code: c.code,
+                    address: c.address,
                     logoUrl: c.logo_url,
                     primaryColor: c.primary_color,
                     isActive: c.is_active,
