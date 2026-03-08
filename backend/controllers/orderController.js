@@ -799,13 +799,16 @@ const getMyOrders = async (req, res, next) => {
                    (SELECT json_agg(json_build_object(
                        'id', oi.id,
                        'menu_item_id', oi.menu_item_id,
-                       'name', oi.item_name,
+                       'name', COALESCE(mi.name, 'Item'),
                        'quantity', oi.quantity,
                        'price', oi.unit_price,
                        'special_instructions', oi.special_instructions
-                   )) FROM order_items oi WHERE oi.order_id = o.id) as items
+                   )) 
+                   FROM order_items oi 
+                   LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+                   WHERE oi.order_id = o.id) as items
             FROM orders o
-            JOIN cafeterias cf ON o.cafeteria_id = cf.id
+            LEFT JOIN cafeterias cf ON o.cafeteria_id = cf.id
             WHERE o.user_id = $1
               AND o.status IN ('pending', 'confirmed', 'preparing', 'ready')
             ORDER BY o.order_date DESC, o.created_at DESC
@@ -823,7 +826,7 @@ const getMyOrders = async (req, res, next) => {
                     orderDate: order.order_date,
                     dayOfWeek: order.day_of_week,
                     status: order.status,
-                    total: parseFloat(order.total),
+                    total: parseFloat(order.total_amount || order.total || 0),
                     cafeteriaName: order.cafeteria_name,
                     createdAt: order.created_at,
                     items: order.items || []
@@ -843,7 +846,7 @@ const getMyOrders = async (req, res, next) => {
 const getMyOrderHistory = async (req, res, next) => {
     try {
         const userId = req.user.userId;
-        const { page = 1, limit = 20, mealType, dateFrom, dateTo, includeArchived } = req.query;
+        const { page = 1, limit = 20, mealType, dateFrom, dateTo } = req.query;
         
         let query = `
             SELECT o.*, cf.name as cafeteria_name,
@@ -851,23 +854,21 @@ const getMyOrderHistory = async (req, res, next) => {
                    (SELECT json_agg(json_build_object(
                        'id', oi.id,
                        'menu_item_id', oi.menu_item_id,
-                       'name', oi.item_name,
+                       'name', COALESCE(mi.name, 'Item'),
                        'quantity', oi.quantity,
                        'price', oi.unit_price,
                        'special_instructions', oi.special_instructions
-                   )) FROM order_items oi WHERE oi.order_id = o.id) as items
+                   )) 
+                   FROM order_items oi 
+                   LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+                   WHERE oi.order_id = o.id) as items
             FROM orders o
-            JOIN cafeterias cf ON o.cafeteria_id = cf.id
+            LEFT JOIN cafeterias cf ON o.cafeteria_id = cf.id
             WHERE o.user_id = $1
         `;
         
         const params = [userId];
         let paramIndex = 2;
-        
-        // Exclude archived orders by default
-        if (includeArchived !== 'true') {
-            query += ` AND (o.is_archived = FALSE OR o.is_archived IS NULL)`;
-        }
         
         if (mealType) {
             query += ` AND o.meal_type = $${paramIndex++}`;
@@ -894,12 +895,7 @@ const getMyOrderHistory = async (req, res, next) => {
         const result = await db.query(query, params);
         
         // Get total count for pagination
-        let countQuery = `
-            SELECT COUNT(*) FROM orders o WHERE o.user_id = $1
-        `;
-        if (includeArchived !== 'true') {
-            countQuery += ` AND (o.is_archived = FALSE OR o.is_archived IS NULL)`;
-        }
+        const countQuery = `SELECT COUNT(*) FROM orders o WHERE o.user_id = $1`;
         const countResult = await db.query(countQuery, [userId]);
         const totalCount = parseInt(countResult.rows[0].count);
         
@@ -909,15 +905,20 @@ const getMyOrderHistory = async (req, res, next) => {
                 orders: result.rows.map(order => ({
                     id: order.id,
                     orderNumber: order.order_number,
+                    order_number: order.order_number,
                     mealType: order.meal_type,
+                    meal_type: order.meal_type,
                     orderDate: order.order_date,
+                    order_date: order.order_date,
                     dayOfWeek: order.day_of_week,
                     status: order.status,
-                    total: parseFloat(order.total),
-                    itemCount: parseInt(order.item_count),
+                    total: parseFloat(order.total_amount || order.total || 0),
+                    total_amount: parseFloat(order.total_amount || order.total || 0),
+                    itemCount: parseInt(order.item_count || 0),
                     cafeteriaName: order.cafeteria_name,
+                    cafeteria_name: order.cafeteria_name,
                     createdAt: order.created_at,
-                    isArchived: order.is_archived || false,
+                    created_at: order.created_at,
                     items: order.items || []
                 })),
                 pagination: {
