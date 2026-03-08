@@ -973,6 +973,8 @@ const deleteUser = async (req, res, next) => {
         const { id } = req.params;
         const adminId = req.user.userId;
         
+        console.log('Delete user request:', { targetId: id, adminId, role: req.user.role });
+        
         // Prevent self-deletion
         if (id === adminId) {
             return res.status(400).json({
@@ -998,15 +1000,26 @@ const deleteUser = async (req, res, next) => {
         
         // Soft delete - mark as inactive and mangle email to allow reuse
         const timestamp = Date.now();
-        await db.query(
-            `UPDATE users 
-             SET is_active = FALSE, 
-                 email = email || '.deleted.' || $2,
-                 updated_at = CURRENT_TIMESTAMP,
-                 updated_by = $3
-             WHERE id = $1`,
-            [id, timestamp, adminId]
-        );
+        try {
+            await db.query(
+                `UPDATE users 
+                 SET is_active = FALSE, 
+                     email = email || '.deleted.' || $2,
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE id = $1`,
+                [id, timestamp]
+            );
+            console.log('User soft deleted successfully:', id);
+        } catch (updateError) {
+            console.error('Failed to update user:', updateError.message);
+            return res.status(500).json({
+                success: false,
+                error: {
+                    code: 'DELETE_FAILED',
+                    message: 'Failed to delete user: ' + updateError.message
+                }
+            });
+        }
         
         // Try to log audit (don't fail if audit_logs table doesn't exist)
         try {
@@ -1026,7 +1039,14 @@ const deleteUser = async (req, res, next) => {
         });
         
     } catch (error) {
-        next(error);
+        console.error('deleteUser error:', error);
+        return res.status(500).json({
+            success: false,
+            error: {
+                code: 'DELETE_ERROR',
+                message: error.message || 'Failed to delete user'
+            }
+        });
     }
 };
 
