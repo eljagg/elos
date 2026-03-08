@@ -167,25 +167,23 @@ const createCompany = async (req, res, next) => {
 const updateCompany = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { name, code, address, phone, email, emailDomain, contactPerson, logoUrl, primaryColor, secondaryColor, settings, isActive } = req.body;
+        // Only destructure fields that actually exist in the database
+        const { name, code, address, logoUrl, primaryColor, secondaryColor, settings, isActive } = req.body;
         
         const updates = [];
         const params = [];
         let idx = 1;
         
+        // Only update columns that exist in the database
         if (name !== undefined) { updates.push(`name = $${idx++}`); params.push(name); }
         if (code !== undefined) { updates.push(`code = $${idx++}`); params.push(code); }
         if (address !== undefined) { updates.push(`address = $${idx++}`); params.push(address); }
-        if (phone !== undefined) { updates.push(`phone = $${idx++}`); params.push(phone); }
-        // Use email_domain column (frontend may send as email or emailDomain)
-        if (email !== undefined) { updates.push(`email_domain = $${idx++}`); params.push(email); }
-        if (emailDomain !== undefined) { updates.push(`email_domain = $${idx++}`); params.push(emailDomain); }
         if (logoUrl !== undefined) { updates.push(`logo_url = $${idx++}`); params.push(logoUrl); }
         if (primaryColor !== undefined) { updates.push(`primary_color = $${idx++}`); params.push(primaryColor); }
         if (secondaryColor !== undefined) { updates.push(`secondary_color = $${idx++}`); params.push(secondaryColor); }
         if (settings !== undefined) { updates.push(`settings = $${idx++}`); params.push(JSON.stringify(settings)); }
         if (isActive !== undefined) { updates.push(`is_active = $${idx++}`); params.push(isActive); }
-        // Note: contact_person column doesn't exist in schema - ignoring for now
+        // Note: phone and email_domain columns don't exist in database - ignoring
         
         if (updates.length === 0) {
             return res.status(400).json({ success: false, error: { message: 'No fields to update' } });
