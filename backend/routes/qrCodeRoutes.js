@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth');
 const qrCodeController = require('../controllers/qrCodeController');
 
 // Public route for scanning (no auth required)
@@ -16,14 +16,14 @@ router.use(authenticate);
 
 // Get QR codes
 router.get('/', qrCodeController.getQRCodes);
-router.get('/stats', authorize('SUPER_ADMIN', 'HR_ADMIN', 'KITCHEN_HEAD'), qrCodeController.getQRCodeStats);
+router.get('/stats', requireRole('SUPER_ADMIN', 'HR_ADMIN', 'KITCHEN_HEAD'), qrCodeController.getQRCodeStats);
 
 // Create QR codes (kitchen/admin only)
-router.post('/', authorize('SUPER_ADMIN', 'HR_ADMIN', 'KITCHEN_HEAD'), qrCodeController.createQRCode);
-router.post('/bulk', authorize('SUPER_ADMIN', 'HR_ADMIN', 'KITCHEN_HEAD'), qrCodeController.bulkCreateQRCodes);
+router.post('/', requireRole('SUPER_ADMIN', 'HR_ADMIN', 'KITCHEN_HEAD'), qrCodeController.createQRCode);
+router.post('/bulk', requireRole('SUPER_ADMIN', 'HR_ADMIN', 'KITCHEN_HEAD'), qrCodeController.bulkCreateQRCodes);
 
 // Update/Delete
-router.patch('/:id', authorize('SUPER_ADMIN', 'HR_ADMIN', 'KITCHEN_HEAD'), qrCodeController.updateQRCode);
-router.delete('/:id', authorize('SUPER_ADMIN', 'HR_ADMIN', 'KITCHEN_HEAD'), qrCodeController.deleteQRCode);
+router.patch('/:id', requireRole('SUPER_ADMIN', 'HR_ADMIN', 'KITCHEN_HEAD'), qrCodeController.updateQRCode);
+router.delete('/:id', requireRole('SUPER_ADMIN', 'HR_ADMIN', 'KITCHEN_HEAD'), qrCodeController.deleteQRCode);
 
 module.exports = router;

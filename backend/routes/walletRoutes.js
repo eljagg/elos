@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth');
 const walletController = require('../controllers/walletController');
 
 // All routes require authentication
@@ -17,10 +17,10 @@ router.get('/transactions', walletController.getTransactions);
 router.post('/pay', walletController.payForOrder);
 
 // HR/Admin routes - wallet management
-router.get('/all', authorize('SUPER_ADMIN', 'HR_ADMIN'), walletController.getAllWallets);
-router.post('/:userId/deposit', authorize('SUPER_ADMIN', 'HR_ADMIN'), walletController.depositFunds);
-router.patch('/:userId/settings', authorize('SUPER_ADMIN', 'HR_ADMIN'), walletController.updateWalletSettings);
-router.post('/refund', authorize('SUPER_ADMIN', 'HR_ADMIN', 'KITCHEN_HEAD'), walletController.refundToWallet);
-router.post('/bulk-deposit', authorize('SUPER_ADMIN', 'HR_ADMIN'), walletController.bulkDeposit);
+router.get('/all', requireRole('SUPER_ADMIN', 'HR_ADMIN'), walletController.getAllWallets);
+router.post('/:userId/deposit', requireRole('SUPER_ADMIN', 'HR_ADMIN'), walletController.depositFunds);
+router.patch('/:userId/settings', requireRole('SUPER_ADMIN', 'HR_ADMIN'), walletController.updateWalletSettings);
+router.post('/refund', requireRole('SUPER_ADMIN', 'HR_ADMIN', 'KITCHEN_HEAD'), walletController.refundToWallet);
+router.post('/bulk-deposit', requireRole('SUPER_ADMIN', 'HR_ADMIN'), walletController.bulkDeposit);
 
 module.exports = router;
