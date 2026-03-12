@@ -31,6 +31,9 @@ const adminRoutes = require('./backend/routes/adminRoutes');
 const catalogRoutes = require('./backend/routes/catalogRoutes');
 const dailyMenuRoutes = require('./backend/routes/dailyMenuRoutes');
 const menuCatalogRoutes = require('./backend/routes/menuCatalogRoutes');
+const walletRoutes = require('./backend/routes/walletRoutes');
+const notificationRoutes = require('./backend/routes/notificationRoutes');
+const qrCodeRoutes = require('./backend/routes/qrCodeRoutes');
 // const licenseRoutes = require('./backend/routes/licenseRoutes'); // Temporarily disabled - causing crash
 
 const logger = require('./backend/utils/logger');
@@ -125,6 +128,9 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/catalog', catalogRoutes);
 app.use('/api/menu-catalog', menuCatalogRoutes);
 app.use('/api/daily-menu', dailyMenuRoutes);
+app.use('/api/wallet', walletRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/qr-codes', qrCodeRoutes);
 // app.use('/api/license', licenseRoutes); // Temporarily disabled - causing crash
 
 // API 404 handler

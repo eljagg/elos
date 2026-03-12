@@ -30,9 +30,11 @@ import OrderHistoryPage from './pages/employee/OrderHistoryPage';
 import KitchenDashboard from './pages/kitchen/Dashboard';
 import DailyMenuManagement from './pages/kitchen/DailyMenuManagement';
 import MenuCalendar from './pages/kitchen/MenuCalendar';
+import QRCodeManagement from './pages/kitchen/QRCodeManagement';
 import HRDashboard from './pages/hr/Dashboard';
 import HRUserForm from './pages/hr/UserForm';
 import ReceptionistDashboard from './pages/receptionist/Dashboard';
+import QRCodeHandler from './pages/QRCodeHandler';
 
 // Admin pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -145,6 +147,7 @@ function App() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/guest" element={<GuestLoginPage />} />
+            <Route path="/qr/:code" element={<QRCodeHandler />} />
             
             {/* Protected routes - License check required */}
             <Route path="/" element={
@@ -166,6 +169,11 @@ function App() {
             <Route path="kitchen/daily-menu" element={
               <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN', 'KITCHEN_HEAD', 'KITCHEN_SOUS', 'KITCHEN_STAFF']}>
                 <DailyMenuManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="kitchen/qr-codes" element={
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN', 'KITCHEN_HEAD', 'HR_ADMIN']}>
+                <QRCodeManagement />
               </ProtectedRoute>
             } />
             <Route path="kitchen/*" element={

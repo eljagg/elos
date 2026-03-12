@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { messageAPI } from '../../services/api';
 import { DashboardFooter } from '../Footer';
+import NotificationBell from '../common/NotificationBell';
 
 const MainLayout = () => {
   const { user, logout } = useAuth();
@@ -85,6 +86,7 @@ const MainLayout = () => {
           { path: '/kitchen/orders', icon: '📦', label: 'Orders' },
           { path: '/kitchen/menus', icon: '🍽️', label: 'Menus' },
           { path: '/kitchen/prep', icon: '📋', label: 'Prep List' },
+          { path: '/kitchen/qr-codes', icon: '📱', label: 'QR Codes' },
         ];
       case 'RECEPTIONIST':
         return [
@@ -227,11 +229,14 @@ const MainLayout = () => {
             </div>
             
             <div className="flex items-center gap-4">
-              {/* Notifications */}
+              {/* Messages (internal communication) */}
               <button className={`relative p-2 ${colors.bgSecondary} rounded-lg ${colors.bgHover} transition-colors`}>
-                <span className="text-xl">🔔</span>
+                <span className="text-xl">💬</span>
                 {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">{unreadCount}</span>}
               </button>
+              
+              {/* System Notifications (orders, wallet, etc.) */}
+              <NotificationBell />
               
               {/* User Menu */}
               <div className="relative">

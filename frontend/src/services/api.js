@@ -149,12 +149,7 @@ export const orderAPI = {
   
   // Guest codes - uses /guests/codes route
   getGuestCodes: () => api.get('/guests/codes'),
-  createGuestCode: (data) => api.post('/guests/codes', data),
-  
-  // Favorites
-  getFavorites: () => api.get('/orders/favorites'),
-  saveFavorite: (data) => api.post('/orders/favorites', data),
-  deleteFavorite: (id) => api.delete(`/orders/favorites/${id}`)
+  createGuestCode: (data) => api.post('/guests/codes', data)
 };
 
 // ============================================================================
@@ -287,13 +282,6 @@ export const dailyMenuAPI = {
   getAllDailyMenus: (params) => api.get('/daily-menu/all', { params }),
   createDailyMenu: (data) => api.post('/daily-menu', data),
   publishDailyMenu: (id, data) => api.post(`/daily-menu/${id}/publish`, data),
-  unpublishDailyMenu: (id) => api.put(`/daily-menu/${id}/unpublish`),
-  archiveDailyMenu: (id) => api.put(`/daily-menu/${id}/archive`),
-  deleteDailyMenu: (id) => api.delete(`/daily-menu/${id}`),
-  
-  // Menu Items
-  addItemsToMenu: (menuId, items) => api.post(`/daily-menu/${menuId}/items`, { items }),
-  removeMenuItem: (menuId, itemId) => api.delete(`/daily-menu/${menuId}/items/${itemId}`),
   markItemSoldOut: (dailyMenuItemId, data) => api.post(`/daily-menu/items/${dailyMenuItemId}/sold-out`, data),
   updatePortions: (dailyMenuItemId, data) => api.patch(`/daily-menu/items/${dailyMenuItemId}/portions`, data),
   
@@ -301,6 +289,49 @@ export const dailyMenuAPI = {
   getNotifications: (params) => api.get('/daily-menu/notifications', { params }),
   markNotificationRead: (id) => api.patch(`/daily-menu/notifications/${id}/read`),
   markAllNotificationsRead: () => api.patch('/daily-menu/notifications/read-all')
+};
+
+// ============================================================================
+// Wallet API (Cashless Payments)
+// ============================================================================
+export const walletAPI = {
+  // Employee routes
+  getMyWallet: () => api.get('/wallet'),
+  getTransactions: (params) => api.get('/wallet/transactions', { params }),
+  payForOrder: (orderId, amount) => api.post('/wallet/pay', { orderId, amount }),
+  
+  // HR/Admin routes
+  getAllWallets: (params) => api.get('/wallet/all', { params }),
+  depositFunds: (userId, data) => api.post(`/wallet/${userId}/deposit`, data),
+  updateWalletSettings: (userId, data) => api.patch(`/wallet/${userId}/settings`, data),
+  refundToWallet: (data) => api.post('/wallet/refund', data),
+  bulkDeposit: (deposits, description) => api.post('/wallet/bulk-deposit', { deposits, description })
+};
+
+// ============================================================================
+// Notifications API
+// ============================================================================
+export const notificationAPI = {
+  getNotifications: (params) => api.get('/notifications', { params }),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  markAsRead: (id) => api.patch(`/notifications/${id}/read`),
+  markAllAsRead: () => api.patch('/notifications/read-all'),
+  deleteNotification: (id) => api.delete(`/notifications/${id}`),
+  getPreferences: () => api.get('/notifications/preferences'),
+  updatePreferences: (data) => api.patch('/notifications/preferences', data)
+};
+
+// ============================================================================
+// QR Code API
+// ============================================================================
+export const qrCodeAPI = {
+  getQRCodes: (params) => api.get('/qr-codes', { params }),
+  createQRCode: (data) => api.post('/qr-codes', data),
+  scanQRCode: (code) => api.get(`/qr-codes/scan/${code}`),
+  updateQRCode: (id, data) => api.patch(`/qr-codes/${id}`, data),
+  deleteQRCode: (id) => api.delete(`/qr-codes/${id}`),
+  bulkCreateQRCodes: (data) => api.post('/qr-codes/bulk', data),
+  getQRCodeStats: (params) => api.get('/qr-codes/stats', { params })
 };
 
 // Export default api instance for custom requests

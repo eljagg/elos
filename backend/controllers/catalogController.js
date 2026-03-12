@@ -212,12 +212,22 @@ const createCatalogItem = async (req, res, next) => {
             add_on_price = 0,
             imageUrl,
             prepTimeMinutes = 15,
+            // Nutritional info
             calories,
+            proteinGrams,
+            carbsGrams,
+            fatGrams,
+            // Dietary flags
             isVegetarian = false,
             isVegan = false,
             isGlutenFree = false,
+            isDairyFree = false,
+            isNutFree = false,
+            isHalal = false,
+            isKosher = false,
             isSpicy = false,
             spiceLevel = 0,
+            // Other flags
             isFeatured = false,
             hasSizes = false,
             sizeSmallPrice,
@@ -317,16 +327,18 @@ const createCatalogItem = async (req, res, next) => {
         const result = await db.query(`
             INSERT INTO menu_item_catalog (
                 cafeteria_id, category_id, name, description, price, add_on_price, image_url,
-                prep_time_minutes, calories, is_vegetarian, is_vegan, is_gluten_free,
-                is_spicy, spice_level, is_featured, has_sizes, size_small_price, 
-                size_medium_price, size_large_price, created_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                prep_time_minutes, calories, protein_grams, carbs_grams, fat_grams,
+                is_vegetarian, is_vegan, is_gluten_free, is_dairy_free, is_nut_free,
+                is_halal, is_kosher, is_spicy, spice_level, is_featured, has_sizes, 
+                size_small_price, size_medium_price, size_large_price, created_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
             RETURNING *
         `, [
             cafeteriaId || null, effectiveCategoryId || null, name, description, price, add_on_price, imageUrl,
-            prepTimeMinutes, calories, isVegetarian, isVegan, isGlutenFree,
-            isSpicy, spiceLevel, isFeatured, hasSizes, sizeSmallPrice || null,
-            sizeMediumPrice || null, sizeLargePrice || null, userId
+            prepTimeMinutes, calories, proteinGrams, carbsGrams, fatGrams,
+            isVegetarian, isVegan, isGlutenFree, isDairyFree, isNutFree,
+            isHalal, isKosher, isSpicy, spiceLevel, isFeatured, hasSizes, 
+            sizeSmallPrice || null, sizeMediumPrice || null, sizeLargePrice || null, userId
         ]);
 
         const newItem = result.rows[0];
@@ -391,12 +403,22 @@ const updateCatalogItem = async (req, res, next) => {
             add_on_price,
             imageUrl,
             prepTimeMinutes,
+            // Nutritional info
             calories,
+            proteinGrams,
+            carbsGrams,
+            fatGrams,
+            // Dietary flags
             isVegetarian,
             isVegan,
             isGlutenFree,
+            isDairyFree,
+            isNutFree,
+            isHalal,
+            isKosher,
             isSpicy,
             spiceLevel,
+            // Other flags
             isFeatured,
             isActive,
             dietaryTagIds,
@@ -577,20 +599,28 @@ const updateCatalogItem = async (req, res, next) => {
                 image_url = COALESCE($7, image_url),
                 prep_time_minutes = COALESCE($8, prep_time_minutes),
                 calories = COALESCE($9, calories),
-                is_vegetarian = COALESCE($10, is_vegetarian),
-                is_vegan = COALESCE($11, is_vegan),
-                is_gluten_free = COALESCE($12, is_gluten_free),
-                is_spicy = COALESCE($13, is_spicy),
-                spice_level = COALESCE($14, spice_level),
-                is_featured = COALESCE($15, is_featured),
-                is_active = COALESCE($16, is_active),
+                protein_grams = COALESCE($10, protein_grams),
+                carbs_grams = COALESCE($11, carbs_grams),
+                fat_grams = COALESCE($12, fat_grams),
+                is_vegetarian = COALESCE($13, is_vegetarian),
+                is_vegan = COALESCE($14, is_vegan),
+                is_gluten_free = COALESCE($15, is_gluten_free),
+                is_dairy_free = COALESCE($16, is_dairy_free),
+                is_nut_free = COALESCE($17, is_nut_free),
+                is_halal = COALESCE($18, is_halal),
+                is_kosher = COALESCE($19, is_kosher),
+                is_spicy = COALESCE($20, is_spicy),
+                spice_level = COALESCE($21, spice_level),
+                is_featured = COALESCE($22, is_featured),
+                is_active = COALESCE($23, is_active),
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $17
+            WHERE id = $24
             RETURNING *
         `, [
             cafeteriaId, effectiveCategoryId, name, description, price, add_on_price, imageUrl,
-            prepTimeMinutes, calories, isVegetarian, isVegan, isGlutenFree,
-            isSpicy, spiceLevel, isFeatured, isActive, id
+            prepTimeMinutes, calories, proteinGrams, carbsGrams, fatGrams,
+            isVegetarian, isVegan, isGlutenFree, isDairyFree, isNutFree,
+            isHalal, isKosher, isSpicy, spiceLevel, isFeatured, isActive, id
         ]);
 
         // =====================================================================
