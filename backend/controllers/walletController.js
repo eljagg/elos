@@ -3,7 +3,7 @@
  * Handles cashless payment system for ELOS
  */
 
-const db = require('../config/db');
+const db = require('../config/database');
 
 /**
  * Get user's wallet

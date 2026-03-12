@@ -3,7 +3,7 @@
  * Handles QR code generation and scanning for ELOS ordering
  */
 
-const db = require('../config/db');
+const db = require('../config/database');
 const crypto = require('crypto');
 
 /**

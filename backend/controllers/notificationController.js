@@ -3,23 +3,27 @@
  * Handles in-app, email, and SMS notifications for ELOS
  */
 
-const db = require('../config/db');
-const nodemailer = require('nodemailer');
+const db = require('../config/database');
 
-// Email transporter (configure in production)
+// Email transporter - will be configured if SMTP settings exist
 let emailTransporter = null;
 
 const initEmailTransporter = () => {
     if (process.env.SMTP_HOST) {
-        emailTransporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT || 587,
-            secure: process.env.SMTP_SECURE === 'true',
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS
-            }
-        });
+        try {
+            const nodemailer = require('nodemailer');
+            emailTransporter = nodemailer.createTransport({
+                host: process.env.SMTP_HOST,
+                port: process.env.SMTP_PORT || 587,
+                secure: process.env.SMTP_SECURE === 'true',
+                auth: {
+                    user: process.env.SMTP_USER,
+                    pass: process.env.SMTP_PASS
+                }
+            });
+        } catch (err) {
+            console.log('Nodemailer not available, email notifications disabled');
+        }
     }
 };
 
