@@ -9,7 +9,10 @@ const db = require('../config/database');
 exports.getIngredients = async (req, res) => {
   try {
     const { category, search, isActive = 'true' } = req.query;
-    const companyId = req.user.companyId;
+    // Handle both companyId formats and default to null if not present
+    const companyId = req.user?.companyId || req.user?.company_id || null;
+    
+    console.log('[Ingredients] Fetching ingredients for companyId:', companyId);
     
     let query = `
       SELECT i.*, 
@@ -40,34 +43,52 @@ exports.getIngredients = async (req, res) => {
       params.push(`%${search}%`);
     }
     
-    query += ` ORDER BY ic.display_order, i.name`;
+    query += ` ORDER BY ic.display_order NULLS LAST, i.name`;
     
+    console.log('[Ingredients] Query params:', params);
     const result = await db.query(query, params);
+    console.log('[Ingredients] Found', result.rows.length, 'ingredients');
     
     res.json({
       success: true,
       data: { ingredients: result.rows }
     });
   } catch (error) {
-    console.error('Get ingredients error:', error);
-    res.status(500).json({ success: false, error: { message: 'Failed to fetch ingredients' } });
+    console.error('[Ingredients] Get ingredients error:', error.message);
+    console.error('[Ingredients] Stack:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      error: { 
+        message: 'Failed to fetch ingredients',
+        details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+      } 
+    });
   }
 };
 
 // Get ingredient categories
 exports.getCategories = async (req, res) => {
   try {
+    console.log('[Ingredients] Fetching categories');
     const result = await db.query(`
       SELECT * FROM ingredient_categories ORDER BY display_order
     `);
+    console.log('[Ingredients] Found', result.rows.length, 'categories');
     
     res.json({
       success: true,
       data: { categories: result.rows }
     });
   } catch (error) {
-    console.error('Get categories error:', error);
-    res.status(500).json({ success: false, error: { message: 'Failed to fetch categories' } });
+    console.error('[Ingredients] Get categories error:', error.message);
+    console.error('[Ingredients] Stack:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      error: { 
+        message: 'Failed to fetch categories',
+        details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+      } 
+    });
   }
 };
 
@@ -75,6 +96,15 @@ exports.getCategories = async (req, res) => {
 exports.getIngredient = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: { message: 'Invalid ingredient ID format' } 
+      });
+    }
     
     const result = await db.query(`
       SELECT i.*, ic.name as category_name, ic.icon as category_icon
@@ -92,7 +122,7 @@ exports.getIngredient = async (req, res) => {
       data: { ingredient: result.rows[0] }
     });
   } catch (error) {
-    console.error('Get ingredient error:', error);
+    console.error('[Ingredients] Get ingredient error:', error.message);
     res.status(500).json({ success: false, error: { message: 'Failed to fetch ingredient' } });
   }
 };
@@ -100,8 +130,8 @@ exports.getIngredient = async (req, res) => {
 // Create ingredient
 exports.createIngredient = async (req, res) => {
   try {
-    const companyId = req.user.companyId;
-    const userId = req.user.id;
+    const companyId = req.user?.companyId || req.user?.company_id || null;
+    const userId = req.user?.userId || req.user?.id;
     
     const {
       name, description, category,
@@ -113,6 +143,13 @@ exports.createIngredient = async (req, res) => {
       containsSoy, containsFish, containsShellfish, containsSesame,
       costPerServing
     } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ 
+        success: false, 
+        error: { message: 'Ingredient name is required' } 
+      });
+    }
     
     const result = await db.query(`
       INSERT INTO ingredients (
@@ -127,14 +164,14 @@ exports.createIngredient = async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
       RETURNING *
     `, [
-      companyId, name, description, category,
+      companyId, name.trim(), description, category || 'OTHER',
       servingSize || 100, servingUnit || 'g', servingDescription,
       calories || 0, proteinGrams || 0, carbsGrams || 0, fatGrams || 0, fiberGrams || 0, sugarGrams || 0, sodiumMg || 0,
       usdaFdcId,
       isVegetarian || false, isVegan || false, isGlutenFree !== false, isDairyFree !== false, isNutFree !== false, isHalal !== false, isKosher !== false,
       containsGluten || false, containsDairy || false, containsEggs || false, containsNuts || false, containsPeanuts || false,
       containsSoy || false, containsFish || false, containsShellfish || false, containsSesame || false,
-      costPerServing, userId
+      costPerServing || null, userId
     ]);
     
     res.status(201).json({
@@ -142,7 +179,7 @@ exports.createIngredient = async (req, res) => {
       data: { ingredient: result.rows[0] }
     });
   } catch (error) {
-    console.error('Create ingredient error:', error);
+    console.error('[Ingredients] Create ingredient error:', error.message);
     res.status(500).json({ success: false, error: { message: 'Failed to create ingredient' } });
   }
 };
@@ -151,7 +188,7 @@ exports.createIngredient = async (req, res) => {
 exports.updateIngredient = async (req, res) => {
   try {
     const { id } = req.params;
-    const companyId = req.user.companyId;
+    const companyId = req.user?.companyId || req.user?.company_id || null;
     
     const {
       name, description, category,
@@ -222,7 +259,7 @@ exports.updateIngredient = async (req, res) => {
       data: { ingredient: result.rows[0] }
     });
   } catch (error) {
-    console.error('Update ingredient error:', error);
+    console.error('[Ingredients] Update ingredient error:', error.message);
     res.status(500).json({ success: false, error: { message: 'Failed to update ingredient' } });
   }
 };
@@ -231,7 +268,7 @@ exports.updateIngredient = async (req, res) => {
 exports.deleteIngredient = async (req, res) => {
   try {
     const { id } = req.params;
-    const companyId = req.user.companyId;
+    const companyId = req.user?.companyId || req.user?.company_id || null;
     
     // Check if ingredient is used in any dishes
     const usage = await db.query(`
@@ -251,7 +288,7 @@ exports.deleteIngredient = async (req, res) => {
     
     res.json({ success: true });
   } catch (error) {
-    console.error('Delete ingredient error:', error);
+    console.error('[Ingredients] Delete ingredient error:', error.message);
     res.status(500).json({ success: false, error: { message: 'Failed to delete ingredient' } });
   }
 };
@@ -280,10 +317,10 @@ exports.getDishIngredients = async (req, res) => {
     
     // Calculate totals
     const totals = result.rows.reduce((acc, ing) => ({
-      calories: acc.calories + Math.round(ing.calories * ing.quantity),
-      protein: acc.protein + (parseFloat(ing.protein_grams) * ing.quantity),
-      carbs: acc.carbs + (parseFloat(ing.carbs_grams) * ing.quantity),
-      fat: acc.fat + (parseFloat(ing.fat_grams) * ing.quantity)
+      calories: acc.calories + Math.round((ing.calories || 0) * (ing.quantity || 1)),
+      protein: acc.protein + (parseFloat(ing.protein_grams || 0) * (ing.quantity || 1)),
+      carbs: acc.carbs + (parseFloat(ing.carbs_grams || 0) * (ing.quantity || 1)),
+      fat: acc.fat + (parseFloat(ing.fat_grams || 0) * (ing.quantity || 1))
     }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
     
     res.json({
@@ -299,7 +336,7 @@ exports.getDishIngredients = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get dish ingredients error:', error);
+    console.error('[Ingredients] Get dish ingredients error:', error.message);
     res.status(500).json({ success: false, error: { message: 'Failed to fetch dish ingredients' } });
   }
 };
@@ -309,6 +346,13 @@ exports.addDishIngredient = async (req, res) => {
   try {
     const { dishId } = req.params;
     const { ingredientId, quantity, notes } = req.body;
+    
+    if (!ingredientId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: { message: 'Ingredient ID is required' } 
+      });
+    }
     
     // Check if already exists
     const existing = await db.query(`
@@ -348,7 +392,7 @@ exports.addDishIngredient = async (req, res) => {
       data: { dishIngredient: result.rows[0] }
     });
   } catch (error) {
-    console.error('Add dish ingredient error:', error);
+    console.error('[Ingredients] Add dish ingredient error:', error.message);
     res.status(500).json({ success: false, error: { message: 'Failed to add ingredient to dish' } });
   }
 };
@@ -375,7 +419,7 @@ exports.updateDishIngredient = async (req, res) => {
       data: { dishIngredient: result.rows[0] }
     });
   } catch (error) {
-    console.error('Update dish ingredient error:', error);
+    console.error('[Ingredients] Update dish ingredient error:', error.message);
     res.status(500).json({ success: false, error: { message: 'Failed to update dish ingredient' } });
   }
 };
@@ -392,7 +436,7 @@ exports.removeDishIngredient = async (req, res) => {
     
     res.json({ success: true });
   } catch (error) {
-    console.error('Remove dish ingredient error:', error);
+    console.error('[Ingredients] Remove dish ingredient error:', error.message);
     res.status(500).json({ success: false, error: { message: 'Failed to remove ingredient from dish' } });
   }
 };
@@ -418,7 +462,7 @@ exports.calculateDishNutrition = async (req, res) => {
       data: { nutrition: result.rows[0] }
     });
   } catch (error) {
-    console.error('Calculate dish nutrition error:', error);
+    console.error('[Ingredients] Calculate dish nutrition error:', error.message);
     res.status(500).json({ success: false, error: { message: 'Failed to calculate nutrition' } });
   }
 };
@@ -481,7 +525,7 @@ exports.syncDishNutrition = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Sync dish nutrition error:', error);
+    console.error('[Ingredients] Sync dish nutrition error:', error.message);
     res.status(500).json({ success: false, error: { message: 'Failed to sync nutrition' } });
   }
 };
