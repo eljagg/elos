@@ -42,6 +42,7 @@ import UserManagement from './pages/admin/UserManagement';
 import UserForm from './pages/admin/UserForm';
 import MenuManagement from './pages/admin/MenuManagement';
 import DishLibrary from './pages/admin/DishLibrary';
+import IngredientLibrary from './pages/admin/IngredientLibrary';
 import CompanySettings from './pages/admin/CompanySettings';
 import Reports from './pages/admin/Reports';
 import SystemSettings from './pages/admin/SystemSettings';
@@ -230,6 +231,11 @@ function App() {
             <Route path="admin/dish-library" element={
               <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN', 'KITCHEN_HEAD', 'KITCHEN_SOUS', 'KITCHEN_STAFF']}>
                 <DishLibrary />
+              </ProtectedRoute>
+            } />
+            <Route path="admin/ingredients" element={
+              <ProtectedRoute allowedRoles={['SYSTEM_OWNER', 'SUPER_ADMIN', 'KITCHEN_HEAD', 'KITCHEN_SOUS', 'KITCHEN_STAFF']}>
+                <IngredientLibrary />
               </ProtectedRoute>
             } />
             <Route path="admin/menus" element={

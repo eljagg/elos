@@ -334,5 +334,28 @@ export const qrCodeAPI = {
   getQRCodeStats: (params) => api.get('/qr-codes/stats', { params })
 };
 
+// ============================================================================
+// Ingredient API (Nutrition System)
+// ============================================================================
+export const ingredientAPI = {
+  // Ingredients
+  getIngredients: (params) => api.get('/ingredients', { params }),
+  getIngredient: (id) => api.get(`/ingredients/${id}`),
+  createIngredient: (data) => api.post('/ingredients', data),
+  updateIngredient: (id, data) => api.put(`/ingredients/${id}`, data),
+  deleteIngredient: (id) => api.delete(`/ingredients/${id}`),
+  
+  // Categories
+  getCategories: () => api.get('/ingredients/categories'),
+  
+  // Dish ingredients
+  getDishIngredients: (dishId) => api.get(`/ingredients/dish/${dishId}`),
+  updateDishIngredients: (dishId, ingredients) => api.put(`/ingredients/dish/${dishId}`, { ingredients }),
+  
+  // Nutrition calculation
+  calculateNutrition: (dishId) => api.get(`/ingredients/dish/${dishId}/nutrition`),
+  syncNutrition: (dishId) => api.post(`/ingredients/dish/${dishId}/sync-nutrition`)
+};
+
 // Export default api instance for custom requests
 export default api;

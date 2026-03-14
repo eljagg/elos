@@ -293,6 +293,7 @@ const deliveryRoutes = require('./routes/deliveryRoutes');
 const dailyMenuRoutes = require('./routes/dailyMenuRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const licenseRoutes = require('./routes/licenseRoutes');
+const ingredientRoutes = require('./routes/ingredientRoutes');
 
 /**
  * Mount routes with prefixes
@@ -314,6 +315,7 @@ app.use('/api/reports', reportRoutes);   // Reports and analytics
 app.use('/api/delivery', deliveryRoutes); // Delivery management
 app.use('/api/admin', adminRoutes);      // Admin functions
 app.use('/api/license', licenseRoutes);  // License management
+app.use('/api/ingredients', ingredientRoutes); // Ingredient management
 
 // PHASE 3 TEST: Direct inline route
 app.get("/api/menu-catalog-test", (req, res) => {
@@ -385,12 +387,14 @@ app.use((err, req, res, next) => {
     // Determine status code
     const statusCode = err.statusCode || err.status || 500;
     
-    // Prepare error response - show actual message for debugging
+    // Prepare error response
     const errorResponse = {
         success: false,
         error: {
             code: err.code || 'INTERNAL_ERROR',
-            message: err.message || 'An unexpected error occurred'
+            message: process.env.NODE_ENV === 'production' 
+                ? 'An unexpected error occurred' 
+                : err.message
         }
     };
     
@@ -523,3 +527,4 @@ startServer();
 module.exports = app;
 // Force rebuild Thu Feb  5 01:14:55 UTC 2026
 // Redeployed Fri Feb  6 16:07:17 UTC 2026
+// Added ingredient routes Fri Mar 14 2026

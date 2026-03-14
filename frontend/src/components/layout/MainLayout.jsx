@@ -53,6 +53,7 @@ const MainLayout = () => {
           { path: '/admin/companies', icon: '🏢', label: 'Companies' },
           { path: '/admin/orders', icon: '📦', label: 'Orders' },
           { path: '/admin/dish-library', icon: '📚', label: 'Dish Library' },
+          { path: '/admin/ingredients', icon: '🥗', label: 'Ingredients' },
           { path: '/admin/menus', icon: '🍽️', label: 'Menus' },
           { path: '/admin/reports', icon: '📊', label: 'Reports' },
           { path: '/admin/settings', icon: '⚙️', label: 'Settings' },
@@ -64,6 +65,7 @@ const MainLayout = () => {
           { path: '/admin/companies', icon: '🏢', label: 'Companies' },
           { path: '/admin/orders', icon: '📦', label: 'Orders' },
           { path: '/admin/dish-library', icon: '📚', label: 'Dish Library' },
+          { path: '/admin/ingredients', icon: '🥗', label: 'Ingredients' },
           { path: '/admin/menus', icon: '🍽️', label: 'Menus' },
           { path: '/admin/reports', icon: '📊', label: 'Reports' },
           { path: '/admin/settings', icon: '⚙️', label: 'Settings' },
@@ -81,6 +83,7 @@ const MainLayout = () => {
         return [
           ...baseItems,
           { path: '/admin/dish-library', icon: '📚', label: 'Dish Library' },
+          { path: '/admin/ingredients', icon: '🥗', label: 'Ingredients' },
           { path: '/kitchen/daily-menu', icon: '📅', label: 'Daily Menu' },
           { path: '/kitchen/menu-calendar', icon: '🗓️', label: 'Menu Calendar' },
           { path: '/kitchen/orders', icon: '📦', label: 'Orders' },
