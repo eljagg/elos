@@ -20,29 +20,6 @@ process.on('unhandledRejection', (reason, promise) => {
  * ELOS - Employee Lunch Ordering System
  * Main Server Entry Point
  * ============================================================================
- * 
- * This is the main file that starts the ELOS API server.
- * It configures Express with all necessary middleware and routes.
- * 
- * LEARNING NOTES:
- * ---------------
- * Express.js is a web framework that handles:
- * 1. HTTP request routing (GET /api/users -> userController)
- * 2. Middleware (functions that run before route handlers)
- * 3. Error handling
- * 4. Response formatting
- * 
- * Middleware Order Matters!
- * Middleware runs in the order it's defined. For example:
- * 1. Security headers (helmet) - First for protection
- * 2. CORS - Allow cross-origin requests
- * 3. Body parsing - Parse JSON request bodies
- * 4. Rate limiting - Prevent abuse
- * 5. Authentication - Check if user is logged in
- * 6. Routes - Handle the actual requests
- * 7. Error handling - Catch and handle errors
- * 
- * ============================================================================
  */
 
 // ============================================================================
@@ -56,13 +33,13 @@ require('dotenv').config();
 const express = require('express');
 
 // Security middleware
-const helmet = require('helmet');        // Sets security HTTP headers
-const cors = require('cors');            // Handles Cross-Origin Resource Sharing
-const rateLimit = require('express-rate-limit'); // Prevents brute-force attacks
+const helmet = require('helmet');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 
 // Request processing middleware
-const compression = require('compression'); // Compresses responses for faster transfer
-const morgan = require('morgan');          // HTTP request logging
+const compression = require('compression');
+const morgan = require('morgan');
 
 // File handling
 const path = require('path');
@@ -77,45 +54,20 @@ const logger = require('./utils/logger');
 // ============================================================================
 
 const app = express();
-
-// Trust proxy (needed if behind a load balancer or reverse proxy)
-// This ensures we get the correct client IP address
 app.set('trust proxy', 1);
 
 // ============================================================================
 // SECURITY MIDDLEWARE
 // ============================================================================
 
-/**
- * Helmet - Set security HTTP headers
- * 
- * This adds various HTTP headers that protect against common attacks:
- * - XSS (Cross-Site Scripting)
- * - Clickjacking
- * - MIME sniffing
- * - And more...
- */
 app.use(helmet({
-    contentSecurityPolicy: false,  // Disabled for now to debug static file issues
-    crossOriginEmbedderPolicy: false // Allow loading external resources
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false
 }));
 
-/**
- * CORS - Cross-Origin Resource Sharing
- * 
- * This allows our frontend (running on a different port/domain) to make
- * requests to our API. Without CORS, browsers block cross-origin requests.
- * 
- * LEARNING NOTE:
- * In production, you should restrict origins to only your frontend domain.
- * Never use cors() without options in production!
- */
 const corsOptions = {
     origin: function (origin, callback) {
-        // Allow requests with no origin (mobile apps, Postman, etc.)
         if (!origin) return callback(null, true);
-        
-        // Check if origin is in allowed list
         if (security.cors.origins.includes(origin)) {
             callback(null, true);
         } else {
@@ -132,75 +84,35 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-/**
- * Rate Limiting - Prevent abuse
- * 
- * This limits how many requests a single IP can make in a given time period.
- * Essential for preventing brute-force attacks and DoS.
- */
-// Apply rate limiting ONLY to unauthenticated requests
 const generalLimiter = rateLimit({
     windowMs: security.rateLimit.general.windowMs,
     max: security.rateLimit.general.max,
     message: security.rateLimit.general.message,
     standardHeaders: true,
     legacyHeaders: false,
-    // Skip rate limiting for authenticated users and certain IPs
     skip: (req) => {
-        // Skip if user is authenticated (has valid token)
         if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
             return true;
         }
-        // Skip certain IPs (monitoring, etc.)
         const skipIPs = process.env.RATE_LIMIT_SKIP_IPS?.split(',') || [];
         return skipIPs.includes(req.ip);
     }
 });
-// Apply rate limiting to all requests
 app.use('/api/', generalLimiter);
+
 // ============================================================================
 // REQUEST PROCESSING MIDDLEWARE
 // ============================================================================
 
-/**
- * Compression - Reduce response size
- * 
- * Compresses responses using gzip, reducing data transfer by 50-80%.
- * This makes the API faster, especially for large responses like reports.
- */
 app.use(compression());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-/**
- * Body Parsing - Parse incoming request bodies
- * 
- * This middleware parses JSON bodies, making req.body available.
- * We also set limits to prevent DoS attacks with huge payloads.
- */
-app.use(express.json({ 
-    limit: '10mb' // Max JSON body size (for image uploads, etc.)
-}));
-
-app.use(express.urlencoded({ 
-    extended: true, 
-    limit: '10mb' 
-}));
-
-/**
- * Request Logging - Log all HTTP requests
- * 
- * Morgan logs every request with method, URL, status, and timing.
- * In development: colored, concise output
- * In production: detailed logs for analysis
- */
 if (process.env.NODE_ENV === 'production') {
-    // Production: JSON format for log aggregation services
     app.use(morgan('combined', {
-        stream: {
-            write: (message) => logger.http(message.trim())
-        }
+        stream: { write: (message) => logger.http(message.trim()) }
     }));
 } else {
-    // Development: Colored, readable output
     app.use(morgan('dev'));
 }
 
@@ -208,27 +120,15 @@ if (process.env.NODE_ENV === 'production') {
 // STATIC FILES
 // ============================================================================
 
-/**
- * Serve static files from the 'public' directory
- * This includes uploaded images, company logos, etc.
- */
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ============================================================================
 // API ROUTES
 // ============================================================================
 
-/**
- * Health Check Endpoint
- * 
- * Used by load balancers and monitoring services to check if the server is alive.
- * This should be a simple, fast check that doesn't require authentication.
- */
 app.get('/api/health', async (req, res) => {
     try {
-        // Check database connection
         const dbConnected = await db.checkConnection();
-        
         const healthStatus = {
             status: dbConnected ? 'healthy' : 'unhealthy',
             timestamp: new Date().toISOString(),
@@ -240,24 +140,17 @@ app.get('/api/health', async (req, res) => {
             },
             pool: db.getPoolStats()
         };
-        
         res.status(dbConnected ? 200 : 503).json(healthStatus);
     } catch (error) {
         logger.error('Health check failed:', error);
-        res.status(503).json({
-            status: 'unhealthy',
-            error: error.message
-        });
+        res.status(503).json({ status: 'unhealthy', error: error.message });
     }
 });
 
-/**
- * API Version and Info
- */
 app.get('/api', (req, res) => {
     res.json({
         name: 'ELOS API',
-        version: '1.0.0',
+        version: '1.0.4',
         description: 'Employee Lunch Ordering System',
         documentation: '/api/docs',
         health: '/api/health'
@@ -268,92 +161,121 @@ app.get('/api', (req, res) => {
 // ROUTE IMPORTS AND MOUNTING
 // ============================================================================
 
-/**
- * Import route modules
- * Each module handles a specific area of functionality
- */
+console.log('[ROUTES] ========================================');
+console.log('[ROUTES] Starting route imports...');
+console.log('[ROUTES] ========================================');
+
 const authRoutes = require('./routes/authRoutes');
+console.log('[ROUTES] ✅ authRoutes loaded');
+
 const userRoutes = require('./routes/userRoutes');
+console.log('[ROUTES] ✅ userRoutes loaded');
+
 const companyRoutes = require('./routes/companyRoutes');
+console.log('[ROUTES] ✅ companyRoutes loaded');
+
 const menuRoutes = require('./routes/menuRoutes');
+console.log('[ROUTES] ✅ menuRoutes loaded');
+
 let catalogRoutes;
 try {
   catalogRoutes = require('./routes/catalogRoutes');
-  console.log('✅ Catalog routes loaded successfully - v3');
+  console.log('[ROUTES] ✅ catalogRoutes loaded');
 } catch (err) {
-  console.error('❌ Failed to load catalog routes:', err.message);
-  catalogRoutes = require('express').Router(); // Empty router as fallback
+  console.error('[ROUTES] ❌ Failed to load catalogRoutes:', err.message);
+  catalogRoutes = require('express').Router();
 }
+
 const orderRoutes = require('./routes/orderRoutes');
+console.log('[ROUTES] ✅ orderRoutes loaded');
+
 const guestRoutes = require('./routes/guestRoutes');
+console.log('[ROUTES] ✅ guestRoutes loaded');
+
 const messageRoutes = require('./routes/messageRoutes');
+console.log('[ROUTES] ✅ messageRoutes loaded');
+
 const reportRoutes = require('./routes/reportRoutes');
+console.log('[ROUTES] ✅ reportRoutes loaded');
+
 const menuCatalogRoutes = require('./routes/menuCatalogRoutes');
+console.log('[ROUTES] ✅ menuCatalogRoutes loaded');
+
 const deliveryRoutes = require('./routes/deliveryRoutes');
+console.log('[ROUTES] ✅ deliveryRoutes loaded');
+
 const dailyMenuRoutes = require('./routes/dailyMenuRoutes');
+console.log('[ROUTES] ✅ dailyMenuRoutes loaded');
+
 const adminRoutes = require('./routes/adminRoutes');
+console.log('[ROUTES] ✅ adminRoutes loaded');
+
 const licenseRoutes = require('./routes/licenseRoutes');
-const ingredientRoutes = require('./routes/ingredientRoutes');
+console.log('[ROUTES] ✅ licenseRoutes loaded');
 
-/**
- * Mount routes with prefixes
- * 
- * All routes are prefixed with /api/ for clear separation from
- * any static files or frontend routes.
- */
-app.use('/api/auth', authRoutes);        // Authentication (login, register, etc.)
-app.use('/api/users', userRoutes);       // User management
-app.use('/api/companies', companyRoutes); // Company management
-app.use('/api/menu-catalog', menuCatalogRoutes);  // Menu-catalog linking
-app.use('/api/menus', menuRoutes);       // Menu management
-app.use('/api/daily-menus', dailyMenuRoutes); // Daily menu management
-app.use('/api/catalog', catalogRoutes);   // Dish catalog/library
-app.use('/api/orders', orderRoutes);     // Order management
-app.use('/api/guests', guestRoutes);     // Guest code management
-app.use('/api/messages', messageRoutes); // Messaging system
-app.use('/api/reports', reportRoutes);   // Reports and analytics
-app.use('/api/delivery', deliveryRoutes); // Delivery management
-app.use('/api/admin', adminRoutes);      // Admin functions
-app.use('/api/license', licenseRoutes);  // License management
-app.use('/api/ingredients', ingredientRoutes); // Ingredient management
+// Ingredient routes with detailed debug
+let ingredientRoutes;
+console.log('[ROUTES] Attempting to load ingredientRoutes...');
+try {
+  ingredientRoutes = require('./routes/ingredientRoutes');
+  console.log('[ROUTES] ✅ ingredientRoutes loaded successfully!');
+} catch (err) {
+  console.error('[ROUTES] ❌ Failed to load ingredientRoutes');
+  console.error('[ROUTES] Error message:', err.message);
+  console.error('[ROUTES] Error stack:', err.stack);
+  ingredientRoutes = require('express').Router();
+}
 
-// PHASE 3 TEST: Direct inline route
+console.log('[ROUTES] ========================================');
+console.log('[ROUTES] All route imports complete');
+console.log('[ROUTES] ========================================');
+
+// Mount routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/companies', companyRoutes);
+app.use('/api/menu-catalog', menuCatalogRoutes);
+app.use('/api/menus', menuRoutes);
+app.use('/api/daily-menus', dailyMenuRoutes);
+app.use('/api/catalog', catalogRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/guests', guestRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/delivery', deliveryRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/license', licenseRoutes);
+app.use('/api/ingredients', ingredientRoutes);
+
+console.log('[ROUTES] ✅ All routes mounted to Express app');
+
+// Test route
 app.get("/api/menu-catalog-test", (req, res) => {
   res.json({ success: true, message: "Route works!", timestamp: new Date() });
 });
 
-
-// ============================================================================
 // ============================================================================
 // SERVE FRONTEND STATIC FILES
 // ============================================================================
 const frontendPath = path.join(__dirname, '../frontend/dist');
 console.log('Frontend path:', frontendPath);
 console.log('Frontend exists:', require('fs').existsSync(frontendPath));
-console.log('Frontend files:', require('fs').existsSync(frontendPath) ? require('fs').readdirSync(frontendPath) : 'N/A');
 app.use(express.static(frontendPath));
 
-// Handle SPA routing - serve index.html for all non-API routes
 app.get('*', (req, res, next) => {
-    // Skip API routes
     if (req.path.startsWith('/api/')) {
         return next();
     }
-    // Skip static file requests
     if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map)$/)) {
         return next();
     }
     res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
+// ============================================================================
 // ERROR HANDLING
 // ============================================================================
 
-/**
- * 404 Handler - Route not found
- * 
- * If no route matches the request, this sends a 404 response.
- */
 app.use((req, res, next) => {
     res.status(404).json({
         success: false,
@@ -364,17 +286,7 @@ app.use((req, res, next) => {
     });
 });
 
-/**
- * Global Error Handler
- * 
- * This catches any errors thrown in route handlers or middleware.
- * It logs the error and sends a clean error response to the client.
- * 
- * IMPORTANT: Never send stack traces to clients in production!
- * They can reveal sensitive information about your code.
- */
 app.use((err, req, res, next) => {
-    // Log the error
     logger.error('Unhandled error:', {
         error: err.message,
         stack: err.stack,
@@ -384,10 +296,7 @@ app.use((err, req, res, next) => {
         userId: req.user?.id
     });
     
-    // Determine status code
     const statusCode = err.statusCode || err.status || 500;
-    
-    // Prepare error response
     const errorResponse = {
         success: false,
         error: {
@@ -398,7 +307,6 @@ app.use((err, req, res, next) => {
         }
     };
     
-    // Include stack trace in development
     if (process.env.NODE_ENV !== 'production') {
         errorResponse.error.stack = err.stack;
     }
@@ -412,15 +320,8 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3001;
 
-/**
- * Start the server
- * 
- * We first check the database connection, then start listening.
- * If the database is unavailable, we exit (fail fast).
- */
 const startServer = async () => {
     try {
-        // Check database connection
         logger.startup('Checking database connection...');
         const dbConnected = await db.checkConnection();
         
@@ -428,7 +329,6 @@ const startServer = async () => {
             throw new Error('Database connection failed');
         }
         
-        // Start HTTP server
         const server = app.listen(PORT, () => {
             logger.startup(`ELOS API Server started`, {
                 port: PORT,
@@ -456,60 +356,31 @@ const startServer = async () => {
             `);
         });
         
-        // ====================================================================
-        // GRACEFUL SHUTDOWN
-        // ====================================================================
-        
-        /**
-         * Handle shutdown signals
-         * 
-         * When the server receives a shutdown signal (SIGTERM, SIGINT),
-         * we want to:
-         * 1. Stop accepting new connections
-         * 2. Wait for existing requests to complete
-         * 3. Close database connections
-         * 4. Exit cleanly
-         * 
-         * This prevents data corruption and lost requests.
-         */
         const gracefulShutdown = async (signal) => {
             logger.shutdown(`Received ${signal}, starting graceful shutdown...`);
-            
-            // Stop accepting new connections
             server.close(async () => {
                 logger.shutdown('HTTP server closed');
-                
                 try {
-                    // Close database pool
                     await db.closePool();
                     logger.shutdown('Database pool closed');
-                    
-                    // Exit successfully
                     process.exit(0);
                 } catch (error) {
                     logger.error('Error during shutdown:', error);
                     process.exit(1);
                 }
             });
-            
-            // Force exit if graceful shutdown takes too long
             setTimeout(() => {
                 logger.error('Forced shutdown after timeout');
                 process.exit(1);
-            }, 30000); // 30 second timeout
+            }, 30000);
         };
         
-        // Listen for shutdown signals
         process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
         process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-        
-        // Handle uncaught exceptions
         process.on('uncaughtException', (error) => {
             logger.error('Uncaught Exception:', error);
             gracefulShutdown('uncaughtException');
         });
-        
-        // Handle unhandled promise rejections
         process.on('unhandledRejection', (reason, promise) => {
             logger.error('Unhandled Rejection:', { reason, promise });
         });
@@ -520,12 +391,7 @@ const startServer = async () => {
     }
 };
 
-// Start the server
 startServer();
 
-// Export app for testing
 module.exports = app;
-// Force rebuild Thu Feb  5 01:14:55 UTC 2026
-// Redeployed Fri Feb  6 16:07:17 UTC 2026
-// Added ingredient routes Fri Mar 14 2026
-// Rebuild Sat Mar 14 05:49:53 UTC 2026
+// Debug logging added Sat Mar 14 2026 v2
