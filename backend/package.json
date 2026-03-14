@@ -1,6 +1,6 @@
 {
   "name": "elos-backend",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "ELOS - Employee Lunch Ordering System Backend API",
   "main": "server.js",
   "scripts": {
