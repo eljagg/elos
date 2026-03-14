@@ -9,7 +9,7 @@ const db = require('../config/database');
 exports.getIngredients = async (req, res) => {
   try {
     const { category, search, isActive = 'true' } = req.query;
-    const companyId = req.user.company_id;
+    const companyId = req.user.companyId;
     
     let query = `
       SELECT i.*, 
@@ -100,7 +100,7 @@ exports.getIngredient = async (req, res) => {
 // Create ingredient
 exports.createIngredient = async (req, res) => {
   try {
-    const companyId = req.user.company_id;
+    const companyId = req.user.companyId;
     const userId = req.user.id;
     
     const {
@@ -151,7 +151,7 @@ exports.createIngredient = async (req, res) => {
 exports.updateIngredient = async (req, res) => {
   try {
     const { id } = req.params;
-    const companyId = req.user.company_id;
+    const companyId = req.user.companyId;
     
     const {
       name, description, category,
@@ -231,22 +231,22 @@ exports.updateIngredient = async (req, res) => {
 exports.deleteIngredient = async (req, res) => {
   try {
     const { id } = req.params;
-    const companyId = req.user.company_id;
+    const companyId = req.user.companyId;
     
     // Check if ingredient is used in any dishes
-    const usageCheck = await db.query(`
-      SELECT COUNT(*) FROM dish_ingredients WHERE ingredient_id = $1
+    const usage = await db.query(`
+      SELECT COUNT(*) as count FROM dish_ingredients WHERE ingredient_id = $1
     `, [id]);
     
-    if (parseInt(usageCheck.rows[0].count) > 0) {
+    if (parseInt(usage.rows[0].count) > 0) {
       return res.status(400).json({ 
         success: false, 
-        error: { message: 'Cannot delete ingredient that is used in dishes. Deactivate it instead.' } 
+        error: { message: 'Cannot delete ingredient that is used in dishes' } 
       });
     }
     
     await db.query(`
-      DELETE FROM ingredients WHERE id = $1 AND company_id = $2
+      DELETE FROM ingredients WHERE id = $1 AND (company_id = $2 OR company_id IS NULL)
     `, [id, companyId]);
     
     res.json({ success: true });
