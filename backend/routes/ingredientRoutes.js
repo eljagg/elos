@@ -1,3 +1,4 @@
+console.log("[ROUTES] Ingredient routes loading...");
 /**
  * Ingredient Routes
  * API endpoints for managing ingredients and dish-ingredient relationships
