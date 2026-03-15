@@ -31,13 +31,24 @@ const MainLayout = () => {
         const response = await messageAPI.getUnreadCount();
         setUnreadCount(response.data?.data?.unreadCount || 0);
       } catch (error) {
-        console.error('Failed to fetch unread count:', error);
+        // Silently handle - not critical for app function
       }
     };
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 60000); // Refresh every minute
     return () => clearInterval(interval);
   }, []);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showUserMenu && !e.target.closest('.user-menu-container')) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showUserMenu]);
 
   // Navigation items based on role
   const getNavItems = () => {
@@ -74,8 +85,7 @@ const MainLayout = () => {
         return [
           ...baseItems,
           { path: '/hr', icon: '👥', label: 'Employees' },
-          { path: '/hr/feedback', icon: '💬', label: 'Feedback' },
-          { path: '/hr/reports', icon: '📊', label: 'Reports' },
+          { path: '/hr/users/new', icon: '➕', label: 'Add Employee' },
         ];
       case 'KITCHEN_HEAD':
       case 'KITCHEN_SOUS':
@@ -94,16 +104,15 @@ const MainLayout = () => {
       case 'RECEPTIONIST':
         return [
           ...baseItems,
+          { path: '/dashboard?tab=verify', icon: '📋', label: 'Verify Delivery' },
           { path: '/dashboard?tab=codes', icon: '🎟️', label: 'Guest Codes' },
           { path: '/dashboard?tab=deliveries', icon: '📦', label: 'Deliveries' },
-          { path: '/reports', icon: '📊', label: 'Reports' },
         ];
       case 'DELIVERY_PERSON':
       case 'DELIVERY':
         return [
           ...baseItems,
           { path: '/delivery', icon: '🚚', label: 'Deliveries' },
-          { path: '/delivery', icon: '📜', label: 'History' },
         ];
       default:
         return [
@@ -238,11 +247,11 @@ const MainLayout = () => {
                 {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">{unreadCount}</span>}
               </button>
               
-              {/* System Notifications (orders, wallet, etc.) */}
+              {/* System Notifications (orders, deliveries, etc.) */}
               <NotificationBell />
               
               {/* User Menu */}
-              <div className="relative">
+              <div className="relative user-menu-container">
                 <button 
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className={`flex items-center gap-2 px-3 py-2 ${colors.bgSecondary} rounded-lg ${colors.bgHover} transition-colors`}

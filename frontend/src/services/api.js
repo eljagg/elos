@@ -184,9 +184,13 @@ export const deliveryAPI = {
   getTracking: () => api.get('/delivery/tracking'),
   updateTracking: (orderId, data) => api.post(`/delivery/tracking/${orderId}`, data),
   
-  // Confirmations (for receptionist)
+  // Confirmations (for receptionist - legacy)
   getPendingConfirmations: () => api.get('/delivery/pending-confirmations'),
   confirmDelivery: (orderId) => api.post(`/delivery/confirm/${orderId}`),
+  
+  // Delivery verification (receptionist checklist flow)
+  getPendingVerification: () => api.get('/delivery/pending-verification'),
+  verifyAndNotify: (arrivedOrderIds, missingOrderIds) => api.post('/delivery/verify-and-notify', { arrivedOrderIds, missingOrderIds }),
   
   // Drivers & Routes
   getDrivers: () => api.get('/delivery/drivers'),

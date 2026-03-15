@@ -16,4 +16,8 @@ router.post('/stops/:stopId/complete', authenticate, deliveryController.complete
 // Driver's own deliveries
 router.get('/my-deliveries', authenticate, deliveryController.getMyDeliveries);
 
+// Delivery verification (Receptionist flow)
+router.get('/pending-verification', authenticate, requireRole('SUPER_ADMIN', 'RECEPTIONIST', 'HR_ADMIN'), deliveryController.getPendingVerification);
+router.post('/verify-and-notify', authenticate, requireRole('SUPER_ADMIN', 'RECEPTIONIST', 'HR_ADMIN'), deliveryController.verifyAndNotify);
+
 module.exports = router;
