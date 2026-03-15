@@ -121,14 +121,19 @@ try {
   qrCodeRoutes = require('express').Router();
 }
 
-let licenseRoutes;
-try {
-  licenseRoutes = require('./backend/routes/licenseRoutes');
-  console.log('[ROUTES] ✅ licenseRoutes loaded');
-} catch (err) {
-  console.error('[ROUTES] ❌ Failed to load licenseRoutes:', err.message);
-  licenseRoutes = require('express').Router();
-}
+// License routes temporarily disabled - causes 401 redirect loop on login page
+// because LicenseProvider calls /api/license/status before user is authenticated.
+// The frontend LicenseContext handles 404 gracefully, so leaving disabled is safe.
+// To re-enable: uncomment these lines AND fix LicenseContext to handle 401.
+// let licenseRoutes;
+// try {
+//   licenseRoutes = require('./backend/routes/licenseRoutes');
+//   console.log('[ROUTES] ✅ licenseRoutes loaded');
+// } catch (err) {
+//   console.error('[ROUTES] ❌ Failed to load licenseRoutes:', err.message);
+//   licenseRoutes = require('express').Router();
+// }
+console.log('[ROUTES] ⏸️  licenseRoutes skipped (disabled - causes login loop)');
 
 let ingredientRoutes;
 try {
@@ -260,7 +265,7 @@ app.use('/api/daily-menu', dailyMenuRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/qr-codes', qrCodeRoutes);
-app.use('/api/license', licenseRoutes);
+// app.use('/api/license', licenseRoutes);  // Disabled - see comment above
 app.use('/api/ingredients', ingredientRoutes);
 
 console.log('[ROUTES] ✅ All routes mounted to Express app');
