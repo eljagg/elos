@@ -1,6 +1,27 @@
-node_modules
+# Dependencies
+node_modules/
 
 # Environment variables
 .env
 backend/.env
+frontend/.env
+
+# Log files
+logs/
+*.log
+
+# Debug/temp scripts
 check_tables.js
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Coverage
+coverage/
