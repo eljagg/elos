@@ -397,21 +397,9 @@ const superAdminConfig = {
     // Maximum number of super admin accounts
     maxAccounts: 2,
     
-    // Default super admin emails (created on first run)
-    defaultAccounts: [
-        {
-            email: 'superadmin1@elos.local',
-            tempPassword: 'ChangeMe123!@#', // Must change on first login
-            firstName: 'Super',
-            lastName: 'Admin 1'
-        },
-        {
-            email: 'superadmin2@elos.local',
-            tempPassword: 'ChangeMe456!@#', // Must change on first login
-            firstName: 'Super',
-            lastName: 'Admin 2'
-        }
-    ],
+    // Super admin accounts are provisioned via environment variables or database seeding.
+    // NEVER hardcode credentials in source code.
+    // Use: SUPER_ADMIN_EMAIL and SUPER_ADMIN_TEMP_PASSWORD env vars for initial setup.
     
     // Force password change on first login
     forcePasswordChange: true,

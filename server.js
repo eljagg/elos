@@ -5,12 +5,17 @@
  * - API requests (/api/*)
  * - Static frontend files (everything else)
  * 
- * Version: 1.0.5
- * Last updated: March 14, 2026
+ * Version: 1.0.6
+ * Last updated: March 18, 2026
+ * 
+ * Security fixes:
+ * - CORS no longer falls back to wildcard '*'
+ * - Rate limiter applies to all requests (no Bearer token bypass)
+ * - Higher rate limit (500/15min) for normal usage, auth routes have own stricter limits
  */
 
 // === STARTUP DIAGNOSTICS ===
-console.log("=== ELOS SERVER v5 STARTING ===");
+console.log("=== ELOS SERVER v6 STARTING ===");
 console.log("Node version:", process.version);
 console.log("Working directory:", process.cwd());
 console.log("Environment:", process.env.NODE_ENV || 'not set');
@@ -168,9 +173,40 @@ app.use(helmet({
     crossOriginEmbedderPolicy: false
 }));
 
-// CORS
+// CORS - SECURITY FIX: no wildcard fallback
+// Build allowed origins list from environment
+const allowedOrigins = [];
+if (process.env.FRONTEND_URL) {
+    allowedOrigins.push(process.env.FRONTEND_URL);
+}
+if (process.env.CORS_ORIGINS) {
+    allowedOrigins.push(...process.env.CORS_ORIGINS.split(',').map(o => o.trim()));
+}
+// Always allow localhost in development
+if (process.env.NODE_ENV !== 'production') {
+    allowedOrigins.push('http://localhost:3000', 'http://localhost:5173');
+}
+
+console.log('[SECURITY] Allowed CORS origins:', allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'same-origin only');
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || '*',
+    origin: function (origin, callback) {
+        // Allow requests with no origin (same-origin, mobile apps, server-to-server)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.length === 0) {
+            // No origins configured - allow same-origin only
+            // This is safer than wildcard
+            return callback(null, false);
+        }
+        
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        
+        console.warn(`[SECURITY] CORS blocked request from: ${origin}`);
+        return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -180,21 +216,19 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Rate limiting
+// Rate limiting - SECURITY FIX: applies to ALL requests, no Bearer bypass
+// Auth routes (login, password reset) have their own stricter limits in authRoutes.js
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100,
+    max: 500, // 500 requests per 15 minutes (generous for normal app usage)
     message: {
         success: false,
         error: { code: 'RATE_LIMITED', message: 'Too many requests, please try again later' }
     },
     standardHeaders: true,
     legacyHeaders: false,
+    // Only skip for explicitly whitelisted IPs (e.g., monitoring)
     skip: (req) => {
-        // Skip rate limiting for authenticated requests
-        if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-            return true;
-        }
         const skipIPs = process.env.RATE_LIMIT_SKIP_IPS?.split(',') || [];
         return skipIPs.includes(req.ip);
     }
@@ -221,14 +255,14 @@ app.get('/api/health', async (req, res) => {
         await db.query('SELECT 1');
         res.json({ 
             status: 'healthy',
-            version: '1.0.5',
+            version: '1.0.6',
             timestamp: new Date().toISOString(),
             database: 'connected'
         });
     } catch (error) {
         res.status(500).json({ 
             status: 'unhealthy',
-            version: '1.0.5',
+            version: '1.0.6',
             timestamp: new Date().toISOString(),
             database: 'disconnected',
             error: error.message
@@ -239,7 +273,7 @@ app.get('/api/health', async (req, res) => {
 app.get('/api', (req, res) => {
     res.json({
         name: 'ELOS API',
-        version: '1.0.5',
+        version: '1.0.6',
         description: 'Employee Lunch Ordering System',
         health: '/api/health'
     });
@@ -350,7 +384,7 @@ app.listen(PORT, '0.0.0.0', () => {
 ║     ███████╗███████╗╚██████╔╝███████║                        ║
 ║     ╚══════╝╚══════╝ ╚═════╝ ╚══════╝                        ║
 ║                                                               ║
-║         Employee Lunch Ordering System  v1.0.5                ║
+║         Employee Lunch Ordering System  v1.0.6                ║
 ║                                                               ║
 ║     Server running on port ${String(PORT).padEnd(31)}║
 ║     Environment: ${(process.env.NODE_ENV || 'development').padEnd(29)}║
