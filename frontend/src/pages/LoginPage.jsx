@@ -24,7 +24,9 @@ export default function LoginPage() {
       toast.success('Welcome back!');
       navigate('/dashboard');
     } catch (error) {
-      toast.error(error.response?.data?.error?.message || 'Invalid email or password');
+      // AuthContext throws new Error(message) with the real backend error already extracted.
+      // Use error.message (not error.response.data.error.message which is for Axios errors)
+      toast.error(error.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }

@@ -156,8 +156,11 @@ const rateLimitConfig = {
         windowMs: 15 * 60 * 1000, // 15 minutes
         max: 100, // 100 requests per 15 minutes
         message: {
-            error: 'Too many requests. Please try again later.',
-            code: 'RATE_LIMIT_EXCEEDED'
+            success: false,
+            error: {
+                code: 'RATE_LIMIT_EXCEEDED',
+                message: 'Too many requests. Please try again later.'
+            }
         }
     },
     
@@ -166,8 +169,11 @@ const rateLimitConfig = {
         windowMs: 15 * 60 * 1000, // 15 minutes
         max: 10, // 10 login attempts per 15 minutes (increased from 5)
         message: {
-            error: 'Too many login attempts. Please try again in 15 minutes.',
-            code: 'LOGIN_RATE_LIMIT_EXCEEDED'
+            success: false,
+            error: {
+                code: 'LOGIN_RATE_LIMIT_EXCEEDED',
+                message: 'Too many login attempts. Please try again in 15 minutes.'
+            }
         }
     },
     
@@ -176,8 +182,11 @@ const rateLimitConfig = {
         windowMs: 60 * 60 * 1000, // 1 hour
         max: 3, // Only 3 reset requests per hour
         message: {
-            error: 'Too many password reset requests. Please try again later.',
-            code: 'RESET_RATE_LIMIT_EXCEEDED'
+            success: false,
+            error: {
+                code: 'RESET_RATE_LIMIT_EXCEEDED',
+                message: 'Too many password reset requests. Please try again later.'
+            }
         }
     },
     
@@ -186,8 +195,11 @@ const rateLimitConfig = {
         windowMs: 5 * 60 * 1000, // 5 minutes
         max: 3, // Only 3 attempts per 5 minutes
         message: {
-            error: 'Too many code attempts. Please try again in 5 minutes.',
-            code: 'GUEST_CODE_RATE_LIMIT_EXCEEDED'
+            success: false,
+            error: {
+                code: 'GUEST_CODE_RATE_LIMIT_EXCEEDED',
+                message: 'Too many code attempts. Please try again in 5 minutes.'
+            }
         }
     },
     
@@ -196,8 +208,11 @@ const rateLimitConfig = {
         windowMs: 60 * 1000, // 1 minute
         max: 10, // 10 orders per minute (handles quick orders for the week)
         message: {
-            error: 'Too many orders. Please slow down.',
-            code: 'ORDER_RATE_LIMIT_EXCEEDED'
+            success: false,
+            error: {
+                code: 'ORDER_RATE_LIMIT_EXCEEDED',
+                message: 'Too many orders. Please slow down.'
+            }
         }
     }
 };
