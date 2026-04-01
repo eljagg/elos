@@ -800,11 +800,11 @@ const getMyOrders = async (req, res, next) => {
                    (SELECT json_agg(json_build_object(
                        'id', oi.id,
                        'menu_item_id', oi.menu_item_id,
-                       'name', oi.item_name,
+                       'name', COALESCE(mi.name, 'Item'),
                        'quantity', oi.quantity,
                        'price', oi.unit_price,
                        'special_instructions', oi.special_instructions
-                   )) FROM order_items oi WHERE oi.order_id = o.id) as items
+                   )) FROM order_items oi LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id WHERE oi.order_id = o.id) as items
             FROM orders o
             JOIN cafeterias cf ON o.cafeteria_id = cf.id
             WHERE o.user_id = $1
@@ -852,11 +852,11 @@ const getMyOrderHistory = async (req, res, next) => {
                    (SELECT json_agg(json_build_object(
                        'id', oi.id,
                        'menu_item_id', oi.menu_item_id,
-                       'name', oi.item_name,
+                       'name', COALESCE(mi.name, 'Item'),
                        'quantity', oi.quantity,
                        'price', oi.unit_price,
                        'special_instructions', oi.special_instructions
-                   )) FROM order_items oi WHERE oi.order_id = o.id) as items
+                   )) FROM order_items oi LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id WHERE oi.order_id = o.id) as items
             FROM orders o
             JOIN cafeterias cf ON o.cafeteria_id = cf.id
             WHERE o.user_id = $1
@@ -867,7 +867,7 @@ const getMyOrderHistory = async (req, res, next) => {
         
         // Exclude archived orders by default
         if (includeArchived !== 'true') {
-            query += ` AND (o.is_archived = FALSE OR o.is_archived IS NULL)`;
+            // is_archived column not yet added - skipping filter
         }
         
         if (mealType) {
@@ -899,7 +899,7 @@ const getMyOrderHistory = async (req, res, next) => {
             SELECT COUNT(*) FROM orders o WHERE o.user_id = $1
         `;
         if (includeArchived !== 'true') {
-            countQuery += ` AND (o.is_archived = FALSE OR o.is_archived IS NULL)`;
+            // is_archived column not yet added - skipping filter
         }
         const countResult = await db.query(countQuery, [userId]);
         const totalCount = parseInt(countResult.rows[0].count);
@@ -918,7 +918,7 @@ const getMyOrderHistory = async (req, res, next) => {
                     itemCount: parseInt(order.item_count),
                     cafeteriaName: order.cafeteria_name,
                     createdAt: order.created_at,
-                    isArchived: order.is_archived || false,
+                    isArchived: false,
                     items: order.items || []
                 })),
                 pagination: {
