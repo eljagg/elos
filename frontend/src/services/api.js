@@ -57,7 +57,13 @@ export const authAPI = {
   logout: () => api.post('/auth/logout'),
   getMe: () => api.get('/auth/me'),
   // Guest login with single-use code
-  guestLogin: (code) => api.post('/auth/guest/login', { code })
+  guestLogin: (code) => api.post('/auth/guest/login', { code }),
+  
+  // 2FA
+  verify2FA: (tempToken, code) => api.post('/auth/2fa/verify', { tempToken, code }),
+  setup2FA: () => api.post('/auth/2fa/setup'),
+  verifySetup2FA: (code) => api.post('/auth/2fa/verify-setup', { code }),
+  disable2FA: (code) => api.post('/auth/2fa/disable', { code })
 };
 
 // ============================================================================
@@ -116,11 +122,17 @@ export const menuAPI = {
   // Menus
   getMenus: (params) => api.get('/menus', { params }),
   getMenu: (id) => api.get(`/menus/${id}`),
+  getMenuById: (id) => api.get(`/menus/${id}`),
+  getCurrentMenu: () => api.get('/menus/current'),
   createMenu: (data) => api.post('/menus', data),
   updateMenu: (id, data) => api.put(`/menus/${id}`, data),
   deleteMenu: (id) => api.delete(`/menus/${id}`),
+  publishMenu: (id) => api.post(`/menus/${id}/publish`),
+  unpublishMenu: (id) => api.post(`/menus/${id}/unpublish`),
+  archiveMenu: (id) => api.put(`/menus/${id}/archive`),
+  restoreMenu: (id) => api.put(`/menus/${id}/restore`),
   
-  // Menu Items (accessed via menu routes)
+  // Menu Items
   getMenuItems: (menuId) => api.get(`/menus/${menuId}`),
   addMenuItem: (menuId, data) => api.post(`/menus/${menuId}/items`, data),
   updateMenuItem: (menuId, itemId, data) => api.put(`/menus/${menuId}/items/${itemId}`, data),
@@ -141,11 +153,19 @@ export const orderAPI = {
   // Order creation
   createOrder: (data) => api.post('/orders', data),
   createDailyOrder: (data) => api.post('/orders/daily', data),
+  createWeekOrders: (data) => api.post('/orders/week', data),
   
   // Order management
   updateOrder: (id, data) => api.put(`/orders/${id}`, data),
   updateOrderStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
   cancelOrder: (id) => api.post(`/orders/${id}/cancel`),
+  archiveOrder: (id) => api.put(`/orders/${id}/archive`),
+  deleteOrder: (id) => api.delete(`/orders/${id}`),
+  
+  // Favorites
+  getFavorites: () => api.get('/orders/favorites'),
+  saveFavorite: (data) => api.post('/orders/favorites', data),
+  deleteFavorite: (id) => api.delete(`/orders/favorites/${id}`),
   
   // Guest codes - uses /guests/codes route
   getGuestCodes: () => api.get('/guests/codes'),
@@ -169,7 +189,10 @@ export const messageAPI = {
   submitFeedback: (data) => api.post('/messages/feedback', data),
   getFeedback: (params) => api.get('/messages/feedback', { params }),
   respondToFeedback: (id, response) => api.put(`/messages/feedback/${id}/respond`, { response }),
-  updateFeedbackStatus: (id, status) => api.patch(`/messages/feedback/${id}/status`, { status })
+  updateFeedbackStatus: (id, status) => api.patch(`/messages/feedback/${id}/status`, { status }),
+  
+  // Announcements
+  createAnnouncement: (data) => api.post('/messages', { ...data, type: 'announcement' })
 };
 
 // ============================================================================
@@ -218,14 +241,10 @@ export const deliveryAPI = {
 // Report API
 // ============================================================================
 export const reportAPI = {
-  getOrderStats: (params) => api.get('/reports/orders', { params }),
-  getRevenueStats: (params) => api.get('/reports/revenue', { params }),
-  getUserStats: (params) => api.get('/reports/users', { params }),
-  getMenuStats: (params) => api.get('/reports/menus', { params }),
-  getDailyReport: (date) => api.get(`/reports/daily/${date}`),
-  getWeeklyReport: (startDate) => api.get(`/reports/weekly/${startDate}`),
-  getMonthlyReport: (year, month) => api.get(`/reports/monthly/${year}/${month}`),
-  exportReport: (type, params) => api.get(`/reports/export/${type}`, { params, responseType: 'blob' })
+  getOrderSummary: (params) => api.get('/reports/orders/summary', { params }),
+  getPopularItems: (params) => api.get('/reports/orders/popular-items', { params }),
+  getDailyOrderCounts: (params) => api.get('/reports/orders/daily-counts', { params }),
+  getIssueSummary: (params) => api.get('/reports/issues/summary', { params })
 };
 
 // ============================================================================
@@ -286,6 +305,7 @@ export const dailyMenuAPI = {
   getAllDailyMenus: (params) => api.get('/daily-menu/all', { params }),
   createDailyMenu: (data) => api.post('/daily-menu', data),
   updateMenu: (id, data) => api.put(`/daily-menu/${id}`, data),
+  updateDailyMenu: (id, data) => api.put(`/daily-menu/${id}`, data),
   deleteDailyMenu: (id) => api.delete(`/daily-menu/${id}`),
   addItemsToMenu: (id, data) => api.post(`/daily-menu/${id}/items`, data),
   updateMenuItem: (menuId, itemId, data) => api.put(`/daily-menu/${menuId}/items/${itemId}`, data),
@@ -360,9 +380,14 @@ export const ingredientAPI = {
   // Categories
   getCategories: () => api.get('/ingredients/categories'),
   
-  // Dish ingredients
+  // Dish ingredients (bulk)
   getDishIngredients: (dishId) => api.get(`/ingredients/dish/${dishId}`),
   updateDishIngredients: (dishId, ingredients) => api.put(`/ingredients/dish/${dishId}`, { ingredients }),
+  
+  // Dish ingredients (individual)
+  addDishIngredient: (dishId, data) => api.post(`/ingredients/dish/${dishId}`, data),
+  updateDishIngredient: (dishId, ingredientId, data) => api.put(`/ingredients/dish/${dishId}/${ingredientId}`, data),
+  removeDishIngredient: (dishId, ingredientId) => api.delete(`/ingredients/dish/${dishId}/${ingredientId}`),
   
   // Nutrition calculation
   calculateNutrition: (dishId) => api.get(`/ingredients/dish/${dishId}/nutrition`),

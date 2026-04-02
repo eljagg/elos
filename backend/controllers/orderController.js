@@ -1241,14 +1241,13 @@ const archiveOrder = async (req, res, next) => {
             });
         }
         
-        // Archive the order
+        // Archive the order (use status field since is_archived column doesn't exist yet)
         await db.query(
             `UPDATE orders 
-             SET is_archived = TRUE, 
-                 archived_at = CURRENT_TIMESTAMP,
-                 archived_by = $1
-             WHERE id = $2`,
-            [userId, id]
+             SET status = 'archived',
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $1`,
+            [id]
         );
         
         logger.info('Order archived:', { orderId: id, userId });
@@ -1302,7 +1301,7 @@ const deleteOrder = async (req, res, next) => {
         }
         
         // Only allow deleting archived or cancelled orders
-        if (!order.is_archived && order.status !== 'cancelled') {
+        if (order.status !== 'archived' && order.status !== 'cancelled') {
             return res.status(400).json({
                 success: false,
                 error: {
