@@ -275,16 +275,25 @@ export default function DailyMenuManagement() {
   // ========== MENU ACTIONS ==========
   const handleAddItems = async (items) => {
     try {
-      await dailyMenuAPI.createDailyMenu({
-        cafeteriaId: selectedCafeteria,
-        date: selectedDate,
-        mealType: 'lunch',
-        cutoffTime: '10:00:00',
-        items: items.map(item => ({
-          catalogItemId: item.id,
-          portionsAvailable: item.portions || 50
-        }))
-      });
+      if (dailyMenu) {
+        // Menu already exists — add items to it
+        await dailyMenuAPI.addItemsToMenu(dailyMenu.id, {
+          catalogItemIds: items.map(item => item.id),
+          portionsAvailable: 50
+        });
+      } else {
+        // No menu yet — create one with items
+        await dailyMenuAPI.createDailyMenu({
+          cafeteriaId: selectedCafeteria,
+          date: selectedDate,
+          mealType: 'lunch',
+          cutoffTime: '10:00:00',
+          items: items.map(item => ({
+            catalogItemId: item.id,
+            portionsAvailable: item.portions || 50
+          }))
+        });
+      }
       toast.success('Items added to daily menu');
       setShowAddModal(false);
       loadDailyMenu();
@@ -300,6 +309,22 @@ export default function DailyMenuManagement() {
       loadDailyMenu();
     } catch (error) {
       toast.error('Failed to update portions');
+    }
+  };
+
+  const handleUpdatePrice = async () => {
+    if (!dailyMenu) return;
+    const price = parseFloat(mealPrice);
+    if (isNaN(price) || price <= 0) {
+      toast.error('Please enter a valid price');
+      return;
+    }
+    try {
+      await dailyMenuAPI.updateMenu(dailyMenu.id, { mealPrice: price });
+      toast.success('Meal price updated');
+      loadDailyMenu();
+    } catch (error) {
+      toast.error('Failed to update price');
     }
   };
 
@@ -538,6 +563,14 @@ export default function DailyMenuManagement() {
                     className="w-28 px-3 py-2 border rounded-lg text-right font-bold"
                     step="0.01"
                   />
+                  {dailyMenu?.status === 'published' && (
+                    <button
+                      onClick={handleUpdatePrice}
+                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                    >
+                      Save
+                    </button>
+                  )}
                 </div>
                 
                 {/* Publish/Unpublish */}

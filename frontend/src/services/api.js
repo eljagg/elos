@@ -285,9 +285,17 @@ export const dailyMenuAPI = {
   getDailyMenu: (params) => api.get('/daily-menu', { params }),
   getAllDailyMenus: (params) => api.get('/daily-menu/all', { params }),
   createDailyMenu: (data) => api.post('/daily-menu', data),
+  updateMenu: (id, data) => api.put(`/daily-menu/${id}`, data),
+  deleteDailyMenu: (id) => api.delete(`/daily-menu/${id}`),
+  addItemsToMenu: (id, data) => api.post(`/daily-menu/${id}/items`, data),
+  updateMenuItem: (menuId, itemId, data) => api.put(`/daily-menu/${menuId}/items/${itemId}`, data),
+  removeMenuItem: (menuId, itemId) => api.delete(`/daily-menu/${menuId}/items/${itemId}`),
   publishDailyMenu: (id, data) => api.post(`/daily-menu/${id}/publish`, data),
+  unpublishDailyMenu: (id) => api.put(`/daily-menu/${id}/unpublish`),
+  archiveDailyMenu: (id) => api.put(`/daily-menu/${id}/archive`),
   markItemSoldOut: (dailyMenuItemId, data) => api.post(`/daily-menu/items/${dailyMenuItemId}/sold-out`, data),
   updatePortions: (dailyMenuItemId, data) => api.patch(`/daily-menu/items/${dailyMenuItemId}/portions`, data),
+  getCatalogItemsGrouped: () => api.get('/daily-menu/catalog/items/grouped'),
   
   // Notifications
   getNotifications: (params) => api.get('/daily-menu/notifications', { params }),

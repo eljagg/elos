@@ -271,9 +271,9 @@ const createDailyMenu = async (req, res, next) => {
 const updateMenu = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const { cutoffTime } = req.body;
+        const { cutoffTime, mealPrice } = req.body;
 
-        // Check if menu exists and is not published
+        // Check if menu exists
         const menu = await db.query('SELECT * FROM daily_menus WHERE id = $1', [id]);
         
         if (menu.rows.length === 0) {
@@ -283,19 +283,37 @@ const updateMenu = async (req, res, next) => {
             });
         }
 
-        if (menu.rows[0].status === 'published') {
+        // Build dynamic update
+        const updates = [];
+        const values = [];
+        let paramCount = 1;
+
+        if (cutoffTime !== undefined) {
+            updates.push(`cutoff_time = $${paramCount++}`);
+            values.push(cutoffTime);
+        }
+
+        if (mealPrice !== undefined) {
+            updates.push(`meal_price = $${paramCount++}`);
+            values.push(parseFloat(mealPrice));
+        }
+
+        if (updates.length === 0) {
             return res.status(400).json({
                 success: false,
-                error: { code: 'MENU_PUBLISHED', message: 'Cannot modify a published menu' }
+                error: { code: 'NO_UPDATES', message: 'No valid fields to update' }
             });
         }
 
+        updates.push('updated_at = CURRENT_TIMESTAMP');
+        values.push(id);
+
         const result = await db.query(`
             UPDATE daily_menus
-            SET cutoff_time = $1, updated_at = CURRENT_TIMESTAMP
-            WHERE id = $2
+            SET ${updates.join(', ')}
+            WHERE id = $${paramCount}
             RETURNING *
-        `, [cutoffTime, id]);
+        `, values);
 
         res.json({
             success: true,
@@ -334,12 +352,7 @@ const addItemsToMenu = async (req, res, next) => {
             });
         }
 
-        if (menu.rows[0].status === 'published') {
-            return res.status(400).json({
-                success: false,
-                error: { code: 'MENU_PUBLISHED', message: 'Cannot modify a published menu' }
-            });
-        }
+        // Published menus can be edited (restriction removed for flexibility)
 
         await db.query('BEGIN');
 
@@ -392,12 +405,7 @@ const updateMenuItem = async (req, res, next) => {
             });
         }
 
-        if (menu.rows[0].status === 'published') {
-            return res.status(400).json({
-                success: false,
-                error: { code: 'MENU_PUBLISHED', message: 'Cannot modify a published menu' }
-            });
-        }
+        // Published menus can be edited (restriction removed for flexibility)
 
         // Build update query dynamically
         const updates = [];
@@ -467,12 +475,7 @@ const removeMenuItem = async (req, res, next) => {
             });
         }
 
-        if (menu.rows[0].status === 'published') {
-            return res.status(400).json({
-                success: false,
-                error: { code: 'MENU_PUBLISHED', message: 'Cannot modify a published menu' }
-            });
-        }
+        // Published menus can be edited (restriction removed for flexibility)
 
         const result = await db.query(
             'DELETE FROM daily_menu_items WHERE daily_menu_id = $1 AND id = $2 RETURNING *',
