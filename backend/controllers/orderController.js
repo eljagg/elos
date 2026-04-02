@@ -734,13 +734,16 @@ const getOrderById = async (req, res, next) => {
         
         // Get order items
         const itemsResult = await db.query(
-            `SELECT oi.*, mi.name, mi.description, mi.image_url,
+            `SELECT oi.*, COALESCE(mi.name, mic.name, 'Item') as name, 
+                    COALESCE(mi.description, mic.description) as description, 
+                    COALESCE(mi.image_url, mic.image_url) as image_url,
                     mc.name as category_name
              FROM order_items oi
-             JOIN menu_items mi ON oi.menu_item_id = mi.id
-             JOIN menu_categories mc ON mi.category_id = mc.id
+             LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+             LEFT JOIN menu_item_catalog mic ON oi.menu_item_id = mic.id
+             LEFT JOIN menu_categories mc ON COALESCE(mi.category_id, mic.category_id) = mc.id
              WHERE oi.order_id = $1
-             ORDER BY mc.display_order, mi.display_order`,
+             ORDER BY mc.display_order NULLS LAST`,
             [id]
         );
         
@@ -803,11 +806,11 @@ const getMyOrders = async (req, res, next) => {
                    (SELECT json_agg(json_build_object(
                        'id', oi.id,
                        'menu_item_id', oi.menu_item_id,
-                       'name', COALESCE(mi.name, 'Item'),
+                       'name', COALESCE(mi.name, mic.name, 'Item'),
                        'quantity', oi.quantity,
                        'price', oi.unit_price,
                        'special_instructions', oi.special_instructions
-                   )) FROM order_items oi LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id WHERE oi.order_id = o.id) as items
+                   )) FROM order_items oi LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id LEFT JOIN menu_item_catalog mic ON oi.menu_item_id = mic.id WHERE oi.order_id = o.id) as items
             FROM orders o
             JOIN cafeterias cf ON o.cafeteria_id = cf.id
             WHERE o.user_id = $1
@@ -855,11 +858,11 @@ const getMyOrderHistory = async (req, res, next) => {
                    (SELECT json_agg(json_build_object(
                        'id', oi.id,
                        'menu_item_id', oi.menu_item_id,
-                       'name', COALESCE(mi.name, 'Item'),
+                       'name', COALESCE(mi.name, mic.name, 'Item'),
                        'quantity', oi.quantity,
                        'price', oi.unit_price,
                        'special_instructions', oi.special_instructions
-                   )) FROM order_items oi LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id WHERE oi.order_id = o.id) as items
+                   )) FROM order_items oi LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id LEFT JOIN menu_item_catalog mic ON oi.menu_item_id = mic.id WHERE oi.order_id = o.id) as items
             FROM orders o
             JOIN cafeterias cf ON o.cafeteria_id = cf.id
             WHERE o.user_id = $1
@@ -1484,14 +1487,15 @@ const getKitchenOrders = async (req, res, next) => {
                    (
                        SELECT json_agg(json_build_object(
                            'id', oi.id,
-                           'name', mi.name,
+                           'name', COALESCE(mi.name, mic.name, 'Item'),
                            'quantity', oi.quantity,
                            'specialInstructions', oi.special_instructions,
                            'categoryCode', mc.code
                        ))
                        FROM order_items oi
-                       JOIN menu_items mi ON oi.menu_item_id = mi.id
-                       JOIN menu_categories mc ON mi.category_id = mc.id
+                       LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+                       LEFT JOIN menu_item_catalog mic ON oi.menu_item_id = mic.id
+                       LEFT JOIN menu_categories mc ON COALESCE(mi.category_id, mic.category_id) = mc.id
                        WHERE oi.order_id = o.id
                    ) as items
             FROM orders o
@@ -1553,6 +1557,8 @@ const getKitchenOrders = async (req, res, next) => {
                     mealType: order.meal_type,
                     status: order.status,
                     userName: `${order.user_first_name} ${order.user_last_name}`,
+                    user_first_name: order.user_first_name,
+                    user_last_name: order.user_last_name,
                     companyName: order.company_name,
                     companyId: order.company_id,
                     departmentName: order.department_name,
