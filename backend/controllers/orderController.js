@@ -495,17 +495,20 @@ const createWeekOrders = async (req, res, next) => {
                 
                 const totals = calculateOrderTotals(validItems);
                 
+                // Generate order number
+                const weekOrderNumber = 'ORD-' + Date.now().toString(36).toUpperCase() + '-' + i;
+                
                 // Create order
                 const order = await db.transaction(async (client) => {
                     const orderResult = await client.query(
                         `INSERT INTO orders (
-                            user_id, cafeteria_id, company_id, department_id,
+                            order_number, user_id, cafeteria_id, company_id, department_id,
                             meal_type, order_date, day_of_week, status,
                             subtotal, tax, total
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, $9, $10)
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, $10, $11)
                         RETURNING *`,
                         [
-                            userId, cafeteriaId, req.user.companyId, req.user.departmentId,
+                            weekOrderNumber, userId, cafeteriaId, req.user.companyId, req.user.departmentId,
                             mealType, dayOrder.date, dayOfWeek,
                             totals.subtotal, totals.tax, totals.total
                         ]
@@ -1241,13 +1244,14 @@ const archiveOrder = async (req, res, next) => {
             });
         }
         
-        // Archive the order (use status field since is_archived column doesn't exist yet)
+        // Archive the order
         await db.query(
             `UPDATE orders 
-             SET status = 'archived',
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = $1`,
-            [id]
+             SET is_archived = TRUE, 
+                 archived_at = CURRENT_TIMESTAMP,
+                 archived_by = $1
+             WHERE id = $2`,
+            [userId, id]
         );
         
         logger.info('Order archived:', { orderId: id, userId });
@@ -1301,7 +1305,7 @@ const deleteOrder = async (req, res, next) => {
         }
         
         // Only allow deleting archived or cancelled orders
-        if (order.status !== 'archived' && order.status !== 'cancelled') {
+        if (!order.is_archived && order.status !== 'cancelled') {
             return res.status(400).json({
                 success: false,
                 error: {
@@ -1758,14 +1762,18 @@ const createDailyMenuOrder = async (req, res, next) => {
         // Generate order number
         const orderNumber = 'ORD-' + Date.now().toString(36).toUpperCase();
         
+        // Calculate day of week
+        const orderDateObj = new Date(orderDate + 'T12:00:00');
+        const dayOfWeek = orderDateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        
         // Create order
         const orderResult = await db.query(
             `INSERT INTO orders (order_number, user_id, company_id, department_id, cafeteria_id, 
-                                order_date, meal_type, status, total_amount, notes)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                                order_date, day_of_week, meal_type, status, subtotal, total, notes)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
              RETURNING *`,
             [orderNumber, userId, userCompanyId, userDepartmentId, cafeteriaId,
-             orderDate, 'lunch', 'pending', totalAmount, notes || '']
+             orderDate, dayOfWeek, 'lunch', 'pending', totalAmount, totalAmount, notes || '']
         );
         
         const newOrder = orderResult.rows[0];
