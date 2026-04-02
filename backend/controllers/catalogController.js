@@ -344,17 +344,19 @@ const createCatalogItem = async (req, res, next) => {
         const newItem = result.rows[0];
 
         // Add dietary tags
-        if (dietaryTagIds.length > 0) {
-            const tagValues = dietaryTagIds.map((tagId, idx) => `($1, $${idx + 2})`).join(', ');
-            const tagParams = [newItem.id, ...dietaryTagIds];
-            await db.query(`INSERT INTO catalog_item_dietary_tags (catalog_item_id, dietary_tag_id) VALUES ${tagValues}`, tagParams);
+        const uniqueTagIds = [...new Set(dietaryTagIds || [])];
+        if (uniqueTagIds.length > 0) {
+            const tagValues = uniqueTagIds.map((tagId, idx) => `($1, $${idx + 2})`).join(', ');
+            const tagParams = [newItem.id, ...uniqueTagIds];
+            await db.query(`INSERT INTO catalog_item_dietary_tags (catalog_item_id, dietary_tag_id) VALUES ${tagValues} ON CONFLICT DO NOTHING`, tagParams);
         }
 
         // Add allergens
-        if (allergenIds.length > 0) {
-            const allergenValues = allergenIds.map((allergenId, idx) => `($1, $${idx + 2})`).join(', ');
-            const allergenParams = [newItem.id, ...allergenIds];
-            await db.query(`INSERT INTO catalog_item_allergens (catalog_item_id, allergen_id) VALUES ${allergenValues}`, allergenParams);
+        const uniqueAllergenIds = [...new Set(allergenIds || [])];
+        if (uniqueAllergenIds.length > 0) {
+            const allergenValues = uniqueAllergenIds.map((allergenId, idx) => `($1, $${idx + 2})`).join(', ');
+            const allergenParams = [newItem.id, ...uniqueAllergenIds];
+            await db.query(`INSERT INTO catalog_item_allergens (catalog_item_id, allergen_id) VALUES ${allergenValues} ON CONFLICT DO NOTHING`, allergenParams);
         }
 
         // Record initial price in history
@@ -690,20 +692,24 @@ const updateCatalogItem = async (req, res, next) => {
         // Update dietary tags if provided
         if (dietaryTagIds !== undefined) {
             await db.query('DELETE FROM catalog_item_dietary_tags WHERE catalog_item_id = $1', [id]);
-            if (dietaryTagIds.length > 0) {
-                const tagValues = dietaryTagIds.map((tagId, idx) => `($1, $${idx + 2})`).join(', ');
-                const tagParams = [id, ...dietaryTagIds];
-                await db.query(`INSERT INTO catalog_item_dietary_tags (catalog_item_id, dietary_tag_id) VALUES ${tagValues}`, tagParams);
+            // Deduplicate tag IDs
+            const uniqueTagIds = [...new Set(dietaryTagIds)];
+            if (uniqueTagIds.length > 0) {
+                const tagValues = uniqueTagIds.map((tagId, idx) => `($1, $${idx + 2})`).join(', ');
+                const tagParams = [id, ...uniqueTagIds];
+                await db.query(`INSERT INTO catalog_item_dietary_tags (catalog_item_id, dietary_tag_id) VALUES ${tagValues} ON CONFLICT DO NOTHING`, tagParams);
             }
         }
 
         // Update allergens if provided
         if (allergenIds !== undefined) {
             await db.query('DELETE FROM catalog_item_allergens WHERE catalog_item_id = $1', [id]);
-            if (allergenIds.length > 0) {
-                const allergenValues = allergenIds.map((allergenId, idx) => `($1, $${idx + 2})`).join(', ');
-                const allergenParams = [id, ...allergenIds];
-                await db.query(`INSERT INTO catalog_item_allergens (catalog_item_id, allergen_id) VALUES ${allergenValues}`, allergenParams);
+            // Deduplicate allergen IDs
+            const uniqueAllergenIds = [...new Set(allergenIds)];
+            if (uniqueAllergenIds.length > 0) {
+                const allergenValues = uniqueAllergenIds.map((allergenId, idx) => `($1, $${idx + 2})`).join(', ');
+                const allergenParams = [id, ...uniqueAllergenIds];
+                await db.query(`INSERT INTO catalog_item_allergens (catalog_item_id, allergen_id) VALUES ${allergenValues} ON CONFLICT DO NOTHING`, allergenParams);
             }
         }
 

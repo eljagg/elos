@@ -355,9 +355,7 @@ app.use((err, req, res, next) => {
         success: false,
         error: {
             code: err.code || 'SERVER_ERROR',
-            message: process.env.NODE_ENV === 'production' 
-                ? 'An unexpected error occurred' 
-                : err.message
+            message: err.message || 'An unexpected error occurred'
         }
     });
 });
